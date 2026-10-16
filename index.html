@@ -25,25 +25,29 @@
   <select id="char" class="sb"></select>
   <select id="map" class="sb"></select>
   <button id="wavebtn" class="sb">Spawn wave (N)</button>
+  <button id="spawnbtn" class="sb">Spawn (B)</button>
   <button id="regen" class="sb">Regenerate (R)</button>
   <button id="helpbtn">Help (H)</button>
   <button id="menubtn">Menu (Esc)</button>
 </div>
 <div id="help" style="display:none">
-  <b>A / D</b> walk &nbsp; <b>W / Space</b> jump<br>
+  <b>A / D</b> walk &nbsp; <b>W / Space</b> jump &nbsp; (in water: hold jump to swim)<br>
   <b>Double-tap jump</b> or <b>F</b>: take flight / land<br>
   Flying: <b>WASD</b> steer freely, release to glide &amp; hover<br>
   <b>Shift</b> boost: rams straight through buildings<br>
   <b>Mouse</b> aim &nbsp; <b>Left click</b> cast (hold for beams)<br>
-  <b>1-9, 0, -, =</b> / <b>Q E</b> / <b>wheel</b> switch power<br>
-  <b>C</b> switch hero (Doom, Hulk, Thor, Iron Man, Wolverine, Cyclops, Iceman, Jean Grey, Storm)<br>
+  <b>1-9, 0, -, =</b> / <b>Q E</b> / <b>wheel</b> switch power (12 per hero)<br>
+  <b>C</b> / <b>Shift+C</b> next / previous hero &nbsp; <b>B</b> spawn menu<br>
   <b>N</b> spawn enemy wave &nbsp; <b>K</b> clear enemies<br>
   <b>R</b> regenerate &nbsp; <b>M</b> switch map &nbsp; <b>H</b> hide help<br>
-  <b>Esc</b> pause / main menu (N, K, R, M, C are sandbox-only)
+  <b>Esc</b> pause / main menu (N, K, R, M, C, B are sandbox-only)
   <hr style="border-color:#284">
-  Hold-to-grab powers (Telekinesis, Hulk's Rip &amp; Throw): hold on terrain, release to throw.<br>Hulk can't fly: <b>Shift</b> = shoulder charge. Cyclops: hold <b>F</b> = optic thrust (beam into the ground lifts him).
+  <b>Hulk</b>: hold <b>S</b> to charge, <b>Space</b> = gamma leap at the cursor; jump again mid-air = thunderclap jump; <b>S</b> mid-air = dive slam; <b>Shift</b> = shoulder charge.<br>
+  <b>Wolverine</b>: push into a wall mid-air to dig in the claws: <b>W</b> climbs, <b>S</b> slides, <b>Space</b> kicks off. Keep running to sprint; low walls get vaulted.<br>
+  <b>Cyclops</b>: hold <b>F</b> = optic thrust. Hold-to-grab powers (Telekinesis, Rip &amp; Throw): hold on terrain or an enemy, release to throw.
 </div>
 <div id="powers"></div>
+<div id="toolchip"></div>
 <div id="banner"><div id="bT"></div><div id="bS"></div></div>
 <div id="bossbar"><div id="bossN">ULTRON PRIME</div><div class="bb"><div id="bossF"></div></div></div>
 <div id="menu" class="ov">
@@ -52,7 +56,7 @@
     <div class="caption">ISSUE #1 · FALLING-SAND SUPERHERO MAYHEM</div>
     <h1 class="logo">HEROES<br>SANDBOX</h1>
     <p class="blurb">Everything breaks. Every pixel falls. Pick a hero, pick a fight, and level the block.</p>
-    <div class="keys">A/D WALK · SPACE JUMP · DOUBLE-TAP TO FLY · SHIFT BOOST<br>CLICK CAST · 1-0 / Q E / WHEEL POWERS · ESC PAUSE · ENTER START</div>
+    <div class="keys">A/D WALK · SPACE JUMP · DOUBLE-TAP TO FLY · SHIFT BOOST<br>CLICK CAST · 1-0 - = / Q E / WHEEL POWERS · B SPAWN MENU (SANDBOX) · ESC PAUSE · ENTER START</div>
   </div>
   <div id="mright">
     <h3>CHOOSE YOUR STORY</h3><div id="modes" class="grid2"></div>
@@ -92,6 +96,10 @@
       <label class="chk"><input id="sink" type="checkbox"> HALFTONE + INK OUTLINES</label>
       <label class="chk"><input id="sbloom" type="checkbox"> BLOOM</label>
       <label class="chk"><input id="sfps" type="checkbox"> SHOW FPS</label>
+      <label>VOLUME <input id="svol" type="range" min="0" max="100"></label>
+      <label class="chk"><input id="ssound" type="checkbox"> SOUND EFFECTS</label>
+      <label class="chk"><input id="sfx" type="checkbox"> SCREEN FX (SHOCKWAVES, HEAT HAZE)</label>
+      <label class="chk"><input id="slight" type="checkbox"> DYNAMIC LIGHTING</label>
     </div>
     <button id="sback" class="cbtn yel">BACK</button>
   </div>
