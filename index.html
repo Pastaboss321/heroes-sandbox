@@ -748,7 +748,7 @@ const TODS={
   dusk:{top:[52,34,104],bot:[244,128,78],haze:[170,100,120],light:[1.02,.84,.76],sun:[255,150,90],win:.9,stars:.35,clouds:[255,150,120]},
   night:{top:[6,8,26],bot:[36,32,78],haze:[30,32,66],light:[.62,.68,.92],moon:true,win:1,stars:1,clouds:null},
 };
-let farBase=null, farSky=null;
+let farBase=null, farSky=null, farKeep=null; // farKeep: landmark pixels (the X-Mansion) that skip most of the background fade
 const fgL=new Uint8Array(768), bgL=new Uint8Array(768), rimL=new Uint8Array(768), inkL=new Uint8Array(768), htL=new Uint8Array(768);
 const lut=(L,c)=>((255<<24)|(L[512+((c>>16)&255)]<<16)|(L[256+((c>>8)&255)]<<8)|L[c&255])>>>0;
 function buildLUT(){
@@ -771,9 +771,10 @@ function applyTOD(){
     for(let x=0;x<FW;x++){const i=y*FW+x;let c=farBase[i];
       if(farSky[i]){if(T){c=sky;if(T.stars&&y<H*.4&&rnd()<.004*T.stars)c=rgb(230,230,255);}c=mix3(c,haze,dim*.18);}
       else{
-        if(T&&lumC(c)>140&&T.win<1){c=mix3(c,haze,1-T.win*.7);} // lights off in daylight
-        const l=lumC(c),k=.4;c=rgb((c&255)+(l-(c&255))*k,((c>>8)&255)+(l-((c>>8)&255))*k,((c>>16)&255)+(l-((c>>16)&255))*k);
-        c=mix3(c,haze,.22+dim*.42);
+        const keep=farKeep&&farKeep[i];
+        if(T&&lumC(c)>140&&T.win<1){c=keep?mix3(c,[64,74,96],(1-T.win*.7)*.8):mix3(c,haze,1-T.win*.7);} // lights off in daylight
+        const l=lumC(c),k=keep?.1:.4;c=rgb((c&255)+(l-(c&255))*k,((c>>8)&255)+(l-((c>>8)&255))*k,((c>>16)&255)+(l-((c>>16)&255))*k);
+        c=mix3(c,haze,keep?.04+dim*.12:.22+dim*.42);
       }
       far[i]=c;}
   }
@@ -795,7 +796,7 @@ function disc(cx,cy,r,m,p=1){for(let y=-r;y<=r;y++)for(let x=-r;x<=r;x++)if(x*x+
 function tint(x0,y0,x1,y1,r,g,b,v){for(let y=y0|0;y<y1;y++)for(let x=x0|0;x<x1;x++){if(x<0||x>=W||y<0||y>=H)continue;const n=(R()*2-1)*v;col[y*W+x]=rgb(cl(r+n),cl(g+n),cl(b+n));}}
 function bgRect(x0,y0,x1,y1,c){for(let y=Math.max(0,y0|0);y<Math.min(H,y1|0);y++)for(let x=Math.max(0,x0|0);x<Math.min(W,x1|0);x++)bg[y*W+x]=c;}
 function makeFar(top,bot,layer){
-  FW=VW+Math.ceil((W-VW)*PAR)+2; far=new Uint32Array(FW*H);
+  FW=VW+Math.ceil((W-VW)*PAR)+2; far=new Uint32Array(FW*H); farKeep=new Uint8Array(FW*H);
   for(let y=0;y<H;y++){const f=y/H;const c=rgb(top[0]+(bot[0]-top[0])*f,top[1]+(bot[1]-top[1])*f,top[2]+(bot[2]-top[2])*f);far.fill(c,y*FW,(y+1)*FW);}
   const grad=far.slice();
   layer&&layer();
@@ -1173,6 +1174,99 @@ function amb2099(){ // sky traffic and rain
   for(let k=0;k<3;k++)spawn(camX+R()*VW,camY-2,-.4,3.2+R(),rgb(120,140,200),90,0,0,0);
 }
 
+
+// ---- X-Mansion: the Xavier Institute's courtyard. The mansion itself towers in the backdrop.
+function genXMansion(){
+  clearAll();
+  const GY=356,s=R()*100,B=252; // B: lawn line of the mansion in far-layer rows (sits just above the courtyard on screen)
+  makeFar([38,50,104],[246,170,118],()=>{
+    const P=(x,y,c)=>{x|=0;y|=0;if(x<0||x>=FW||y<0||y>=H)return;far[y*FW+x]=c;farKeep[y*FW+x]=1;};
+    const Rf=(x0,y0,x1,y1,c,v=6,keep=true)=>{for(let y=y0|0;y<y1;y++)for(let x=x0|0;x<x1;x++){if(x<0||x>=FW||y<0||y>=H)continue;const n=(R()*2-1)*v;const cc=rgb(cl(c[0]+n),cl(c[1]+n),cl(c[2]+n));far[y*FW+x]=cc;if(keep)farKeep[y*FW+x]=1;}};
+    // distant tree lines and lawns either side of the mansion
+    for(let x=0;x<FW;x++){const hh=B-18-Math.abs(Math.sin(x*.07+s))*16-Math.sin(x*.023+s)*10|0;for(let y=hh;y<H;y++)far[y*FW+x]=rgb(34+(y-hh)/8,62+(y-hh)/10,52+(y-hh)/12);}
+    for(let x=0;x<FW;x++)for(let y=B;y<H;y++)far[y*FW+x]=rgb(62-(y-B)/7,98-(y-B)/6,56-(y-B)/8);
+    const cx=FW/2|0;
+    const stone=(x,base)=>[base[0]-(x-cx)*.05,base[1]-(x-cx)*.05,base[2]-(x-cx)*.04];
+    // wings
+    for(const [x0,x1] of [[cx-182,cx-130],[cx+130,cx+182]]){for(let x=x0;x<x1;x++)Rf(x,B-58,x+1,B,stone(x,[162,152,138]),5);
+      for(let y=B-72;y<B-58;y++){const ins=(y-(B-72))*.0;Rf(x0-2+ins,y,x1+2-ins,y+1,[58,62,82],5);} // wing roofs
+      for(let wx=x0+6;wx<x1-6;wx+=12)for(const wy of [B-50,B-28])win(wx,wy,6,11);}
+    // main block
+    for(let x=cx-130;x<cx+130;x++)Rf(x,B-92,x+1,B,stone(x,[180,170,154]),5);
+    for(let k=0;k<3;k++)Rf(cx-130,B-92+k*30,cx+130,B-90+k*30,[150,140,126],3); // string courses
+    // mansard roof with dormers and chimneys
+    for(let y=B-112;y<B-92;y++){const ins=(B-92-y)*.9;Rf(cx-132+ins,y,cx+132-ins,y+1,[56,60,82],5);}
+    for(let x=cx-120;x<=cx+110;x+=34){if(Math.abs(x-cx)<40)continue;for(let y=0;y<10;y++)Rf(x+y*.5,B-110+y,x+11-y*.5,B-109+y,[150,140,126],3);Rf(x+3,B-104,x+8,B-96,[250,206,128],8);}
+    for(const x of [cx-110,cx-70,cx+62,cx+102])Rf(x,B-126,x+7,B-108,[128,72,62],6);
+    // corner towers with conical spires
+    for(const tx of [cx-150,cx+122]){Rf(tx,B-118,tx+28,B,stone(tx,[172,162,146]),5);
+      for(let y=0;y<34;y++){const w=14*(1-y/34);Rf(tx+14-w-1,B-118-y,tx+14+w+1,B-117-y,[52,56,78],4);}
+      Rf(tx+13,B-158,tx+15,B-150,[200,190,150],3);
+      for(const wy of [B-104,B-78,B-50])win(tx+10,wy,7,12);}
+    // centre pavilion: pediment with the X emblem, portico, doors, steps
+    for(let y=0;y<34;y++){const w=48*(y/34);Rf(cx-w,B-126+y,cx+w,B-125+y,y<2?[60,64,86]:[190,180,164],4);}
+    for(let a=0;a<6.283;a+=.02)for(const r of [9,10,11])P(cx+Math.cos(a)*r,B-108+Math.sin(a)*r,rgb(206,40,40));
+    for(let k=-6;k<=6;k++){for(const o of [-1,0,1]){P(cx+k+o,B-108+k,rgb(24,22,28));P(cx+k+o,B-108-k,rgb(24,22,28));}}
+    Rf(cx-46,B-92,cx+46,B-86,[214,208,196],3);
+    for(const kx of [-40,-22,14,32])Rf(cx+kx,B-86,cx+kx+7,B-10,[234,230,220],4);
+    for(let y=B-40;y<B-10;y++){const a=y<B-34?Math.sqrt(36-(y-(B-34))**2):10;Rf(cx-a,y,cx+a,y+1,[78,48,32],5);}
+    for(let k=0;k<4;k++)Rf(cx-52-k*6,B-10+k*3,cx+52+k*6,B-7+k*3,[200,194,180],4);
+    for(const wy of [B-82,B-56])for(let wx=cx-122;wx<cx+122;wx+=16){if(Math.abs(wx+3-cx)<52)continue;win(wx,wy,7,13);}
+    for(let wx=cx-122;wx<cx+122;wx+=16){if(Math.abs(wx+3-cx)<56)continue;win(wx,B-30,7,13);}
+    // ivy on the lower walls
+    for(let k=0;k<9;k++){const ix=cx-180+R()*360|0,r=6+R()*8;for(let n=0;n<160;n++){const a=R()*6.283,d=Math.sqrt(R())*r,x=ix+Math.cos(a)*d|0,y=B-1-Math.abs(Math.sin(a))*d*2.2|0;if(farKeep[y*FW+x])P(x,y,rgb(34+R()*18,74+R()*26,38));}}
+    function win(x,y,w,h){Rf(x-1,y-1,x+w+1,y+h+1,[214,206,190],3);const lit=R()<.7;
+      for(let yy=0;yy<h;yy++)for(let xx=0;xx<w;xx++){if(yy<2&&(xx===0||xx===w-1))continue;const mull=xx===(w>>1)||yy===(h>>1)+1;P(x+xx,y+yy,mull?rgb(70,60,52):lit?rgb(250,206,128-yy*3):rgb(44,52,74));}}
+  });
+  const hm=[];
+  for(let x=0;x<W;x++){const out=x<380?(380-x)/380:x>1220?(x-1220)/380:0;hm[x]=GY-Math.round(out*out*28+Math.sin(x*.02+s)*3*out);}
+  for(let x=0;x<W;x++){
+    const h=hm[x],st=h+42+Math.sin(x*.05+s)*6|0;
+    for(let y=h;y<H;y++)setc(y*W+x,y<h+2?GRASS:y<st?DIRT:y>=H-4?OBSID:STONE);
+    for(let y=h+3;y<H;y++)bg[y*W+x]=rgb(34-(y-h)/14,28-(y-h)/16,24-(y-h)/18);
+  }
+  bgD.set(bg);
+  for(let y=0;y<H-8;y++)for(let x=0;x<W;x++){if(y>hm[x]+130&&noise2(x,y,s)>.4)setc(y*W+x,EMPTY);}
+  for(let x=0;x<W;x++)SURF[x]=hm[x]+30;
+  // courtyard paving
+  for(let x=380;x<1220;x++)for(let y=GY;y<GY+3;y++){setc(y*W+x,CONC);const j=(x%10===0)||y===GY+2;col[y*W+x]=j?rgb(150,140,122):rgb(196+R()*10,184+R()*10,160+R()*8);}
+  // the fountain, with a glowing X on its column
+  { const fx=800;fill(fx-32,GY-7,fx+32,GY,STONE);tint(fx-32,GY-7,fx+32,GY,200,196,186,6);fill(fx-28,GY-6,fx+28,GY-1,WATER);
+    fill(fx-3,GY-24,fx+3,GY-6,STONE);tint(fx-3,GY-24,fx+3,GY-6,210,206,196,5);fill(fx-11,GY-27,fx+11,GY-24,STONE);tint(fx-11,GY-27,fx+11,GY-24,200,196,186,5);fill(fx-9,GY-26,fx+9,GY-25,WATER);
+    for(let k=-3;k<=3;k++){for(const [x,y] of [[fx+k,GY-17+k],[fx+k,GY-17-k]]){const i=y*W+x;t[i]=NEON;col[i]=rgb(255,70,60);}} }
+  // trimmed hedges
+  for(const [a,b] of [[430,520],[560,650],[950,1040],[1080,1170]]){fill(a,GY-8,b,GY,LEAF);for(let x=a;x<b;x++)for(let y=GY-8;y<GY;y++){const i=y*W+x;if(t[i]===LEAF)col[i]=rgb(30+R()*20,96+R()*30,40+R()*14);}fill(a,GY-9,a+2,GY-8,EMPTY);fill(b-2,GY-9,b,GY-8,EMPTY);}
+  // lamp posts
+  for(const x of [410,700,900,1190]){fill(x,GY-20,x+1,GY,STEEL);tint(x,GY-20,x+1,GY,40,40,48,4);fill(x-1,GY-22,x+2,GY-20,NEON);tint(x-1,GY-22,x+2,GY-20,255,220,150,10);}
+  // stone balustrade posts at the courtyard ends
+  for(const x of [372,1214]){fill(x,GY-16,x+8,GY,STONE);tint(x,GY-16,x+8,GY,196,190,176,6);fill(x-1,GY-18,x+9,GY-16,STONE);tint(x-1,GY-18,x+9,GY-16,170,164,150,4);}
+  // gazebo
+  { const gx=200,gy=hm[gx];fill(gx-22,gy-2,gx+22,gy,WOOD);for(const px of [gx-20,gx-7,gx+6,gx+19])fill(px,gy-20,px+2,gy-2,WOOD);
+    for(let r=0;r<12;r++)fill(gx-26+r*2,gy-21-r,gx+26-r*2,gy-20-r,WOOD);tint(gx-26,gy-33,gx+26,gy-20,236,232,224,8); }
+  // basketball court
+  { const bx=1290;fill(bx,hm[bx]-1,bx+170,hm[bx]+1,CONC);tint(bx,hm[bx]-1,bx+170,hm[bx]+1,176,96,60,8);for(let x=bx;x<bx+170;x+=42)tint(x,hm[bx]-1,x+1,hm[bx],240,240,240,0);
+    const hx=bx+150,hy=hm[hx]-1;fill(hx,hy-34,hx+2,hy,STEEL);fill(hx-6,hy-36,hx+2,hy-26,GLASS);fill(hx-11,hy-28,hx-6,hy-27,STEEL);tint(hx-11,hy-28,hx-6,hy-27,230,90,40,0); }
+  // trees on the lawns, wrought-iron fence and gate pillars at the estate edges
+  for(let x=24;x<W-24;){if(x<360||x>1240){if(!(x>176&&x<228)&&!(x>1280&&x<1470)){const r=R();r<.35?pine(x,hm[x]):r<.8?tree(x,hm[x]):birch(x,hm[x]);}}x+=14+R()*18|0;}
+  for(const [a,b] of [[0,40],[W-40,W]]){for(let x=a;x<b;x+=3)fill(x,hm[x]-16,x+1,hm[x],STEEL);fill(a,hm[a]-14,b,hm[a]-13,STEEL);fill(a,hm[a]-5,b,hm[a]-4,STEEL);tint(a,hm[a]-18,b,hm[a],30,30,36,4);}
+  // beneath the courtyard: the Blackbird hangar
+  { const x0=560,x1=1040,y0=GY+60,y1=GY+112;fill(x0-3,y0-3,x1+3,y1+3,STEEL);tint(x0-3,y0-3,x1+3,y1+3,70,76,88,6);fill(x0,y0,x1,y1,EMPTY);
+    for(let y=y0;y<y1;y++)for(let x=x0;x<x1;x++)bg[y*W+x]=((x>>3)+(y>>3))%2&&y>y1-4?rgb(200,170,40):(y%16===0?rgb(70,84,108):rgb(48,58,78));
+    for(let x=x0+20;x<x1;x+=60)bgRect(x,y0+2,x+10,y0+4,rgb(230,240,255));
+    blackbird(700,y1); }
+  SPAWNX=600;
+}
+function blackbird(x,fy){ // the X-Men's jet, parked on its gear
+  const cy=fy-12;
+  for(let k=0;k<160;k++){const th=k<24?k*.22:k<120?5:Math.max(1,5-(k-120)*.1);for(let y=cy-th|0;y<=cy+th;y++)sxy(x+k,y,STEEL);}
+  for(let k=60;k<118;k++){const w=(k-60)*.12;fill(x+k,cy+2,x+k+1,cy+3+w,STEEL);}
+  for(let k=126;k<158;k++){const h=(k-126)*.55;fill(x+k,cy-5-h,x+k+1,cy-4,STEEL);}
+  tint(x,cy-24,x+160,cy+12,30,32,40,6);
+  fill(x+14,cy-5,x+30,cy-3,GLASS);tint(x+14,cy-5,x+30,cy-3,120,170,210,10);
+  for(const k of [34,96,108])fill(x+k,cy+5,x+k+1,fy,STEEL);
+  tint(x+150,cy-14,x+156,cy-11,220,40,40,0);
+}
+
 // ================= particles =================
 const MP=40000, px=new Float32Array(MP),py=new Float32Array(MP),pvx=new Float32Array(MP),pvy=new Float32Array(MP),pc=new Uint32Array(MP),pl=new Int16Array(MP),pm=new Uint8Array(MP),pg=new Uint8Array(MP);
 let np=0;
@@ -1331,9 +1425,9 @@ const ANIM={
   storm:{leg:14,mid:5,arm:'K',tip:'s',sh:[9,8],hide:rect(9,9,9,11),blink:'e',lid:'s',thick:1,cape:'Cc'},
 };
 const PP=8; // padding around the posed sprite for limbs that reach out
-const ARM_UP=new Set(['Storm Call','Lightning Call','Thunderbolt','Tornado','Hailstorm','Phoenix Force','Ice Wall','Ball Lightning','Conductor Strike','Flash Flood','Eye of the Storm','Bifrost','God Blast']);
-const ARM_BOTH=new Set(['Mystic Shield','Thunderclap','Gale Force','Psychic Wave','Frost Nova','Mind Shield','Levitate Crowd','Debris Storm','Gamma Roar','Energy Shield','Avalanche']);
-const ARM_VISOR=new Set(['Optic Blast','Concussive Burst','Ricochet Shot','Full Power','Optic Sweep','Optic Barrage','Leg Sweep','Visor Overload']);
+const ARM_UP=new Set(['Ice Golem','Telekinetic Rip','Blizzard','Phoenix Wings','Storm Call','Lightning Call','Thunderbolt','Tornado','Hailstorm','Phoenix Force','Ice Wall','Ball Lightning','Conductor Strike','Flash Flood','Eye of the Storm','Bifrost','God Blast']);
+const ARM_BOTH=new Set(['Adamantium Skeleton','Mystic Shield','Thunderclap','Gale Force','Psychic Wave','Frost Nova','Mind Shield','Levitate Crowd','Debris Storm','Gamma Roar','Energy Shield','Avalanche']);
+const ARM_VISOR=new Set(['Optic Cage','Uncontrolled Blast','Optic Blast','Concussive Burst','Ricochet Shot','Full Power','Optic Sweep','Optic Barrage','Leg Sweep','Visor Overload']);
 function armMode(p){
   if(p.throwF>0)return'throw';
   if(held&&held.overhead)return'hold';
@@ -1432,6 +1526,7 @@ function bore(p,sp){
 function hurt(d){
   const p=pl_;if(d<=0)return;
   if(shieldOn){for(let k=0;k<4;k++)spawn(p.x+(R()-.5)*30,p.y-8+(R()-.5)*30,(R()-.5)*2,(R()-.5)*2,glowRGB(),10,0,1,0,1);return;}
+  if(p.metal>0){for(let k=0;k<5;k++)spawn(p.x+(R()-.5)*8,p.y-R()*PH,(R()-.5)*3,-R()*2,rgb(255,240,200),8,0,1,1);return;}
   if(p.rage>0||p.eye>0)d*=.5;p.hp-=d*CH.armor;p.hurtF=8;hurtV=Math.min(1,hurtV+d*CH.armor/30);shake=Math.max(shake,2);
 }
 function updPlayer(){
@@ -1442,6 +1537,9 @@ function updPlayer(){
   if(pressed.KeyF)toggleFly(!p.fly);
   if(CH.id==='cyclops')opticThrust(p,keys.KeyF,ax);
   if(p.boostCd>0)p.boostCd--; if(p.chargeCd>0)p.chargeCd--; if(p.hurtF>0)p.hurtF--;
+  if(p.metal>0)p.metal--; if(p.wings>0)p.wings--;
+  if(p.metal>0&&!p.ground&&p.vy>3)carve(p.x,p.y+2,4,0,p.vy,H); // adamantium cannonball through the floor
+  if(p.wings>0){damageEnemies(p.x,p.y-PH/2,10,3,0,0,true);for(let k=0;k<4;k++){const side=k&1?1:-1,u=R(),wx=p.x-p.face*2+side*(4+u*16),wy=p.y-PH*.7-Math.sin(u*3)*6+u*4;spawn(wx,wy,side*.4-p.vx*.2,-.3,R()<.5?rgb(255,170,50):rgb(255,90,30),12,R()<.02?FIRE:0,1,0,1);}}
   if(p.thrustF>0)p.thrustF--; if(senseT>0)senseT--; if(p.spin>0)p.spin--; if(p.eye>0)p.eye--;
   if(p.castF>0)p.castF--; if(p.recoilF>0)p.recoilF--; if(p.landF>0)p.landF--; if(p.punchF>0)p.punchF--; if(p.throwF>0)p.throwF--;
   if(CH.id==='wolverine'&&p.hp<CH.hp)p.hp=Math.min(CH.hp,p.hp+.12); // healing factor never stops
@@ -1463,7 +1561,7 @@ function updPlayer(){
   if(p.fly){
     // free flight: velocity eases toward input direction; light easing on release = glide → hover
     let dx=ax,dy=ay;const mag=Math.hypot(dx,dy);if(mag>0){dx/=mag;dy/=mag;}
-    const boosting=p.boost>0, spd=FS*(boosting?BOOST:1);
+    const boosting=p.boost>0, spd=FS*(boosting?BOOST:1)*(p.wings>0?1.7:1);
     if(boosting&&mag===0){const s=Math.hypot(p.vx,p.vy)||1;dx=p.vx/s;dy=p.vy/s;}
     const k=boosting?.25:mag>0?.2:.06;
     p.vx+=(dx*spd-p.vx)*k; p.vy+=(dy*spd-p.vy)*k;
@@ -1523,6 +1621,7 @@ function updPlayer(){
   }
   if(p.ground&&!wasGround&&!p.fly){
     p.landF=fallV>3?8:4;
+    if(p.metal>0&&fallV>4)quake(p.x,p.y,{col:[200,206,216],r:24});
     if(p.slam){p.slam=false;quake(p.x,p.y,p.slamOpt||{});p.leap=false;}
     else if(p.leap){p.leap=false;quake(p.x,p.y,{col:CH.glow,r:30});}
     else if(fallV>(CH.id==='hulk'?4.2:5.8))superLand(p,fallV);
@@ -1905,6 +2004,60 @@ STORM_POWERS.splice(0,STORM_POWERS.length,
      if(frame%14===0){const e=nearestEnemy(cx,cy,100);if(e){zap(cx,cy,e.x,e.y,[245,248,255],[150,190,255]);hitEnemy(e,14,0,0);flash(e.x,e.y,14,[150,190,255],3);}}
      return true;});}},
 );
+
+// ---- X-Men powers 9 and 10
+const MPAL={};function metalPal(){if(MPAL[CH.id])return MPAL[CH.id];const o={};for(const k in SPC){const c=SPC[k],l=lumC(c);o[k]=rgb(cl(l*.8+60),cl(l*.82+64),cl(l*.9+74));}o.e=o['*']=rgb(255,255,255);return MPAL[CH.id]=o;}
+WOLV_POWERS.push(
+ {n:'Fastball Special',fn:(a,p,use)=>{if(!use(28))return;cd=60;const dx=a.dx,dy=a.dy;let k=0;fxWord(p.x,p.y-PH-10,'FASTBALL SPECIAL!',1.4,'#ffc93c',true);p.fly=false;shake+=6;
+   ACT.push(()=>{p.vx=dx*8;p.vy=dy*8;const hx=p.x+dx*8,hy=p.y-PH/2+dy*8;carve(hx,hy,7,dx*6,dy*6);damageEnemies(hx,hy,12,30,dx*6,dy*6);if(k%2===0){afters.push({x:p.x,y:p.y,ang:Math.atan2(dx,-dy),face:p.face,life:12});slashFx(hx,hy,Math.atan2(dy,dx));}
+     if(++k>=26){explode(hx|0,hy|0,12,{self:true,col:[255,220,80],word:'SNIKT!!'});p.vx*=.3;p.vy=Math.min(p.vy,0);return false;}return true;});}},
+ {n:'Adamantium Skeleton',fn:(a,p,use)=>{if(p.metal>0||!use(35))return;p.metal=300;cd=40;fxWord(p.x,p.y-PH-10,'KLANNNG!',1.4,'#d8e4ff',true);flash(p.x,p.y-PH/2,40,[220,230,255],8);rings.push({x:p.x,y:p.y-PH/2,r:4,vr:3,life:12,c:[220,230,255]});}},
+);
+CYC_POWERS.push(
+ {n:'Optic Cage',fn:(a,p,use)=>{if(!use(30))return;cd=60;const cx=mouse.wx,cy=mouse.wy,r=22;let k=0;fxWord(cx,cy-r-8,'OPTIC CAGE!',1.1,'#ff6b5c',true);
+   ACT.push(()=>{const c=[[cx-r,cy-r],[cx+r,cy-r],[cx+r,cy+r],[cx-r,cy+r]];for(let q2=0;q2<4;q2++){const [x0,y0]=c[q2],[x1,y1]=c[(q2+1)%4];beams.push({x0,y0,x1,y1,life:1,w:1,c:[255,215,205],g:[255,40,30]});}
+     for(const e of enemies)if(Math.abs(e.x-cx)<r+e.def.w/2&&Math.abs(e.y-cy)<r+e.def.h/2){hitEnemy(e,.9,0,0);e.vx*=.4;e.vy*=.4;if(Math.abs(Math.abs(e.x-cx)-r)<e.def.w/2+1||Math.abs(Math.abs(e.y-cy)-r)<e.def.h/2+1)hitEnemy(e,2,(cx-e.x)*.05,(cy-e.y)*.05);}
+     return++k<120;});}},
+ {n:'Uncontrolled Blast',fn:(a,p,use)=>{if(!use(55))return;cd=120;let k=0;fxWord(p.x,p.y-PH-12,'VISOR OFF!',1.6,'#ff6b5c',true);hitstop=Math.max(hitstop,4);fxImpact(p.x,p.y-PH/2,4);
+   ACT.push(()=>{const o=eyes(),b=aimFrom(o),base=Math.atan2(b.dy,b.dx);for(let q2=-3;q2<=3;q2++){const an=base+q2*.09+(R()-.5)*.04;beamCore({h:o,dx:Math.cos(an),dy:Math.sin(an)},{pow:300,rad:2,len:520,w:3,c:[255,225,215],g:[255,30,20],spark:()=>rgb(255,60+R()*150,40),dmg:6,noAsh:true});}
+     pl_.vx-=b.dx*.35;pl_.vy-=b.dy*.35;shake=Math.max(shake,14);return++k<40;});}},
+);
+ICE_POWERS.push(
+ {n:'Ice Golem',fn:(a,p,use)=>{if(!use(45))return;cd=90;let gx=mouse.wx|0,gy=mouse.wy|0;while(gy<H-1&&(t[gy*W+gx]===0||KIND[t[gy*W+gx]]!==S))gy++;
+   const cells=[],body=["..IIII..",".IeIIeI.","..IIII..","IIIIIIII","IIIIIIII","II.II.II","II.II.II","II.II.II","..II.II.","..II.II.","..II.II.",".III.III"];
+   for(let y=0;y<body.length;y++)for(let x=0;x<8;x++){const ch=body[y][x];if(ch==='.')continue;for(let a2=0;a2<2;a2++)for(let b2=0;b2<2;b2++){const X=gx-8+x*2+a2,Y=gy-body.length*2+y*2+b2;if(X<0||X>=W||Y<0||Y>=H)continue;const i=Y*W+X;if(t[i]&&KIND[t[i]]===S)continue;
+     setc(i,ch==='e'?NEON:ICE);if(ch==='e')col[i]=rgb(120,230,255);cells.push(i);}}
+   const head=(gy-body.length*2+3)*W+gx;let k=0;fxWord(gx,gy-34,'KRRRAKK!',1.2,'#bfe3ff',true);
+   ACT.push(()=>{k++;if(t[head]!==ICE&&t[head]!==NEON&&t[head-1]!==ICE)return false;
+     if(k%28===0){const e=nearestEnemy(gx,gy-20,220);if(e){const dx=e.x-gx,dy=e.y-(gy-22),d=Math.hypot(dx,dy)||1;for(let q2=0;q2<2;q2++)shots.push({x:gx,y:gy-24,vx:dx/d*6+(R()-.5),vy:dy/d*6+(R()-.5),type:'shard',life:90,col:[200,240,255],grav:.03,
+       onHit:sh=>{for(let q3=0;q3<3;q3++)iceAt(sh.x+(R()-.5)*3,sh.y+(R()-.5)*3);damageEnemies(sh.x,sh.y,6,14,sh.vx*.3,sh.vy*.3);for(const e2 of enemies)if(Math.hypot(e2.x-sh.x,e2.y-sh.y)<7)e2.frozen=Math.max(e2.frozen||0,40);}});}}
+     if(k>=720){for(const i of cells)if(t[i]===ICE||t[i]===NEON){if(R()<.6)spawn(i%W,(i/W)|0,(R()-.5)*3,-R()*2,rgb(220,245,255),40,0,1,1);setc(i,EMPTY);}fxWord(gx,gy-30,'SHATTER',1,'#bfe3ff',true);return false;}return true;});}},
+ {n:'Ice Bridge',fn:(a,p,use)=>{if(!use(22))return;cd=30;const x0=p.x,y0=p.y+1,x1=mouse.wx,y1=mouse.wy,n=Math.max(1,Math.hypot(x1-x0,y1-y0)|0);
+   for(let k=0;k<=n;k++){const X=x0+(x1-x0)*k/n|0,Y=y0+(y1-y0)*k/n|0;for(let d=0;d<3;d++){const i=(Y+d)*W+X;if(i<0||i>=N||(t[i]&&KIND[t[i]]!==G&&KIND[t[i]]!==F))continue;setc(i,ICE);pin[i]=3;slide.push([i,frame+480+(k*.3|0)+(R()*40|0)]);}}
+   fxWord((x0+x1)/2,(y0+y1)/2-10,'FSSHHK!',1,'#bfe3ff',true);for(let k=0;k<40;k++){const f=R();spawn(x0+(x1-x0)*f,y0+(y1-y0)*f,(R()-.5),-R(),rgb(220,245,255),20,0,1,0,1);}}},
+);
+JEAN_POWERS.push(
+ {n:'Phoenix Wings',fn:(a,p,use)=>{if(p.wings>0||!use(40))return;p.wings=360;cd=40;if(!p.fly)toggleFly(true);fxWord(p.x,p.y-PH-12,'SKREEEE!',1.4,'#ffb340',true);fxBurst(p.x,p.y-PH/2,50,'#ffb340');flash(p.x,p.y-PH/2,60,[255,150,50],10);}},
+ {n:'Telekinetic Rip',fn:(a,p,use)=>{if(!use(40))return;cd=70;const cx=mouse.wx|0,cy=mouse.wy|0,r=20;let n=0;
+   for(let y=-r;y<=r;y++)for(let x=-r;x<=r;x++){if(x*x+y*y>r*r*(.8+R()*.2))continue;const X=cx+x,Y=cy+y;if(X<0||X>=W||Y<0||Y>=H-40)continue;const i=Y*W+X,m=t[i];if(m&&(KIND[m]===S||KIND[m]===P)){q[n++]=i;markDirty(i);}}
+   if(n<20)return;const b=makeBody(q,n,true);if(!b)return;b.tx=b.x;b.ty=b.y-60;let k=0;fxWord(cx,cy-30,'RRRMMMM...',1.1,'#ff9ad8',true);shake+=6;
+   ACT.push(()=>{k++;if(!bodies.includes(b))return false;for(let q2=0;q2<6;q2++){const j=R()*b.ex.length|0;spawn(b.x+b.ex[j],b.y+b.ey[j],(R()-.5)*.6,(R()-.5)*.6,rgb(255,120,210),10,0,1,0,1);}
+     if(k<35){b.tx=cx;b.ty=cy-60;return true;}
+     b.held=false;b.vx=0;b.vy=12;b.va=(R()-.5)*.05;b.thrown=true;b.safeP=frame+30;fxWord(cx,cy,'SLAM!',1.5,'#ff9ad8',true);return false;});}},
+);
+STORM_POWERS.push(
+ {n:'Lightning Rider',fn:(a,p,use)=>{if(!use(30))return;cd=40;const x0=p.x,y0=p.y;let lx=x0,ly=y0;const dx=mouse.wx-x0,dy=mouse.wy-y0,d=Math.max(1,Math.hypot(dx,dy));
+   for(let k=1;k<=d;k++){const x=x0+dx*k/d,y=y0+dy*k/d;if(boxHit(x,y))break;lx=x;ly=y;}
+   for(let k=0;k<3;k++)zap(x0,y0-PH/2,lx,ly-PH/2,[245,248,255],[150,190,255]);damageLine(x0,y0-PH/2,lx,ly-PH/2,10,40);
+   for(let k=0;k<12;k++){const f=R(),X=x0+(lx-x0)*f|0,Y=y0-PH/2+(ly-y0)*f|0;if(X>=0&&X<W&&Y>=0&&Y<H&&FLAM[t[Y*W+X]]>0)ignite(Y*W+X);}
+   p.x=lx;p.y=ly;p.vx=dx/d*3;p.vy=dy/d*3;if(!p.fly&&CH.fly)toggleFly(true);flash(lx,ly-PH/2,40,[150,190,255],8);fxWord(lx,ly-PH-6,'KRAKOOOM!',1.3,'#d8e4ff',true);shake+=8;}},
+ {n:'Blizzard',fn:(a,p,use)=>{if(!use(40))return;cd=70;const cx=mouse.wx,cy=mouse.wy,r=75,dir=p.face;let k=0;fxWord(cx,cy-40,'WHHOOOOO!',1.3,'#d8e4ff',true);
+   ACT.push(()=>{for(let q2=0;q2<14;q2++)spawn(cx-dir*r+(R()-.5)*30,cy+(R()-.5)*r*1.6,dir*(3+R()*3),(R()-.5)*.8,R()<.7?rgb(240,246,255):rgb(200,215,235),40,R()<.03?ICE:0,0,0);
+     for(let q2=0;q2<120;q2++){const X=cx+(R()-.5)*r*2|0,Y=cy+(R()-.5)*r*2|0;if(X<0||X>=W||Y<0||Y>=H)continue;const i=Y*W+X,m=t[i];if(m===WATER&&R()<.3)setc(i,ICE);else if(KIND[m]===F)setc(i,EMPTY);}
+     for(const e of enemies)if(Math.abs(e.x-cx)<r&&Math.abs(e.y-cy)<r){e.frozen=Math.max(e.frozen||0,15);e.vx+=dir*.2;hitEnemy(e,.4,0,0);}
+     for(let n=0;n<np;n++)if(Math.abs(px[n]-cx)<r&&Math.abs(py[n]-cy)<r)pvx[n]+=dir*.25;
+     return++k<300;});}},
+);
 const CHARS=[
  {id:'doom',name:'Doom',spr:SPR_DOOM,pal:PAL_DOOM,pw:7,ph:19,fly:true,fs:2.9,boost:2.1,run:1.8,jump:4.3,hp:300,armor:1,glow:[80,255,130],cape:null,thrust:()=>R()<.6?gcol():rgb(255,210,120),powers:DOOM_POWERS},
  {id:'hulk',name:'Hulk',spr:SPR_HULK,pal:PAL_HULK,pw:9,ph:23,fly:false,fs:2.6,boost:1,run:2.3,jump:6.2,hp:500,armor:.45,glow:GAMMA,cape:null,thrust:()=>pickC(GAMMA),powers:HULK_POWERS},
@@ -2257,18 +2410,18 @@ function pdist(e){return Math.hypot(pl_.x-e.x,pl_.y-PH/2-e.y);}
 function seek(e,x,y,sp,acc=.1){const dx=x-e.x,dy=y-e.y,d=Math.hypot(dx,dy)||1;e.vx+=(dx/d*sp-e.vx)*acc;e.vy+=(dy/d*sp-e.vy)*acc;}
 function los(e,x,y){const dx=x-e.x,dy=y-e.y,d=Math.hypot(dx,dy)||1;for(let s=e.def.w/2+1;s<d;s+=2){const X=e.x+dx/d*s|0,Y=e.y+dy/d*s|0;if(X<0||X>=W||Y<0||Y>=H)return false;const k=KIND[t[Y*W+X]];if(k===S||k===P)return false;}return true;}
 function enemyShoot(e,o={}){
-  const p=player(),lead=o.lead||0,tx=p.x+pl_.vx*lead,ty=p.y+pl_.vy*lead,dx=tx-e.x,dy=ty-e.y,d=Math.hypot(dx,dy)||1,sp=o.speed||3.5,spr=o.spread||.06;
-  const a=Math.atan2(dy,dx)+(R()-.5)*spr*2;
-  shots.push({x:e.x+Math.cos(a)*(e.def.w/2+2),y:e.y+Math.sin(a)*(e.def.h/2+2),vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,type:'eshot',owner:'enemy',life:o.life||200,dmg:o.dmg||7,col:o.col||[255,80,60],boom:o.boom||3,fire:o.fire||0});
+  const ex=e.x+(o.ox||0),ey=e.y+(o.oy||0),p=player(),lead=o.lead||0,tx=p.x+pl_.vx*lead,ty=p.y+pl_.vy*lead,dx=tx-ex,dy=ty-ey,d=Math.hypot(dx,dy)||1,sp=o.speed||3.5,spr=o.spread||.06;
+  const a=Math.atan2(dy,dx)+(R()-.5)*spr*2,off=o.ox!==undefined||o.oy!==undefined?3:null;
+  shots.push({x:off?ex+Math.cos(a)*3:e.x+Math.cos(a)*(e.def.w/2+2),y:off?ey+Math.sin(a)*3:e.y+Math.sin(a)*(e.def.h/2+2),vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,type:'eshot',owner:'enemy',life:o.life||200,dmg:o.dmg||7,col:o.col||[255,80,60],boom:o.boom||3,fire:o.fire||0});
   flash(e.x,e.y,8,o.col||[255,80,60],3);
 }
 function enemyBeam(e,o={}){
-  const p=player(),dx=p.x-e.x,dy=p.y-e.y,a=Math.atan2(dy,dx)+(R()-.5)*(o.spread||.08),c=o.col||[255,60,50];
-  let x=e.x,y=e.y,hit=false;
+  const ox=e.x+(o.ox||0),oy=e.y+(o.oy||0),p=player(),dx=p.x-ox,dy=p.y-oy,a=o.ang??Math.atan2(dy,dx)+(R()-.5)*(o.spread||.08),c=o.col||[255,60,50];
+  let x=ox,y=oy,hit=false;
   for(let s=0;s<(o.len||320);s++){x+=Math.cos(a);y+=Math.sin(a);const X=x|0,Y=y|0;if(X<0||X>=W||Y<0||Y>=H)break;
     if(Math.abs(x-pl_.x)<=PW/2+1&&y>=pl_.y-PH&&y<=pl_.y){hurt(o.dmg||10);hit=true;break;}
-    const m=t[Y*W+X];if(m&&KIND[m]!==G&&KIND[m]!==F){explode(X,Y,o.boom||3,{enemy:true,self:true,col:c,dmg:0});break;}}
-  beams.push({x0:e.x,y0:e.y,x1:x,y1:y,life:5,w:1,c:[255,200,190],g:c});flash(x,y,10,c,3);
+    const m=t[Y*W+X];if(m&&KIND[m]!==G&&KIND[m]!==F){explode(X,Y,o.boom||3,{enemy:true,self:true,col:c,dmg:0,quiet:o.quiet});break;}}
+  beams.push({x0:ox,y0:oy,x1:x,y1:y,life:5,w:o.w||1,c:[255,200,190],g:c});flash(x,y,10,c,3);
   return hit;
 }
 function enemyAt(x,y,pad){for(const e of enemies){if(Math.abs(x-e.x)<=e.def.w/2+pad&&Math.abs(y-e.y)<=e.def.h/2+pad)return e;}return null;}
@@ -2313,21 +2466,21 @@ function killEnemy(e){
   const d=e.def;if(!e.mem.noScore){kills++;score+=d.score;}
   explode(e.x,e.y,d.boom,{fire:.25,self:true,col:[255,140,80]});
   // scrap: the sprite's own pixels fly off and land as debris
-  const sp=d.sprite,sw=sp[0].length,sh=sp.length;
+  const sp=d.sprite,sw=sp[0].length,sh=sp.length,S=d.scale||1;
   for(let y=0;y<sh;y++)for(let x=0;x<sw;x++){const ch=sp[y][x];if(ch==='.')continue;const c=d.pal[ch];if(c===undefined)continue;
-    spawn(e.x-sw/2+x,e.y-sh/2+y,(x-sw/2)*.35+(R()-.5)*2+e.vx*.5,(y-sh/2)*.3-1.5-R()*2,c,120,R()<.5?RUBBLE:0,d.glow.includes(ch)?1:0);}
+    if(sw*sh>300&&R()<.4)continue;spawn(e.x+(x-sw/2)*S,e.y+(y-sh/2)*S,(x-sw/2)*.35+(R()-.5)*2+e.vx*.5,(y-sh/2)*.3-1.5-R()*2,c,120,R()<.5?RUBBLE:0,d.glow.includes(ch)?1:0);}
   if(d.onDeath)d.onDeath(e);
   fxWord(e.x,e.y-8,['SKRANCH!','KZZT!','KRAK!','SCRAP!'][R()*4|0],d.boom>=10?1.4:.75,'#f3e9d2',d.boom>=10);
   if(MODE&&MODE.onKill)MODE.onKill(e,MS);
 }
-function spawnPoint(d){
+function spawnPoint(d){ // giants (w>16) may spawn overlapping terrain: they smash their own way out
   if(!d)return null;
   for(let tries=0;tries<12;tries++){
     const side=R()<.5?-1:1;let x=pl_.x+side*(VW/2+10+R()*60);
     if(x<10||x>W-10)x=pl_.x-side*(VW/2+10+R()*60);
     x=Math.max(10,Math.min(W-10,x));
     if(d.fly){const y=Math.max(10,camY+10+R()*90);if(!eHit({def:d},x,y))return [x,y];}
-    else{let y=0;while(y<H-1&&!solidAt(x,y))y++;const sy=y-d.h/2-1;if(sy>5&&!eHit({def:d},x,sy)&&t[(y)*W+(x|0)]!==WATER)return [x,sy];}
+    else{let y=0;while(y<H-1&&!solidAt(x,y))y++;const sy=y-d.h/2-1;if(sy>5&&(d.w>16||!eHit({def:d},x,sy))&&t[(y)*W+(x|0)]!==WATER)return [x,sy];}
   }
   return null;
 }
@@ -2409,6 +2562,43 @@ defineEnemy('ultron_prime',{hp:1400,w:15,h:13,fly:true,score:0,boom:16,glow:'*c'
     if(frame%2===0)spawn(e.x+(R()-.5)*10,e.y+7,(R()-.5)*.6,1.2,rgb(255,120,80),10,0,1,0);
   }});
 
+// ---- Sentinels: mutant-hunting giants (X-Mansion siege)
+const SENT_SPR=["......pPPPPPPp......", ".....pPPPPPPPPp.....", "....pPPPPPPPPPPp....", "....pPPFFFFFFPPp....", "....pFFFFFFFFFFp....", "....pF**FFFF**Fp....", "....pFFFFffFFFFp....", "....pFfKKKKKKfFp....", ".....pFFFFFFFFp.....", "......pppKKppp......", "..pPPPPPPKKPPPPPPp..", ".pPPPPPPPPPPPPPPPPp.", "pPPPMMPPPMMPPPMMPPPp", "pPPMMMMPPMMPPMMMMPPp", "pPPPMMPPMMMMPPMMPPPp", "pmmpPPPMMMMMMPPPpmmp", "MMm.pPPMooooMPPp.mMM", "MMm.pPPMooooMPPp.mMM", "MMm.pPPPMMMMPPPp.mMM", "mMm.ppPPPPPPPPpp.mMm", "MMm..pPPPPPPPPp..mMM", "KKK..pPPPPPPPPp..KKK", "MMm..ppPPPPPPpp..mMM", "MMm..KKKKKKKKKK..mMM", "MMm..pPPPPPPPPp..mMM", "mMm..pPPPPPPPPp..mMm", "HHH..pPPPppPPPp..HHH", "HHH...pPPppPPp...HHH", "hHh...pPPppPPp...hHh", ".....pPPp..pPPp.....", ".....pPPp..pPPp.....", ".....MMMm..mMMM.....", ".....MmMm..mMmM.....", ".....pPPp..pPPp.....", ".....pPPp..pPPp.....", ".....pPPp..pPPp.....", ".....pPPp..pPPp.....", "....pPPPp..pPPPp....", "....pPPPp..pPPPp....", "....mMMMm..mMMMm....", "...pPPPPp..pPPPPp...", "..pPPPPPp..pPPPPPp..", "..pPPPPPP..PPPPPPp..", "..ppppppp..ppppppp.."], SCOUT_SPR=["..pPPPPp..", ".pPFFFFPp.", ".pF*FF*Fp.", ".pFFKKFFp.", "..ppKKpp..", "pPPPMMPPPp", "MmPMooMPmM", "Mm.PPPP.mM", "Mm.PPPP.mM", "H..KKKK..H", "...pPPp...", "...pPPp...", "..pP..Pp..", "..MM..MM..", "..pP..Pp..", ".ppP..Ppp.", ".**....**."];
+// giants smash a path through anything above their feet
+function smashAhead(e,reach){const d=e.def,hw=d.w/2,hh=d.h/2;
+  for(let y=e.y-hh|0;y<=e.y+hh-1;y++)for(let k=1;k<=reach;k++){const x=e.x+e.face*(hw+k)|0;if(x<0||x>=W||y<0||y>=H-40)continue;const i=y*W+x,m=t[i];
+    if(m&&KIND[m]!==G&&KIND[m]!==F){if(np<MP-300&&R()<.5)spawn(x,y,e.face*(1+R()*2),-R()*2,col[i],70,KIND[m]===S?RUBBLE:KIND[m]===L?m:0,0);setc(i,EMPTY);}}
+  bgHit(e.x+e.face*(hw+reach/2),e.y,hh*.6|0);}
+function sentinelThink(e){
+  const d=e.def,S=d.scale||1,p=player(),dx=p.x-e.x,dist=Math.abs(dx);e.face=dx>0?1:-1;
+  if(dist>70*S)e.vx+=(e.face*d.spd-e.vx)*.1;else e.vx*=.85;
+  if(e.t%3===0)smashAhead(e,3*S);
+  if(e.ground&&Math.abs(e.vx)>.12&&e.t%(S>1?44:28)===0){ // footfall
+    shake=Math.max(shake,2.5*S);for(let k=0;k<10*S;k++)spawn(e.x+(R()-.5)*d.w,e.y+d.h/2,(R()-.5)*3,-R()*1.5,rgb(150,140,125),24,0,0,1);
+    if(pl_.ground&&Math.abs(pl_.x-e.x)<40*S&&Math.abs(pl_.y-(e.y+d.h/2))<12){hurt(5*S);pl_.vy=-3;}
+    if(S>1)fxWord(e.x,e.y+d.h/2-6,'THOOM',1,'#f3e9d2',true);}
+  const head={ox:e.face*1*S,oy:-17*S},hand={ox:e.face*8.5*S,oy:5*S};
+  if(e.cd===0&&dist<380&&!e.mem.charge&&!e.mem.sweep){e.mem.charge=40;e.cd=(S>1?140:170)+R()*60|0;}
+  if(e.mem.charge>0){e.mem.charge--;for(const sx of [-3,3])spawn(e.x+head.ox+sx*S,e.y+head.oy,(R()-.5)*.6,(R()-.5)*.6,rgb(255,220,90),8,0,1,0,1);flash(e.x+head.ox,e.y+head.oy,10*S,[255,210,80],2);
+    if(e.mem.charge===0){if(S>1){e.mem.sweep=36;e.mem.base=Math.atan2(p.y-(e.y+head.oy),p.x-(e.x+head.ox));fxWord(e.x,e.y+head.oy-12,'TARGET ACQUIRED',1,'#ff9ad8',true);}
+      else{enemyBeam(e,{...head,dmg:16,col:[255,210,80],len:420,boom:7,spread:.04,w:2});fxWord(e.x+head.ox,e.y+head.oy-8,'ZZAAAK!',1,'#ffc93c',true);}}}
+  if(e.mem.sweep>0){e.mem.sweep--;if(e.mem.sweep%2===0)enemyBeam(e,{...head,ang:e.mem.base-.7+(36-e.mem.sweep)/36*1.4,dmg:12,col:[255,210,80],len:520,boom:6,w:3,quiet:true});shake=Math.max(shake,4);}
+  if(!e.mem.hb||e.t>e.mem.hb){e.mem.hb=e.t+(S>1?60:95)+R()*40;if(dist<320)enemyShoot(e,{...hand,speed:3.2,dmg:12,col:[255,110,200],boom:S>1?11:8,lead:15,spread:.08,fire:.2});}
+  if(S>1&&e.t%600===300){for(let k=0;k<2;k++)spawnEnemy('sentinel_scout',e.x+(R()-.5)*30,e.y-d.h/2-10);banner('MASTER MOLD','deploying sentinels');}
+}
+defineEnemy('sentinel',{hp:900,w:18,h:42,fly:false,score:150,boom:18,spd:.45,glow:'*o',
+  sprite:SENT_SPR,pal:{p:rgb(84,40,120),P:rgb(122,62,168),M:rgb(206,112,170),m:rgb(150,70,124),F:rgb(184,176,206),f:rgb(140,132,166),K:rgb(36,30,46),H:rgb(196,104,160),h:rgb(150,70,124),'*':rgb(255,222,90),o:rgb(255,80,80)},
+  think:sentinelThink});
+defineEnemy('master_mold',{hp:6500,w:36,h:84,fly:false,score:0,boom:32,spd:.26,scale:2,title:'MASTER MOLD',glow:'*o',
+  sprite:SENT_SPR,pal:{p:rgb(58,40,78),P:rgb(92,70,120),M:rgb(150,92,140),m:rgb(104,60,98),F:rgb(150,146,170),f:rgb(108,104,130),K:rgb(26,22,34),H:rgb(150,92,140),h:rgb(104,60,98),'*':rgb(255,90,60),o:rgb(255,60,60)},
+  think:sentinelThink});
+defineEnemy('sentinel_scout',{hp:140,w:9,h:16,fly:true,score:40,boom:7,glow:'*o',
+  sprite:SCOUT_SPR,pal:{p:rgb(84,40,120),P:rgb(122,62,168),M:rgb(206,112,170),m:rgb(150,70,124),F:rgb(184,176,206),K:rgb(36,30,46),H:rgb(196,104,160),'*':rgb(255,200,90),o:rgb(255,80,80)},
+  think(e){const p=player();e.mem.ph??=R()*6.28;const ang=e.t*.02+e.mem.ph;
+    seek(e,p.x+Math.cos(ang)*120,p.y-60+Math.sin(ang*1.3)*30,2.2,.05);e.face=p.x>e.x?1:-1;
+    if(e.cd===0&&pdist(e)<280&&los(e,p.x,p.y)){for(const o of [-2,2])enemyShoot(e,{speed:4.2,dmg:6,col:[255,120,220],spread:.05,oy:o});e.cd=70+R()*40|0;}
+    if(frame%2===0)spawn(e.x+(R()-.5)*3,e.y+9,(R()-.5)*.3,1.2,R()<.5?rgb(255,200,90):rgb(255,120,60),8,0,1,0);}});
+
 // ================= render =================
 const cv=document.getElementById('view'),ctx=cv.getContext('2d');
 const sim=document.createElement('canvas');sim.width=VW;sim.height=VH;const sctx=sim.getContext('2d');
@@ -2469,14 +2659,16 @@ function drawSprite(x,y,ang,face,tintG,spr,pal,hurtF){
 }
 const SPX=[];
 function drawEnemy(e){
-  const d=e.def,sp=d.sprite,sw=sp[0].length,sh=sp.length,x0=e.x-sw/2,y0=e.y-sh/2+(d.fly?Math.round(Math.sin(e.t*.12+e.x*.1)):0);
-  const walk=!d.fly&&e.ground&&Math.abs(e.vx)>.2,ph=e.t*.32,legY=Math.floor(sh*.62);
-  const off=(x,y)=>{if(!walk||y<legY)return 0;const side=x<sw/2?1:-1,k=(y-legY+1)/(sh-legY);return Math.round(Math.sin(ph)*side*k*1.8);};
-  const bob=walk&&Math.abs(Math.cos(ph*2))>.75?1:0;
-  if(SET.ink){const k0=rgb(20,17,15);for(let y=0;y<sh;y++)for(let x=0;x<sw;x++){if(sp[y][e.face>0?x:sw-1-x]==='.')continue;const X=x0+x+off(x,y),Y=y0+y+(y<legY?bob:0);pix(X-1,Y,k0);pix(X+1,Y,k0);pix(X,Y-1,k0);pix(X,Y+1,k0);}}
+  const d=e.def,sp=d.sprite,sw=sp[0].length,sh=sp.length,S=d.scale||1,x0=e.x-sw*S/2,y0=e.y-sh*S/2+(d.fly?Math.round(Math.sin(e.t*.12+e.x*.1)):0);
+  const walk=!d.fly&&e.ground&&Math.abs(e.vx)>.12,ph=e.t*(S>1?.16:.32),legY=Math.floor(sh*.62);
+  const off=(x,y)=>{if(!walk||y<legY)return 0;const side=x<sw/2?1:-1,k=(y-legY+1)/(sh-legY);return Math.round(Math.sin(ph)*side*k*1.8*S);};
+  const bob=walk&&Math.abs(Math.cos(ph*2))>.75?S:0;
+  if(SET.ink){const k0=rgb(20,17,15);for(let y=0;y<sh;y++)for(let x=0;x<sw;x++){if(sp[y][e.face>0?x:sw-1-x]==='.')continue;const X=x0+x*S+off(x,y),Y=y0+y*S+(y<legY?bob:0);
+    for(let k=0;k<S;k++){pix(X-1,Y+k,k0);pix(X+S,Y+k,k0);pix(X+k,Y-1,k0);pix(X+k,Y+S,k0);}}}
   for(let y=0;y<sh;y++)for(let x=0;x<sw;x++){const ch=sp[y][e.face>0?x:sw-1-x];if(ch==='.')continue;const c=d.pal[ch];
-    pix(x0+x+off(x,y),y0+y+(y<legY?bob:0),e.flash?rgb(255,255,255):e.frozen>0?rgb(((c&255)+380)/3,(((c>>8)&255)+460)/3,(((c>>16)&255)+500)/3):c,d.glow.includes(ch)?c:0);}
-  if(e.hp<d.hp){const w=Math.max(4,sw),f=Math.max(0,e.hp/d.hp);for(let k=0;k<w;k++)pix(x0+k,y0-3,k<w*f?rgb(255,70,60):rgb(60,20,20));}
+    const cc=e.flash?rgb(255,255,255):e.frozen>0?rgb(((c&255)+380)/3,(((c>>8)&255)+460)/3,(((c>>16)&255)+500)/3):c,g=d.glow.includes(ch)?c:0,X=x0+x*S+off(x,y),Y=y0+y*S+(y<legY?bob:0);
+    for(let a=0;a<S;a++)for(let b=0;b<S;b++)pix(X+a,Y+b,cc,g);}
+  if(e.hp<d.hp&&!d.title){const w=Math.max(4,sw*S),f=Math.max(0,e.hp/d.hp);for(let k=0;k<w;k++)pix(x0+k,y0-3,k<w*f?rgb(255,70,60):rgb(60,20,20));}
 }
 const flick=new Float32Array(256);
 const htm=new Uint8Array(VW*VH);for(let y=0;y<VH;y++)for(let x=0;x<VW;x++){const ox2=(y>>2)&1?2:0,dx=((x+ox2)&3)-1.5,dy=(y&3)-1.5;htm[y*VW+x]=dx*dx+dy*dy<1.8?1:0;}
@@ -2490,7 +2682,7 @@ function render(){
     const wy=sy+CY;let i=wy*W+CX,o=sy*VW;const frow=(Math.min(H-1,sy+fyo))*FW+fx0;
     for(let sx=0;sx<VW;sx++,i++,o++){
       const m=t[i];
-      if(m===0){const b=bg[i];if(b)buf[o]=lut(bgL,b);else{const f=far[frow+sx];buf[o]=ink&&!htm[o]?lut(htL,f):f;}continue;}
+      if(m===0){const b=bg[i];if(b)buf[o]=lut(bgL,b);else{const f=far[frow+sx];buf[o]=ink&&!htm[o]&&!farKeep[frow+sx]?lut(htL,f):f;}continue;}
       switch(m){
         case FIRE:{const l=life[i];const c=rgb(255,90+Math.min(160,l*4)+(flick[fi++&255]*30|0),20+(flick[fi++&255]*30|0));buf[o]=c;gbuf[o]=c;break;}
         case GFIRE:{const f=flick[fi++&255];const c=f<.3?rgb(200,255,210):f<.7?rgb(60,255,100):rgb(20,180,60);buf[o]=c;gbuf[o]=c;break;}
@@ -2556,7 +2748,7 @@ function render(){
   // cape trail
   const p=pl_;
   if(CH.cape&&p.hist.length>3){const yo=PH-5;for(let k=1;k<Math.min(8,p.hist.length);k++){const [hx,hy]=p.hist[k];const wv=Math.sin(frame*.3+k)*1.2;pix(hx-p.face*(2+k*.4),hy-yo+k*.6+wv,k<4?CH.cape[0]:CH.cape[1]);pix(hx-p.face*(2+k*.4),hy-yo+1+k*.6+wv,CH.cape[1]);}}
-  drawSprite(p.x,p.y+PP,p.ang,p.face,false,posePlayer(p),null,p.hurtF);
+  drawSprite(p.x,p.y+PP,p.ang,p.face,false,posePlayer(p),p.metal>0?metalPal():null,p.hurtF);
   const h=hand();
   if(CH.id==='thor'&&!shots.some(s=>s.type==='hammer')){for(let yy=0;yy<3;yy++)pix(h.x,h.y+yy,rgb(110,80,50));for(let yy=-2;yy<0;yy++)for(let xx=-1;xx<=1;xx++)pix(h.x+xx,h.y+yy,rgb(160,166,176));}
   else if(CH.id!=='hulk')pix(h.x,h.y,glowRGB(),glowRGB());
@@ -2595,7 +2787,7 @@ setChar(0);
 document.getElementById('wavebtn').onclick=e=>{startWave();e.target.blur();};
 const mapSel=document.getElementById('map');
 // maps: id -> {name, gen, amb (optional per-tick ambience)}
-const MAPDEFS={city:{name:'City',gen:genCity},nyc:{name:'New York',gen:genNYC},nyc2099:{name:'NYC 2099',gen:genNYC2099,amb:amb2099},forest:{name:'Forest',gen:genForest}};
+const MAPDEFS={city:{name:'City',gen:genCity},nyc:{name:'New York',gen:genNYC},nyc2099:{name:'NYC 2099',gen:genNYC2099,amb:amb2099},forest:{name:'Forest',gen:genForest},xmansion:{name:'X-Mansion',gen:genXMansion}};
 for(const id in MAPDEFS){const o=document.createElement('option');o.value=id;o.textContent=MAPDEFS[id].name;mapSel.appendChild(o);}
 function shadeWorld(){
   for(let x=0;x<W;x++){let depth=-1;
@@ -2707,7 +2899,7 @@ function bestOf(id){try{return +(localStorage.getItem('ironsorc.best.'+id)||0);}
 function saveBest(id,v){try{localStorage.setItem('ironsorc.best.'+id,String(v));}catch(e){}}
 let bannerT=0;
 function banner(ti,sub){const b=$('banner');$('bT').textContent=ti;$('bS').textContent=sub||'';b.classList.remove('pop');void b.offsetWidth;b.classList.add('pop');b.style.opacity=1;clearTimeout(bannerT);bannerT=setTimeout(()=>{b.style.opacity=0;},2400);}
-function bossBar(e){const el=$('bossbar');if(!e){el.style.display='none';return;}el.style.display='block';$('bossF').style.width=Math.max(0,e.hp/e.def.hp*100)+'%';}
+function bossBar(e){const el=$('bossbar');if(!e){el.style.display='none';return;}el.style.display='block';$('bossN').textContent=e.def.title||'ULTRON PRIME';$('bossF').style.width=Math.max(0,e.hp/e.def.hp*100)+'%';}
 function overlay(id){for(const o of ['menu','pause','over','settings'])$(o).classList.toggle('hidden',o!==id);document.body.classList.toggle('ui-off',id==='menu'||id==='over'||(id==='settings'&&setFrom==='menu'));}
 function startRun(modeId,hero,map){
   MODE=MODES[modeId];RUN={mode:modeId,hero,map};
@@ -2788,6 +2980,32 @@ function nextRobotWave(s){
   if(n%5===0)list.push(['ultron_prime',1]);
   queueWave(list,18);
   banner('WAVE '+n,n%5===0?'ULTRON PRIME INCOMING':['Swarm detected','Mechs on the avenue','Drones over the skyways'][n%3]);
+}
+
+// ---- Sentinel Siege: giant Sentinels march on the X-Mansion
+defineMode('sentinels',{name:'Sentinel Siege',sub:'X-Mansion · giant waves',map:'xmansion',
+  desc:'Giant Sentinels march on the Xavier Institute. Hold the courtyard; Master Mold arrives every 5th wave. 3 lives, heal between waves.',
+  setup(s){s.lives=3;s.wave=0;s.phase='break';s.timer=200;s.boss=null;banner('X-MANSION','SENTINEL SIEGE · protect the school');},
+  update(s){
+    if(s.phase==='break'){if(--s.timer<=0)nextSentinelWave(s);}
+    else if(enemies.length===0&&spawnQ.length===0){
+      const bonus=150*s.wave;score+=bonus;s.phase='break';s.timer=260;
+      pl_.hp=Math.min(CH.hp,pl_.hp+CH.hp*.4);pl_.en=100;
+      banner('WAVE '+s.wave+' REPELLED','+'+bonus+' bonus · the students are safe');}
+    s.boss=enemies.find(e=>e.def.name==='master_mold')||null;bossBar(s.boss);
+  },
+  onKill(e,s){if(e.def.name==='master_mold'){score+=2500;shake=22;banner('MASTER MOLD DESTROYED','+2500');}
+    else if(e.def.name==='sentinel'){fxWord(e.x,e.y-30,'SENTINEL DOWN!',1.4,'#ffc93c',true);hitstop=Math.max(hitstop,3);}},
+  onDeath(s){s.lives--;if(s.lives<=0){endRun();return true;}banner('MUTANT DOWN',s.lives+(s.lives===1?' life':' lives')+' left');return false;},
+  hud(s){return `${s.phase==='break'?'next wave in '+Math.ceil(s.timer/60)+'s':'sentinels left '+(enemies.length+spawnQ.length)} · lives ${s.lives}`;},
+  result(s){return{title:'THE SENTINELS WIN',stats:[['WAVE REACHED',s.wave],['SENTINELS SCRAPPED',kills]]};}
+});
+function nextSentinelWave(s){
+  s.wave++;wave=s.wave;s.phase='fight';const n=s.wave;
+  const list=[['sentinel_scout',1+n],['sentinel',Math.ceil(n/2)]];
+  if(n%5===0)list.push(['master_mold',1]);
+  queueWave(list,40);
+  banner('WAVE '+n,n%5===0?'MASTER MOLD APPROACHES':['Sentinels on the lawn','Mutant detection active','They are coming for the students'][n%3]);
 }
 
 resize();syncSettings();mapSel.value='nyc2099';regen();showMenu();requestAnimationFrame(loop);
