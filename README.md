@@ -4,13 +4,30 @@ A browser falling-sand superhero game: fully destructible pixel worlds, rigid-bo
 
 ## Run
 
-Serve the folder and open `index.html`:
+Needs Node.js. First time:
 
 ```bash
-python -m http.server 8765
+npm install
 ```
 
-Then visit http://localhost:8765.
+Dev server with hot reload (http://localhost:5173):
+
+```bash
+npm run dev
+```
+
+Build one self-contained `dist/index.html` (PixiJS, CSS and game inlined; open it directly or host anywhere):
+
+```bash
+npm run build
+```
+
+## Layout
+
+- `index.html` - page markup (HUD, menus)
+- `src/style.css` - UI styles
+- `src/main.js` - the game (simulation, heroes, enemies, modes, UI logic)
+- `src/gl.js` - PixiJS WebGL presenter (scales the pixel frame, GPU bloom); falls back to 2D canvas without WebGL
 
 ## Controls
 
