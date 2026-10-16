@@ -1397,25 +1397,226 @@ function punchOut(p){ // armour shoves its way out instead of teleporting
 
 // ================= player / heroes =================
 // Each hero: sprite + palette (glow chars: e * @), body size, movement tuning and a power list.
-// ---- hero sprites: front view, light from the upper left, ink outline added by the renderer
-const SPR_DOOM=["....hHHh...", "...hjHHHh..", "..hjHHHHHh.", "..hHLMMMnh.", "..hLeMMeMh.", "..hMMnnMMh.", "..hhMkkMhh.", ".chhnMMnhhc", "CcLLAAAAAac", "CLLAALLAAaC", "CLAAALLAAaC", "CaAAALAAAaC", "CGbbBBBbbGC", "CGTTTTTTTGc", "c.TjTTTTt.c", "c.TTT.TTt.c", "c.LA...Aa.c", "..LA...Aa..", "..LA...Aa..", ".LLA...Aaa."];
-const PAL_DOOM={h:rgb(22,96,44),H:rgb(34,140,62),j:rgb(74,190,98),M:rgb(170,180,192),L:rgb(214,222,232),n:rgb(108,116,128),e:rgb(140,255,170),k:rgb(18,20,22),c:rgb(30,126,58),C:rgb(14,72,34),A:rgb(128,136,150),a:rgb(78,84,98),G:rgb(196,204,216),b:rgb(92,66,40),B:rgb(214,170,60),T:rgb(30,120,56),t:rgb(18,80,38)};
-const SPR_HULK=[".....hhhhh.....", "....hhhhhhh....", "...hhkGGGGhh...", "...hkGGGGGGh...", "...hGeGGGeGh...", "...gGGgggGGg...", "....gGkkkGg....", "..kGGgGGGgGGg..", ".kGGGGkGkGGGGg.", "kGGGkGGgGGkGGGg", "kGGgkGGgGGkgGGg", "kGg.GGkGkGG.gGg", "kGg.gGGgGGg.gGg", "kGg.GGkGkGG.gGg", "GGg.gGGGGGg.gGg", "kGg.ppppppp.gGg", "GGG.pqppqpp.GGg", "ggg.ppp.ppq.ggg", "....ppq.ppq....", "....GGg.kGg....", "....GGg.kGg....", "...kGGg.kGGg...", "...GGGg.GGGg...", "..ggggg.ggggg.."];
-const PAL_HULK={h:rgb(26,28,24),G:rgb(92,168,62),g:rgb(48,108,36),k:rgb(150,214,104),e:rgb(230,255,210),p:rgb(110,56,146),q:rgb(70,32,98)};
-const SPR_THOR=["...sSSSs...", "..wsSSSsw..", "..yffffffy.", "..yfeffefy.", "..yffFFffy.", "..yyfFFfyy.", "...yyFFyy..", ".CCdddddCC.", "CfddododdfC", "CfddododdfC", "CfdddddddfC", "CfdddddddfC", "CfbbbBbbbfC", "C.ddddddd.C", "C.ddddddd.C", "C.dd...dd.C", "c.dd...dd.c", "c.dd...dd.c", "..BB...BB..", ".BBB...BBB."];
-const PAL_THOR={s:rgb(170,176,188),S:rgb(214,220,230),w:rgb(236,240,248),y:rgb(232,196,90),f:rgb(230,186,150),F:rgb(184,138,102),e:rgb(120,180,255),C:rgb(178,28,30),c:rgb(124,16,20),d:rgb(40,46,66),o:rgb(196,204,216),b:rgb(120,90,50),B:rgb(88,64,40)};
-const SPR_IRON=["...RRRRR...", "..RQRRRRr..", "..RGGGGGr..", "..RG*G*Gr..", "..RGGgGGr..", "..rRGgGRr..", "...rRRRr...", "..QRRRRRRr.", ".QRRRRRRRRr", "QRRRR@RRRrr", "QRgRRRRRgrr", "QRgGRRRGgrr", "G*.RRrRR.*g", "...RRRRR...", "...RGrGR...", "...RR.RR...", "..QRR.RRr..", "..RGg.gGr..", "..RRr.RRr..", ".RRRr.RRRr."];
-const PAL_IRON={R:rgb(186,30,30),r:rgb(118,18,20),Q:rgb(236,74,62),G:rgb(232,182,60),g:rgb(170,124,32),'*':rgb(205,242,255),'@':rgb(225,252,255)};
-const SPR_WOLV=["..k.....k..", "..kkYYYkk..", "..kYYYYYk..", "..kwkYkwk..", "..YkkYkkY..", "..kfffffk..", "...kfFfk...", ".BBYYYYYBB.", "BBBYYYYYBBB", "BbBkYYYkBbB", "BbBYkYkYBbB", "BbBYYYYYBbB", "BB.rrRrr.BB", "c..BBBBB..c", "...BB.BB...", "...YY.YY...", "..BBY.YBB..", "..BBB.BBB.."];
-const PAL_WOLV={k:rgb(24,24,30),Y:rgb(240,196,40),w:rgb(250,250,250),f:rgb(222,170,130),F:rgb(160,110,80),B:rgb(40,64,150),b:rgb(24,36,92),r:rgb(170,30,30),R:rgb(220,60,50),c:rgb(220,226,236)};
-const SPR_CYC=["...hhhhh...", "..hhNNNhh..", "..hNNNNNh..", "..NVVVVVN..", "..NfffffN..", "..NfffffN..", "...NfFfN...", ".NNNNNNNNN.", "NNNYYNYYNNn", "NNNNYYYNNNn", "NNnNNYNNnNn", "NNnNNNNNnNn", "YY.YYYYY.YY", "...NNNNN...", "...NNnNN...", "...NN.NN...", "..NNN.NNn..", "..NNn.NNn..", "..YYY.YYY..", ".NNNn.NNNn."];
-const PAL_CYC={h:rgb(96,60,34),N:rgb(34,52,120),n:rgb(20,30,76),Y:rgb(240,200,50),V:rgb(255,50,40),f:rgb(228,180,140),F:rgb(180,130,96)};
-const SPR_ICE=["...iIIIi...", "..iIIIIIJ..", "..iI+IIIJ..", "..ieIIeIJ..", "..iIIIIIJ..", "...iIiIJ...", "....iIJ....", ".iIIIIIIIJ.", "iIIIiIIiIJJ", "iI+IIiIIIJJ", "iIIiIIiIIJJ", "iIIIIJIIIJJ", "I+.IIiII.J+", "...iIIIJ...", "...iIJIJ...", "...iI.IJ...", "..iII.IJJ..", "..iI+.IIJ..", "..iII.IJJ..", ".iIII.IJJJ."];
-const PAL_ICE={i:rgb(150,210,245),I:rgb(210,240,255),J:rgb(80,140,200),'+':rgb(240,255,255),e:rgb(255,255,255)};
-const SPR_JEAN=["...HHHHH...", "..HHhHHHH..", ".HHfffffHH.", ".HHfeffeHH.", ".HHfffffHh.", "HHH.fff.HHh", "HH.DDfDD.Hh", "Hh.DOOOD.hh", "H.DDOOODD.h", ".DdDDODDdD.", ".DdDDDDDdD.", ".Ff.OOO.fF.", "....DDD....", "...DDdDD...", "...DD.DD...", "...DD.DD...", "...Dd.dD...", "...OO.OO...", "...OO.OO...", "..OOO.OOO.."];
-const PAL_JEAN={H:rgb(214,50,30),h:rgb(150,30,20),f:rgb(236,192,160),F:rgb(196,150,120),e:rgb(255,220,140),D:rgb(196,30,40),d:rgb(130,18,28),O:rgb(244,190,60)};
-const SPR_STORM=["..WWWWWW...", ".WWWOOOWWW.", "WWWsssssWWW", "WWsesssesWW", "WWsssssssWW", "WWWsSSSsWWW", "WWW.sSs.WWW", "WWKKKKKKKWW", "CKKKkKkKKKC", "CKKKKKKKKKC", "CKKKkKkKKKC", "CsKOOOOOKsC", "C.KKKKKKK.C", "C.KKK.KKK.C", "C..KK.KK..C", "c..KK.KK..c", "c..KK.KK..c", "...KK.KK...", "..KKK.KKK..", "..KKk.KKk.."];
-const PAL_STORM={W:rgb(240,240,248),O:rgb(240,190,60),s:rgb(120,78,50),S:rgb(90,56,36),e:rgb(255,255,255),K:rgb(30,30,36),k:rgb(60,60,74),C:rgb(46,46,58),c:rgb(84,84,100)};
+// ---- hero sprites: 3/4 front view, heroic proportions (small head, broad shoulders, V-taper, long legs),
+//      light from the upper left, three tones per material plus spot blacks; ink outline added by the renderer
+const SPR_DOOM=[
+"....hhhhh....",
+"...hHjjHHh...",
+"...hLkMknh...",
+"...hLeMenh...",
+"...hLMkMnh...",
+"..chhnMnhhc..",
+".cCGhHHHhGCc.",
+"CGAuTTTTTtGaC",
+"CAauTTtTTtAaC",
+"CAakuTtTtkAaC",
+"CAakuTtTtkAaC",
+"CAakBBbBBkAaC",
+"CGa.TTTTt.GaC",
+"cGG.TTtTt.GGc",
+"c...TT.Tt...c",
+"c...Aa.Aa...c",
+"c..Aa...Aa..c",
+"c..Aa...Aa..c",
+"...Aa...Aa...",
+"..GAa...GAa..",
+"..GAa...GAa..",
+"..aaa...aaa.."];
+const PAL_DOOM={h:rgb(18,70,34),H:rgb(30,110,52),j:rgb(64,160,84),M:rgb(150,158,170),L:rgb(205,212,222),n:rgb(86,92,104),e:rgb(140,255,170),k:rgb(14,16,18),C:rgb(12,50,26),c:rgb(24,90,44),A:rgb(122,130,144),a:rgb(62,68,82),G:rgb(196,204,216),T:rgb(28,102,50),t:rgb(14,60,30),u:rgb(52,146,72),B:rgb(196,150,48),b:rgb(84,58,34)};
+const SPR_HULK=[
+"......hhhhh......",
+".....hhhhhhh.....",
+".....hkGGGgh.....",
+"....kGKKgKKgg....",
+"...kGGeKGKegGg...",
+"..kGGGgKwKgGGGg..",
+".kGGGGGgKgGGGGGg.",
+"kGGkGGGGGGGGGgGGg",
+"kGGkkGGGgGGGGgGgg",
+"kGGgkGGGgGGGgGggg",
+"kGg.kGGgKgGGg.Ggg",
+"kGg.GkGKGKGgg.Ggg",
+"kGg.kGGKGKgGg.Ggg",
+"kGg..kGgGgGg..Ggg",
+"kGg..ppPppqq..Ggg",
+"kGg.PpppqppPq.Ggg",
+"kGG.Pppq.Pppq.GGg",
+"gGg.Pppq.Pppq.Ggg",
+"ggg.Pppq.Pppq.ggg",
+"....Ppqq.Ppqq....",
+"....pqpq.pqpq....",
+"....kGGg.kGGg....",
+"...kGGg...kGGg...",
+"...GGgg...GGgg...",
+"..kGGgg...GGGgg..",
+"..ggggg...ggggg.."];
+const PAL_HULK={h:rgb(18,20,16),G:rgb(84,150,58),g:rgb(44,96,34),k:rgb(140,200,96),K:rgb(26,58,22),e:rgb(220,255,190),w:rgb(232,228,204),p:rgb(98,50,130),q:rgb(56,26,80),P:rgb(140,84,172)};
+const SPR_THOR=[
+"....zyYYy....",
+"...zyYYYyz...",
+"...yYfffFz...",
+"...yfefeFz...",
+"...yffFfFz...",
+"...yzfFFzyz..",
+"..CyzDFDzyC..",
+"CfFDDDdDDdfFC",
+"CfFOoDdOodfFC",
+"CfFOoDdOodfFC",
+"CfFkDDdDdkfFC",
+"CsSkbBbBbkSsC",
+"CsS.dDddd.sSC",
+"cfF.DDdDd.fFc",
+"c...DD.Dd...c",
+"c...DD.Dd...c",
+"c..DD...Dd..c",
+"c..bB...bB..c",
+"...bB...bB...",
+"...bB...bB...",
+"..bbB...bbB..",
+"..BBB...BBB.."];
+const PAL_THOR={z:rgb(150,108,40),y:rgb(214,170,70),Y:rgb(246,218,128),f:rgb(226,178,140),F:rgb(168,118,88),e:rgb(150,206,255),d:rgb(26,30,46),D:rgb(54,62,90),o:rgb(146,154,170),O:rgb(214,222,234),C:rgb(158,22,28),c:rgb(98,12,18),b:rgb(110,80,46),B:rgb(60,42,26),s:rgb(204,210,222),S:rgb(116,122,138),k:rgb(14,16,24)};
+const SPR_IRON=[
+"....rQRRr....",
+"...rQRRRRr...",
+"...QGGGGgr...",
+"...Q**G**r...",
+"...QGGkGgr...",
+"....rGGgr....",
+"..QRrRRRrRr..",
+".QRQRRRRRrRr.",
+".QRQR*@*RrRr.",
+".QrQRRRRRrRr.",
+".GYkYGgGgkYg.",
+".GYkrRrRrkYg.",
+".Gg.RRrRr.Gg.",
+".**.RR.Rr.**.",
+"....QR.Rr....",
+"....QR.Rr....",
+"...GY...Gg...",
+"...QR...Rr...",
+"...QR...Rr...",
+"..QRR...RRr..",
+"..QRR...RRr..",
+"..rrr...rrr.."];
+const PAL_IRON={R:rgb(176,28,28),r:rgb(100,12,16),Q:rgb(232,72,58),G:rgb(214,164,50),Y:rgb(252,216,112),g:rgb(146,104,26),k:rgb(36,12,12),'*':rgb(205,242,255),'@':rgb(225,252,255)};
+const SPR_WOLV=[
+"..kk.....kk..",
+"...kkYYYkk...",
+"...kYLYYyk...",
+"...kwkYkwk...",
+"...hkkYkkh...",
+"...hfFfFFh...",
+"..BbhfFFhbB..",
+"VBbBLYYYyBVBb",
+"VBbkLYYYykVBb",
+"VBbBkLYykBVBb",
+"LYybkLYykbLYy",
+"LYybrRrRrbLYy",
+"VBb.BBbBb.VBb",
+"Bbb.BB.Bb.Bbb",
+"....LY.Yy....",
+"...LY...Yy...",
+"...VBb..VBb..",
+"..VBb...VBb..",
+"..BBb...BBb..",
+"..bbbb..bbbb."];
+const PAL_WOLV={k:rgb(18,18,24),Y:rgb(232,186,36),y:rgb(168,118,20),L:rgb(255,228,112),B:rgb(34,56,140),b:rgb(18,28,80),V:rgb(72,106,204),w:rgb(250,250,250),f:rgb(214,162,124),F:rgb(148,98,70),h:rgb(40,30,24),c:rgb(222,228,238),r:rgb(150,24,24),R:rgb(214,56,46)};
+const SPR_CYC=[
+"....hHHhh....",
+"...hHHhhhh...",
+"...hfffFFh...",
+"...vVVVVVv...",
+"...NffFFFN...",
+"....NfFFN....",
+"..MNNnNNNnN..",
+".MNMYNNNyNNn.",
+".MNMNYNyNnNn.",
+".MNMNNYNNnNn.",
+".MNkNyNYnkNn.",
+".MNkYYyYykNn.",
+".Yy.NNnNn.Yy.",
+".Yy.NN.Nn.Yy.",
+"....MN.Nn....",
+"....MN.Nn....",
+"...MN...Nn...",
+"...YY...Yy...",
+"...MN...Nn...",
+"..MNN...NNn..",
+"..MNN...NNn..",
+"..nnn...nnn.."];
+const PAL_CYC={h:rgb(80,50,28),H:rgb(132,92,56),N:rgb(30,46,110),n:rgb(14,22,60),M:rgb(62,86,162),Y:rgb(236,196,48),y:rgb(168,128,24),V:rgb(255,60,40),v:rgb(110,20,20),f:rgb(222,174,136),F:rgb(168,122,90),k:rgb(10,14,36)};
+const SPR_ICE=[
+"....iIIIi....",
+"...iI+IIiJ...",
+"...iIIIiJJ...",
+"...iIeIeJJ...",
+"...iIIiJJJ...",
+"....iIJJJ....",
+"..iIIiJJJJJ..",
+".IiI+IIiJJiJ.",
+".IiIIiIJJKiJ.",
+".IiIiIIJJKiJ.",
+".IiKIiIJKKiJ.",
+".IiKiIJJKKiJ.",
+".I+.IIJJK.+J.",
+".++.IJ.JK.++.",
+"....IJ.JK....",
+"....Ii.JK....",
+"...I+...JK...",
+"...Ii...JK...",
+"...Ii...JK...",
+"..IIi...JJK..",
+"..IIi...JJK..",
+"..iiJ...JKK.."];
+const PAL_ICE={i:rgb(128,188,234),I:rgb(200,236,255),J:rgb(68,128,194),K:rgb(38,80,146),'+':rgb(240,255,255),e:rgb(255,255,255)};
+const SPR_JEAN=[
+"....LHHHh....",
+"...LHHHHHh...",
+"..LHfffFHhh..",
+"..HHefeFHhh..",
+"..HHfFFFHhh..",
+"..HhHfFHhhh..",
+"..HhOOfOOhh..",
+".PDHPDODdhDd.",
+".PDHPOOOdhDd.",
+".PDHPDODdhDd.",
+".PDhPDDddkDd.",
+".OokPOOodkOo.",
+".Oo.PDDDd.Oo.",
+"....PD.Dd....",
+"....PD.Dd....",
+"...PD...Dd...",
+"...PD...Dd...",
+"...OO...Oo...",
+"...OO...Oo...",
+"..OOO...OOo..",
+"..OOO...OOo..",
+"..ooo...ooo.."];
+const PAL_JEAN={L:rgb(242,98,54),H:rgb(198,44,28),h:rgb(126,24,16),f:rgb(236,190,158),F:rgb(188,138,110),e:rgb(255,190,110),D:rgb(178,26,36),d:rgb(106,12,20),P:rgb(232,66,66),O:rgb(240,186,58),o:rgb(166,116,28),k:rgb(56,6,12)};
+const SPR_STORM=[
+"...wWWWWw....",
+"..wWWOOOWWw..",
+"..wWsssSWww..",
+"..wWesesWww..",
+"..wWsSsSWww..",
+"..wWWsSWWww..",
+".CwWKsSKWwwC.",
+"CGKWGKKKkwKkC",
+"CGKWGKKKkwKkC",
+"CGKWGKKkkwKkC",
+"CGKwGKkKkwKkC",
+"CGKkOOOOokKkC",
+"Css.GKKKk.sSC",
+"c...GK.Kk...c",
+"c...GK.Kk...c",
+"c..GK...Kk..c",
+"c..GK...Kk..c",
+"c..GK...Kk..c",
+"...GK...Kk...",
+"..GKK...KKk..",
+"..GKK...KKk..",
+"..kkk...kkk.."];
+const PAL_STORM={W:rgb(240,242,250),w:rgb(168,176,196),O:rgb(232,186,60),s:rgb(108,70,44),S:rgb(74,46,28),e:rgb(255,255,255),K:rgb(30,30,38),k:rgb(14,14,20),G:rgb(72,74,94),C:rgb(24,24,32),c:rgb(50,50,64),o:rgb(160,118,30)};
 const GLOWCH={e:1,'*':1,'@':1,V:1,'+':1};
 // ---- procedural animation rig. The hero sprite is re-posed every frame before drawing:
 //   leg   first leg row (rows below swing for walking / tuck for jumps / trail in flight)
@@ -1427,15 +1628,15 @@ const GLOWCH={e:1,'*':1,'@':1,V:1,'+':1};
 //   cape  chars that hang from the shoulders and never move with the legs
 const rect=(x0,x1,y0,y1)=>{const r=[];for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)r.push([x,y]);return r;};
 const ANIM={
-  doom:{leg:16,mid:5,arm:'A',tip:'G',sh:[9,8],hide:rect(9,9,9,13),blink:'e',lid:'M',thick:1,cape:'Cc'},
-  hulk:{leg:18,mid:7,arm:'G',tip:'g',sh:[12,9],hide:rect(12,14,10,17),blink:'e',lid:'G',thick:2},
-  thor:{leg:15,mid:5,arm:'f',tip:'F',sh:[9,8],hide:rect(9,9,8,12),blink:'e',lid:'f',thick:1,cape:'Cc'},
-  iron:{leg:15,mid:5,arm:'R',tip:'*',sh:[9,9],hide:rect(9,10,10,12),blink:null,thick:1},
-  wolverine:{leg:14,mid:5,arm:'B',tip:'B',sh:[9,8],hide:rect(9,10,9,13),blink:'w',lid:'k',thick:1,claws:'c'},
-  cyclops:{leg:15,mid:5,arm:'N',tip:'Y',sh:[9,8],hide:rect(9,10,9,12),blink:null,thick:1},
-  iceman:{leg:15,mid:5,arm:'I',tip:'+',sh:[9,8],hide:rect(9,10,9,12),blink:'e',lid:'I',thick:1},
-  jean:{leg:14,mid:5,arm:'D',tip:'f',sh:[8,9],hide:rect(8,9,9,11),blink:'e',lid:'f',thick:1,cape:'Hh'},
-  storm:{leg:14,mid:5,arm:'K',tip:'s',sh:[9,8],hide:rect(9,9,9,11),blink:'e',lid:'s',thick:1,cape:'Cc'},
+  doom:{leg:14,mid:6,arm:'A',tip:'G',sh:[10,7],hide:rect(10,11,7,13),blink:'e',lid:'M',thick:1,cape:'Cc'},
+  hulk:{leg:19,mid:8,arm:'G',tip:'g',sh:[14,7],hide:rect(14,16,8,18),blink:'e',lid:'K',thick:2},
+  thor:{leg:14,mid:6,arm:'f',tip:'F',sh:[10,7],hide:rect(10,11,7,13),blink:'e',lid:'f',thick:1,cape:'Cc'},
+  iron:{leg:14,mid:6,arm:'R',tip:'*',sh:[10,7],hide:rect(10,11,7,13),blink:null,thick:1},
+  wolverine:{leg:14,mid:6,arm:'Y',tip:'B',sh:[10,7],hide:rect(10,12,7,13),blink:'w',lid:'k',thick:1,claws:'c'},
+  cyclops:{leg:14,mid:6,arm:'N',tip:'Y',sh:[10,7],hide:rect(10,11,7,13),blink:null,thick:1},
+  iceman:{leg:14,mid:6,arm:'I',tip:'+',sh:[10,7],hide:rect(10,11,7,13),blink:'e',lid:'I',thick:1},
+  jean:{leg:13,mid:6,arm:'D',tip:'O',sh:[10,7],hide:rect(10,11,7,12),blink:'e',lid:'f',thick:1,cape:'Hh'},
+  storm:{leg:13,mid:6,arm:'K',tip:'s',sh:[10,7],hide:rect(10,11,7,12),blink:'e',lid:'s',thick:1,cape:'Cc'},
 };
 const PP=8; // padding around the posed sprite for limbs that reach out
 const ARM_UP=new Set(['Ice Golem','Telekinetic Rip','Blizzard','Phoenix Wings','Storm Call','Lightning Call','Thunderbolt','Tornado','Hailstorm','Phoenix Force','Ice Wall','Ball Lightning','Conductor Strike','Flash Flood','Eye of the Storm','Bifrost','God Blast']);
@@ -2685,7 +2886,7 @@ function drawSprite(x,y,ang,face,tintG,spr,pal,hurtF){
     SPX.push(cx+xx,cy+yy,ch);
   }
   if(tintG)return;
-  if(SET.ink){const k0=rgb(20,17,15);for(let k=0;k<SPX.length;k+=3){const X=SPX[k],Y=SPX[k+1];pix(X-1,Y,k0);pix(X+1,Y,k0);pix(X,Y-1,k0);pix(X,Y+1,k0);}}
+  if(SET.ink){const k0=rgb(20,17,15);for(let k=0;k<SPX.length;k+=3){const X=SPX[k],Y=SPX[k+1];pix(X-1,Y,k0);pix(X+1,Y,k0);pix(X,Y-1,k0);pix(X,Y+1,k0);pix(X+1,Y+1,k0);}}
   for(let k=0;k<SPX.length;k+=3){const ch=SPX[k+2];pix(SPX[k],SPX[k+1],hurtF&&(hurtF&2)?rgb(255,120,110):pal[ch],GLOWCH[ch]?pal[ch]:0);}
   SPX.length=0;
 }
