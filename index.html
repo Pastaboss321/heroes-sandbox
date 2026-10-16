@@ -1180,8 +1180,10 @@ function genXMansion(){
   clearAll();
   const GY=356,s=R()*100,B=252; // B: lawn line of the mansion in far-layer rows (sits just above the courtyard on screen)
   makeFar([38,50,104],[246,170,118],()=>{
-    const P=(x,y,c)=>{x|=0;y|=0;if(x<0||x>=FW||y<0||y>=H)return;far[y*FW+x]=c;farKeep[y*FW+x]=1;};
-    const Rf=(x0,y0,x1,y1,c,v=6,keep=true)=>{for(let y=y0|0;y<y1;y++)for(let x=x0|0;x<x1;x++){if(x<0||x>=FW||y<0||y>=H)continue;const n=(R()*2-1)*v;const cc=rgb(cl(c[0]+n),cl(c[1]+n),cl(c[2]+n));far[y*FW+x]=cc;if(keep)farKeep[y*FW+x]=1;}};
+    // the mansion is drawn into its own buffer first, then pasted bigger and lower with forced perspective
+    const mc=new Uint32Array(FW*H),mk=new Uint8Array(FW*H);
+    const P=(x,y,c)=>{x|=0;y|=0;if(x<0||x>=FW||y<0||y>=H)return;mc[y*FW+x]=c;mk[y*FW+x]=1;};
+    const Rf=(x0,y0,x1,y1,c,v=6)=>{for(let y=y0|0;y<y1;y++)for(let x=x0|0;x<x1;x++){if(x<0||x>=FW||y<0||y>=H)continue;const n=(R()*2-1)*v;mc[y*FW+x]=rgb(cl(c[0]+n),cl(c[1]+n),cl(c[2]+n));mk[y*FW+x]=1;}};
     // distant tree lines and lawns either side of the mansion
     for(let x=0;x<FW;x++){const hh=B-18-Math.abs(Math.sin(x*.07+s))*16-Math.sin(x*.023+s)*10|0;for(let y=hh;y<H;y++)far[y*FW+x]=rgb(34+(y-hh)/8,62+(y-hh)/10,52+(y-hh)/12);}
     for(let x=0;x<FW;x++)for(let y=B;y<H;y++)far[y*FW+x]=rgb(62-(y-B)/7,98-(y-B)/6,56-(y-B)/8);
@@ -1214,9 +1216,20 @@ function genXMansion(){
     for(const wy of [B-82,B-56])for(let wx=cx-122;wx<cx+122;wx+=16){if(Math.abs(wx+3-cx)<52)continue;win(wx,wy,7,13);}
     for(let wx=cx-122;wx<cx+122;wx+=16){if(Math.abs(wx+3-cx)<56)continue;win(wx,B-30,7,13);}
     // ivy on the lower walls
-    for(let k=0;k<9;k++){const ix=cx-180+R()*360|0,r=6+R()*8;for(let n=0;n<160;n++){const a=R()*6.283,d=Math.sqrt(R())*r,x=ix+Math.cos(a)*d|0,y=B-1-Math.abs(Math.sin(a))*d*2.2|0;if(farKeep[y*FW+x])P(x,y,rgb(34+R()*18,74+R()*26,38));}}
+    for(let k=0;k<9;k++){const ix=cx-180+R()*360|0,r=6+R()*8;for(let n=0;n<160;n++){const a=R()*6.283,d=Math.sqrt(R())*r,x=ix+Math.cos(a)*d|0,y=B-1-Math.abs(Math.sin(a))*d*2.2|0;if(mk[y*FW+x])P(x,y,rgb(34+R()*18,74+R()*26,38));}}
     function win(x,y,w,h){Rf(x-1,y-1,x+w+1,y+h+1,[214,206,190],3);const lit=R()<.7;
       for(let yy=0;yy<h;yy++)for(let xx=0;xx<w;xx++){if(yy<2&&(xx===0||xx===w-1))continue;const mull=xx===(w>>1)||yy===(h>>1)+1;P(x+xx,y+yy,mull?rgb(70,60,52):lit?rgb(250,206,128-yy*3):rgb(44,52,74));}}
+    // gentle forced perspective: a bit taller, the base slightly wider and lower so the house sits right behind the courtyard
+    const B1=B+8,KV=1.18;
+    for(let y=0;y<H;y++){const sy=Math.round(B+(y-B1)/KV);if(sy<0||sy>=H)continue;const kh=1.1+.14*Math.max(0,Math.min(1,(sy-(B-160))/160));
+      for(let x=0;x<FW;x++){const sx=Math.round(cx+(x-cx)/kh);if(sx<0||sx>=FW)continue;const si=sy*FW+sx;if(mk[si]){far[y*FW+x]=mc[si];farKeep[y*FW+x]=1;}}}
+    // the gravel drive and hedge rows run from the door toward the viewer, filling the lawn
+    // manicured grounds fill everything below the house (kept vivid, so flying up shows lawn and gardens, never bare earth)
+    for(let y=B1;y<H;y++){const d=y-B1,hw=18+d*1.1,stripe=((d>>3)&1)?6:-4;
+      for(let x=0;x<FW;x++){const i=y*FW+x;if(farKeep[i]&&d<2)continue;const ax=Math.abs(x-cx),n=(R()*2-1)*5,hedge=d%22<5&&ax>hw+6;
+        far[i]=ax<hw?rgb(cl(180+n),cl(168+n),cl(140+n)):ax<hw+3?rgb(cl(40+n),cl(92+n),cl(44+n)):hedge?rgb(cl(34+n),cl(84+n),cl(40+n)):rgb(cl(74+stripe+n),cl(126+stripe+n),cl(62+stripe+n));farKeep[i]=1;}}
+    for(const side of [-1,1])for(let k=0;k<5;k++){const tx=cx+side*(220+k*36),ty=B1+4+k*3,r=10+k*3; // trees framing the house
+      for(let y=-r*2;y<=r;y++)for(let x=-r;x<=r;x++){if(x*x/(r*r)+(y<0?y*y/(4*r*r):y*y/(r*r))>1)continue;const X=tx+x,Y=ty+y;if(X<0||X>=FW||Y<0||Y>=H)continue;const n=R()*14;far[Y*FW+X]=rgb(26+n,58+n,34+n/2);farKeep[Y*FW+X]=1;}}
   });
   const hm=[];
   for(let x=0;x<W;x++){const out=x<380?(380-x)/380:x>1220?(x-1220)/380:0;hm[x]=GY-Math.round(out*out*28+Math.sin(x*.02+s)*3*out);}
@@ -1430,7 +1443,7 @@ const ARM_BOTH=new Set(['Adamantium Skeleton','Mystic Shield','Thunderclap','Gal
 const ARM_VISOR=new Set(['Optic Cage','Uncontrolled Blast','Optic Blast','Concussive Burst','Ricochet Shot','Full Power','Optic Sweep','Optic Barrage','Leg Sweep','Visor Overload']);
 function armMode(p){
   if(p.throwF>0)return'throw';
-  if(held&&held.overhead)return'hold';
+  if((held&&held.overhead)||(heldE&&CH.powers[cur]&&CH.powers[cur].tk&&CH.powers[cur].tk.overhead))return'hold';
   if(p.slam)return'up';
   if(p.thrustF>0)return'visor';
   if(p.leap)return'back';
@@ -1672,7 +1685,7 @@ function updCamera(){
 // A power is {n:name, fn(a,p,use)} (a = aim from the hand, use(cost) spends energy) or
 // {n, tk:{...}} for grab-and-throw powers handled by updTelekinesis.
 let cur=0,cd=0;
-const shots=[],drones=[],strikes=[]; let vortex=null, held=null, tkPrev=false, storm=null;
+const shots=[],drones=[],strikes=[]; let vortex=null, held=null, heldE=null, tkPrev=false, storm=null;
 function aim(){const h=hand();const dx=mouse.wx-h.x,dy=mouse.wy-h.y,d=Math.hypot(dx,dy)||1;return{h,dx:dx/d,dy:dy/d,d};}
 const CYAN=[150,235,255], BLUE=[160,205,255], GAMMA=[130,255,90];
 const pickC=c=>rgb(c[0]*(.7+R()*.3),c[1]*(.7+R()*.3),c[2]*(.7+R()*.3));
@@ -2233,13 +2246,16 @@ function smashOverlap(b){const c=Math.cos(b.a),s2=Math.sin(b.a);
     for(const i of [Y*W+X,Y*W+X+1,(Y+1)*W+X]){const m=t[i];if(KIND[m]===S||KIND[m]===P){if(np<MP-300&&R()<.5)spawn(i%W,(i/W)|0,(R()-.5)*2,-R()*1.5,col[i],70,KIND[m]===S?RUBBLE:m,0);setc(i,EMPTY);}}}}
 function updTelekinesis(){
   const pw=CH.powers[cur], tk=pw&&pw.tk, want=mouse.down&&!!tk;
-  if(want&&!tkPrev&&!held&&pl_.en>=15){
+  if(want&&!tkPrev&&!held&&!heldE&&pl_.en>=15){
     // rip a chunk out of the world at the cursor (or within arm's reach)
     let cx=mouse.wx|0,cy=mouse.wy|0;
     if(tk.range){const a=aim(),d=Math.min(a.d,tk.range);cx=a.h.x+a.dx*d|0;cy=a.h.y+a.dy*d|0;}
     const r=tk.r;let n=0;
-    const fb=grabBody(cx,cy,r);
-    if(fb){fb.held=true;fb.thrown=false;fb.topple=0;held=fb;pl_.en-=15;held.vy=-2;held.tk=tk;held.overhead=!!tk.overhead;held.lift=0;rings.push({x:fb.x,y:fb.y,r:fb.rmax,vr:-1,life:14,c:CH.glow});shake+=4;}
+    // an enemy under the grab point gets lifted first (bosses are too heavy)
+    let ge=null,gd=r+8;for(const e of enemies){if(e.def.title||e.hp<=0)continue;const d=Math.hypot(e.x-cx,e.y-cy)-e.def.w/2;if(d<gd){gd=d;ge=e;}}
+    const fb=ge?null:grabBody(cx,cy,r);
+    if(ge){heldE=ge;ge.grabbed=true;pl_.en-=15;rings.push({x:ge.x,y:ge.y,r:ge.def.w,vr:-1,life:12,c:CH.glow});fxWord(ge.x,ge.y-ge.def.h/2-6,'GOTCHA!',1,'#ff9ad8',true);}
+    else if(fb){fb.held=true;fb.thrown=false;fb.topple=0;held=fb;pl_.en-=15;held.vy=-2;held.tk=tk;held.overhead=!!tk.overhead;held.lift=0;rings.push({x:fb.x,y:fb.y,r:fb.rmax,vr:-1,life:14,c:CH.glow});shake+=4;}
     else{
     n=grabRegion(cx,cy,r);
     if(!n)for(let y=-r;y<=r;y++)for(let x=-r;x<=r;x++){if(x*x+y*y>r*r*(0.75+R()*.3))continue;const X=cx+x,Y=cy+y;if(X<0||X>=W||Y<0||Y>=H-1)continue;const i=Y*W+X,m=t[i];if(m&&(KIND[m]===S||KIND[m]===P)){q[n++]=i;markDirty(i);}}
@@ -2270,6 +2286,17 @@ function updTelekinesis(){
       else if(t2.overhead){b.tx=pl_.x;b.ty=pl_.y-PH-b.rmax*.6-4;}else{b.tx=mouse.wx;b.ty=mouse.wy;}
       for(let k=0;k<6;k++){const j=R()*b.ex.length|0;spawn(b.x+b.ex[j],b.y+b.ey[j],(R()-.5)*.5,(R()-.5)*.5,CH.thrust(),10,0,1,0,1);}
       if(t2.tether){const h=hand();beams.push({pts:[[h.x,h.y],[(h.x+b.x)/2+(R()-.5)*8,(h.y+b.y)/2+(R()-.5)*8],[b.x,b.y]],life:1,c:[100,220,140],g:[40,160,80]});}}
+  }
+  if(heldE){
+    const e=heldE,t2=tk||{};
+    if(e.hp<=0||!enemies.includes(e)){e.grabbed=false;heldE=null;}
+    else if(!want||pl_.en<=0){ // fling it: it wrecks whatever it hits, including other enemies
+      e.grabbed=false;const a=aim();let dx=a.dx,dy=a.dy;if(t2.overhead&&Math.abs(dx)<.35){dx=(dx<0?-1:1)*.35;const d=Math.hypot(dx,dy);dx/=d;dy/=d;}
+      const sp=t2.overhead?9:11;e.vx=dx*sp;e.vy=dy*sp-1.5;e.thrownT=70;if(t2.overhead)pl_.throwF=10;heldE=null;shake+=4;fxWord(e.x,e.y-e.def.h/2-6,'YOINK!',1,'#ff9ad8',true);}
+    else{pl_.en-=.15;let tx=mouse.wx,ty=mouse.wy;if(t2.overhead){tx=pl_.x;ty=pl_.y-SH-3-e.def.h/2;}
+      e.vx=(tx-e.x)*.25;e.vy=(ty-e.y)*.25;e.x+=e.vx;e.y+=e.vy;e.face=pl_.x>e.x?1:-1;hitEnemy(e,.12,0,0);
+      for(let k=0;k<3;k++)spawn(e.x+(R()-.5)*e.def.w,e.y+(R()-.5)*e.def.h,(R()-.5)*.5,(R()-.5)*.5,CH.thrust(),10,0,1,0,1);
+      if(t2.tether){const h=hand();beams.push({pts:[[h.x,h.y],[(h.x+e.x)/2+(R()-.5)*8,(h.y+e.y)/2+(R()-.5)*8],[e.x,e.y]],life:1,c:[255,170,230],g:[200,90,190]});}}
   }
   tkPrev=want;
 }
@@ -2444,6 +2471,8 @@ function updEnemies(){
   for(let n=spawnQ.length-1;n>=0;n--){const s=spawnQ[n];if(--s.delay>0)continue;spawnQ.splice(n,1);const pos=spawnPoint(ENEMY_TYPES[s.type]);if(pos)spawnEnemy(s.type,pos[0],pos[1]);}
   for(let n=enemies.length-1;n>=0;n--){
     const e=enemies[n],d=e.def;e.t++;if(e.cd>0)e.cd--;if(e.flash>0)e.flash--;
+    if(e.grabbed){if(e.hp<=0){if(heldE===e)heldE=null;killEnemy(e);enemies.splice(n,1);}continue;} // held by telekinesis: no AI, no physics
+    const preSp=Math.hypot(e.vx,e.vy);
     if(e.frozen>0){e.frozen--;e.vx*=.7;if(d.fly)e.vy=Math.min(3,e.vy+.15);if(frame%6===0)spawn(e.x+(R()-.5)*e.def.w,e.y+(R()-.5)*e.def.h,0,.3,rgb(200,240,255),12,0,1,0);}
     else if(d.think)d.think(e);
     // physics
@@ -2458,6 +2487,9 @@ function updEnemies(){
     // hazards + thrown chunks
     const ci=(e.y|0)*W+(e.x|0);if(ci>=0&&ci<N){const m=t[ci];if(m===LAVA)e.hp-=2;else if(m===ACID)e.hp-=1;else if(m===FIRE||m===GFIRE)e.hp-=.4;}
     for(const b of bodies){const spd=Math.hypot(b.vx,b.vy);if(spd<2.2||b.held)continue;if(Math.hypot(b.x-e.x,b.y-e.y)<b.rmax+e.def.w/2&&bodyAt(b,e.x,e.y)){hitEnemy(e,spd*7,b.vx*.6,b.vy*.6);}}
+    if(e.thrownT>0){e.thrownT--; // thrown enemies smash into others and splat on impact
+      for(const o of enemies)if(o!==e&&!o.grabbed&&Math.abs(o.x-e.x)<(o.def.w+d.w)/2+1&&Math.abs(o.y-e.y)<(o.def.h+d.h)/2+1)hitEnemy(o,preSp*5,e.vx*.5,e.vy*.5);
+      if(preSp>3&&(e.mem.blocked===e.t||e.ground)){hitEnemy(e,preSp*12,0,0);explode(e.x|0,e.y|0,Math.min(10,4+preSp*.6|0),{self:true});e.thrownT=0;}}
     if(e.y>H+20)e.hp=0;
     if(e.hp<=0){killEnemy(e);enemies.splice(n,1);}
   }
