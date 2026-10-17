@@ -46,6 +46,42 @@ const cl=v=>v<0?0:v>255?255:v|0;
 function mkcol(m){const d=MATS[m];const v=(Math.random()*2-1)*d[8];return rgb(cl(d[5]+v),cl(d[6]+v),cl(d[7]+v));}
 const R=Math.random;
 
+// ================= physics tuning =================
+// The sim runs on a fixed 60 Hz tick (TICK); loop() advances it by real elapsed time, so behaviour
+// does not depend on display frame rate. All values below are per tick at that rate.
+const TICK=1000/60;
+const PHYS={
+  maxSteps:4,             // ticks loop() may run per rendered frame to catch up (real time down to 15 fps; slower than that the game slows down instead of spiralling)
+  body:{                  // rigid falling chunks (collapsed structure, thrown boulders, explosion chunks)
+    grav:.3, drag:.996, spinDrag:.997, maxV:12, maxSpin:.12,
+    landBounce:.08,       // share of downward speed a big chunk keeps (upward) when it touches down without landing
+    wallBounce:.25,       // share of sideways speed kept when it hits a wall
+    spinBounce:.3,        // share of spin kept when rotating into something
+    restTicks:10,         // ticks a chunk must sit still on support before it freezes into the grid
+    maxAge:1200,         // a chunk that is on support but never quite settles freezes after this many ticks
+    buoy:.45},            // liquid lift, scaled by liquid density / chunk density: chunks denser than buoy/grav (1.5x) the liquid sink and settle, lighter ones float
+  chunk:{                 // small solid chunks blown out by explosions
+    bounce:.35,           // share of impact speed returned on each bounce
+    friction:.25,         // share of sideways speed lost per ground contact
+    minBounceV:1.2,       // below this downward speed a chunk stops bouncing and slides to rest
+    roll:.04,             // how strongly ground speed turns into spin (tumbling)
+    max:60,               // live explosion chunks allowed at once; past it blasts make dust only
+    minR:6,               // explosions smaller than this radius make no chunks (dust only)
+    perR:.45,             // chunks per unit of blast radius above minR
+    perBoom:10,           // most chunks one explosion can make
+    size:[2,5],           // chunk blob radius range, cells
+    speed:.3},            // launch speed per unit of blast radius
+  dust:{                  // light dust motes: no grid collision, cheap
+    grav:.035, drag:.94,
+    life:[25,55],         // lifetime range, ticks
+    fade:20,              // final ticks spent fading out
+    perR2:.8,             // motes per radius^2 of an explosion
+    max:900,              // most motes one explosion can make
+    budget:.7},           // no new dust once the particle pool is this full (leaves room for debris grains)
+  part:{grav:.15, drag:.99, dragHeavy:.9}, // debris grains and sparks
+  powder:{maxV:5}, liquid:{maxV:4},        // fastest fall, cells per tick
+};
+
 // ================= grid =================
 const t=new Uint8Array(N), col=new Uint32Array(N), life=new Uint8Array(N), stamp=new Uint8Array(N), vel=new Uint8Array(N);
 const bg=new Uint32Array(N), bgD=new Uint32Array(N), bgB=new Uint8Array(N); // bgD: backdrop with no structures; bgB: pixel belongs to a structure's backdrop
@@ -104,7 +140,7 @@ function updPowder(i,m,x,y){
   if(y>=H-1)return;
   const j=i+W, tj=t[j];
   if(canSink(m,tj)&&(KIND[tj]!==L||R()<.5)){
-    let v=vel[i]; if(v<5)v++;
+    let v=vel[i]; if(v<PHYS.powder.maxV)v++;
     let dest=j, yy=y+1;
     if(tj===0) for(let s=1;s<v&&yy<H-1;s++){const jj=dest+W;if(t[jj]===0){dest=jj;yy++;}else break;}
     swap(i,dest); vel[dest]=v; if(i>=W&&KIND[t[i-W]]===S)markDirty(i-W); return;
@@ -122,7 +158,7 @@ function updLiquid(i,m,x,y){
   if(y<H-1){
     const j=i+W, tj=t[j];
     if(canSink(m,tj)){
-      let v=vel[i]; if(v<4)v++; let dest=j,yy=y+1;
+      let v=vel[i]; if(v<PHYS.liquid.maxV)v++; let dest=j,yy=y+1;
       if(tj===0) for(let s=1;s<v&&yy<H-1;s++){const jj=dest+W;if(t[jj]===0){dest=jj;yy++;}else break;}
       swap(i,dest); vel[dest]=v; return;
     }
@@ -208,19 +244,33 @@ MASS[STEEL]=1.5;MASS[STONE]=1.2;MASS[OBSID]=1.2;MASS[GLASS]=.8;MASS[WOOD]=.5;MAS
 LOAD[WEB]=160;MASS[WEB]=.05; // spider silk: featherweight and strong, so strands span gaps
 let collapses=0;
 const vis2=new Uint32Array(N), GCAP=150000; let ggen=0, gstart=0;
+const PCAP=8192, pcand=new Int32Array(PCAP), fcand=new Int32Array(PCAP);
+// loose debris under a structure only holds it up if the pile itself stands on something else.
+// Follow the loose column down: rubble trapped inside the very piece being checked (crater rims,
+// cracked walls) or still falling through the air holds nothing, so that piece must fall.
+function pileHolds(j,vm,id){
+  for(let n=0;n<400;n++){
+    if(j>=N-W)return true;                       // world floor
+    const k=KIND[t[j]];
+    if(k===P||k===L){j+=W;continue;}
+    return k===S&&vm[j]!==id;
+  }
+  return true;                                   // very deep pile
+}
 function anchorFlood(s,init){
-  const id=++ggen;let sp=0,tl=0;stk[sp++]=s;q[tl++]=s;vis2[s]=id;
+  const id=++ggen;let sp=0,tl=0,npc=0;stk[sp++]=s;q[tl++]=s;vis2[s]=id;
   while(sp>0){
     if(tl>GCAP)return; // the landscape itself
     const i=stk[--sp],y=(i/W)|0,x=i-y*W;
     if(y>=H-1||(y>=H-40&&gnd[i])||pin[i]===3)return;           // world floor / bedrock band / Iceman's fresh slide
-    const b=t[i+W];if(KIND[b]===P)return;                       // sitting on a debris pile
+    if(KIND[t[i+W]]===P){if(npc>=PCAP)return;pcand[npc++]=i+W;}   // maybe sitting on a debris pile: judged once the walk is done
     for(let d=0;d<4;d++){ // push down last so it is explored first
       let j;if(d===0){if(x===0)continue;j=i-1;}else if(d===1){if(x===W-1)continue;j=i+1;}else if(d===2){if(i<W)continue;j=i-W;}else j=i+W;
       if(KIND[t[j]]!==S)continue;
       if(vis2[j]>=gstart){if(vis2[j]!==id)return;continue;}       // touches something already proven anchored
       vis2[j]=id;q[tl++]=j;stk[sp++]=j;}
   }
+  for(let k=0;k<npc;k++)if(pileHolds(pcand[k],vis2,id))return;   // rests on a real pile
   // fully walked and never reached the ground: it is floating
   if(init){let lf=0;for(let k=0;k<tl;k++)if(t[q[k]]===LEAF)lf++; // generator leftovers (detached canopies, specks) are simply removed
     if(tl<200||lf*2>tl){for(let k=0;k<tl;k++){t[q[k]]=0;wake(q[k]);}return;}}
@@ -284,7 +334,7 @@ function dropBg(i,x,y){if(R()<.2&&np<MP-500)spawn(x,y,(R()-.5)*1.5,-R(),shade(bg
 function flood(s,init){
   // walk one connected structure (natural ground and built stuff are separate structures)
   // depth-first, diving down first: anything resting on the world floor is proven sound in a few hundred steps
-  const id=++vgen; let sp=0,tl=0; stk[sp++]=s; q[tl++]=s; vis[s]=id; let sup=0, mass=0, My=0, Ty=H, smx=-1, smn=W, cmx=0, hook=false, r0=rid[s], mixed=false;
+  const id=++vgen; let sp=0,tl=0,nfc=0; stk[sp++]=s; q[tl++]=s; vis[s]=id; let sup=0, mass=0, My=0, Ty=H, smx=-1, smn=W, cmx=0, hook=false, r0=rid[s], mixed=false;
   while(sp>0){
     if(tl>CAP)return; // part of the landscape itself: too big to fall
     if(sup>=1e9&&!init)return; // proven sound (cells walked so far count as sound for later floods)
@@ -301,9 +351,10 @@ function flood(s,init){
         else if(vis[j]<vstart){vis[j]=id;q[tl++]=j;stk[sp++]=j;}
         else if(vis[j]!==id)sup+=1e9; // touches a region already judged sound this pass
       }
-      else if(d===3&&kj===P){sup+=90;if(x<smn)smn=x;if(x>smx)smx=x;} // resting on loose debris: weak support
+      else if(d===3&&kj===P){if(nfc<PCAP)fcand[nfc++]=j;else{sup+=90;if(x<smn)smn=x;if(x>smx)smx=x;}} // resting on loose debris: weak support, judged after the walk
     }
   }
+  for(let k=0;k<nfc;k++){const j=fcand[k];if(pileHolds(j,vis,id)){const x=j%W;sup+=90;if(x<smn)smn=x;if(x>smx)smx=x;}}
   if(hook)sup+=1e9;
   if(init){ // generated as-is: tiny floaters vanish, bigger ones hang on hooks until damaged; the rest get a 1.5x safety margin
     if(sup===0)return; // floating bits are the anchor pass's job
@@ -431,13 +482,15 @@ function bodyAt(b,X,Y){ // local material under a world point
   return(lx<0||ly<0||lx>=b.lw||ly>=b.lh)?0:b.lm[ly*b.lw+lx];
 }
 function updBodies(){
+  const PB=PHYS.body,CK=PHYS.chunk;
   for(let n=bodies.length-1;n>=0;n--){
-    const b=bodies[n]; b.age++;
-    if(stasis&&inStasis(b.x,b.y))continue; // hangs in the air until the bubble pops
+    const b=bodies[n];
+    if(stasis&&inStasis(b.x,b.y))continue; // hangs in the air until the bubble pops (and does not age, so it cannot freeze up there)
+    b.age++;
     if(b.held){ if(!b.overhead){b.vx=(b.vx+((b.tx??mouse.wx)-b.x)*.18)*.72; b.vy=(b.vy+((b.ty??mouse.wy)-b.y)*.18)*.72; b.va*=.9;} }
-    else { b.vy+=.3; b.vx*=.996; b.va*=.997; if(b.topple&&b.age<90)b.va+=b.topple*.0015; }
-    const sp=Math.hypot(b.vx,b.vy); if(sp>12){b.vx*=12/sp;b.vy*=12/sp;}
-    if(Math.abs(b.va)>.12)b.va=Math.sign(b.va)*.12;
+    else { b.vy+=PB.grav; b.vx*=PB.drag; b.va*=PB.spinDrag; if(b.topple&&b.age<90)b.va+=b.topple*.0015; }
+    const sp=Math.hypot(b.vx,b.vy); if(sp>PB.maxV){b.vx*=PB.maxV/sp;b.vy*=PB.maxV/sp;}
+    if(Math.abs(b.va)>PB.maxSpin)b.va=Math.sign(b.va)*PB.maxSpin;
     const ns=Math.min(14,Math.max(1,Math.ceil(Math.max(Math.abs(b.vx),Math.abs(b.vy),Math.abs(b.va)*b.rmax))));
     let landed=false, impact=0, grounded=false;
     for(let s=0;s<ns&&!landed;s++){
@@ -445,7 +498,12 @@ function updBodies(){
       const ny=b.y+b.vy/ns;
       let dv=0;
       if(!bodyHitPose(b,b.x,ny,b.a))b.y=ny;
-      else if(b.vy>3&&!b.held&&b.n>=30&&(dv=crush(b,b.x,ny,b.a,b.vy,0,1))){b.vy-=dv;b.y=ny;}
+      else if(b.vy>3&&!b.held&&!b.chunk&&b.n>=30&&(dv=crush(b,b.x,ny,b.a,b.vy,0,1))){b.vy-=dv;b.y=ny;}
+      else if(b.chunk&&b.vy>0&&!b.held){ // small chunk: bounce, skid and tumble, then rest
+        grounded=true;
+        if(b.vy>CK.minBounceV){b.vy*=-CK.bounce;b.vx*=1-CK.friction;b.va=b.va*.5+b.vx*CK.roll;if(b.vy<-.8)debrisBurst(b,1.2,2);}
+        else{b.vy=0;b.vx*=1-CK.friction;b.va*=.6;}
+      }
       else if(b.vy>0&&!b.held){
         grounded=true;
         const hit=b.vy+Math.abs(b.va)*b.rmax*.6, c=contacts(b);
@@ -455,21 +513,21 @@ function updBodies(){
           b.va+=Math.sign(off)*Math.min(.014,Math.abs(off)*.0009+.002); b.vx+=Math.sign(off)*.04;
         }
         if(hit>2.5)debrisBurst(b,hit*.5,4);
-        b.vy*=-.08;
+        b.vy*=-PB.landBounce;
       } else b.vy=0;
       // horizontal
       const nx=b.x+b.vx/ns;
       if(!bodyHitPose(b,nx,b.y,b.a))b.x=nx;
-      else if(Math.abs(b.vx)>3&&!b.held&&b.n>=30&&(dv=crush(b,nx,b.y,b.a,Math.abs(b.vx),Math.sign(b.vx),0))){b.vx-=Math.sign(b.vx)*dv;b.x=nx;}
-      else{ if(Math.abs(b.vx)>4.5&&!b.held){landed=true;impact=Math.abs(b.vx);break;} b.vx*=-.25; }
+      else if(Math.abs(b.vx)>3&&!b.held&&!b.chunk&&b.n>=30&&(dv=crush(b,nx,b.y,b.a,Math.abs(b.vx),Math.sign(b.vx),0))){b.vx-=Math.sign(b.vx)*dv;b.x=nx;}
+      else{ if(Math.abs(b.vx)>4.5&&!b.held&&!b.chunk){landed=true;impact=Math.abs(b.vx);break;} b.vx*=b.chunk?-CK.bounce:-PB.wallBounce; }
       // rotation
       const na=b.a+b.va/ns;
       if(!bodyHitPose(b,b.x,b.y,na))b.a=na;
-      else{ if(Math.abs(b.va)*b.rmax>5&&!b.held){landed=true;impact=Math.abs(b.va)*b.rmax;break;} b.va*=-.3; }
+      else{ if(Math.abs(b.va)*b.rmax>5&&!b.held&&!b.chunk){landed=true;impact=Math.abs(b.va)*b.rmax;break;} b.va*=-PB.spinBounce; }
     }
     if(!landed&&!b.held){
       if(grounded&&Math.abs(b.vx)<.4&&Math.abs(b.vy)<.6&&Math.abs(b.va)<.006)b.rest++;else b.rest=Math.max(0,b.rest-1);
-      if(b.rest>10||b.age>1200){landed=true;impact=Math.max(1,Math.abs(b.vy));}
+      if(b.rest>PB.restTicks||(b.age>PB.maxAge&&grounded)){landed=true;impact=Math.max(1,Math.abs(b.vy));} // only ever freezes while on support
     }
     // splash liquids / sweep gas the chunk overlaps, tear through back walls; shed dust while moving fast
     const c=Math.cos(b.a),s=Math.sin(b.a),spd=Math.hypot(b.vx,b.vy)+Math.abs(b.va)*b.rmax;let wet=0,wl=WATER;
@@ -478,17 +536,17 @@ function updBodies(){
       const kd=KIND[m];if(kd===S||kd===P)continue;
       if(kd===L){wet++;wl=m;if(spd>1.5){if(np<MP-200)spawn(X,Y,(R()-.5)*2+b.vx*.4,-.6-R()*1.5-Math.abs(b.vy)*.4,col[j],70,m,0);setc(j,EMPTY);if(spd>3&&!b.splashed){b.splashed=1;snd('splash',X,Y,{v:Math.min(1,spd/6)});}}}
       else setc(j,EMPTY);}
-    if(wet&&!b.held){const f=wet/b.ex.length;b.vy-=f*.7*DENS[wl]/b.dens;b.vx*=1-f*.12;b.vy*=1-f*.12;b.va*=1-f*.1;if(f>.15)b.rest=0;}
-    if(!b.held&&!(b.safeP>frame)&&spd>3&&b.age>4&&frame-b.hitP>20&&Math.abs(pl_.x-b.x)<b.rmax+4&&Math.abs(pl_.y-PH/2-b.y)<b.rmax+8&&bodyAt(b,pl_.x,pl_.y-PH/2)){
+    if(wet&&!b.held){const f=wet/b.ex.length;b.vy-=f*PB.buoy*DENS[wl]/b.dens;b.vx*=1-f*.12;b.vy*=1-f*.12;b.va*=1-f*.1;if(f>.15&&b.dens<DENS[wl])b.rest=0;}
+    if(!b.held&&!b.chunk&&!(b.safeP>frame)&&spd>3&&b.age>4&&frame-b.hitP>20&&Math.abs(pl_.x-b.x)<b.rmax+4&&Math.abs(pl_.y-PH/2-b.y)<b.rmax+8&&bodyAt(b,pl_.x,pl_.y-PH/2)){
       b.hitP=frame;hurt(Math.min(30,spd*Math.sqrt(b.n)/12));pl_.vx+=b.vx*.7;pl_.vy+=b.vy*.7;shake=Math.max(shake,6);}
-    if(spd>1.5&&!b.held){const cnt=Math.min(8,(b.ex.length/120)*spd|0);for(let k=0;k<cnt;k++){const e=R()*b.ex.length|0;const X=b.x+b.ex[e]*c-b.ey[e]*s,Y=b.y+b.ex[e]*s+b.ey[e]*c;spawn(X,Y,b.vx*.6+(R()-.5)*1.5,b.vy*.4-R(),R()<.5?rgb(150,140,125):rgb(110,105,98),40+R()*40,0,0,1);}}
+    if(spd>1.5&&!b.held){const cnt=Math.min(8,(b.ex.length/120)*spd|0);for(let k=0;k<cnt;k++){const e=R()*b.ex.length|0;const X=b.x+b.ex[e]*c-b.ey[e]*s,Y=b.y+b.ex[e]*s+b.ey[e]*c;spawnDust(X,Y,b.vx*.6+(R()-.5)*1.5,b.vy*.4-R(),R()<.5?rgb(150,140,125):rgb(110,105,98));}}
     if(landed){ landBody(b,impact); bodies.splice(n,1); }
     else if(b.y>H+80){ bodies.splice(n,1); }
   }
 }
 function debrisBurst(b,power,cnt){
   const c=Math.cos(b.a),s=Math.sin(b.a);
-  for(let k=0;k<cnt;k++){const e=R()*b.ex.length|0;const X=b.x+b.ex[e]*c-b.ey[e]*s,Y=b.y+b.ex[e]*s+b.ey[e]*c;spawn(X,Y-1,(R()-.5)*power,-R()*power,rgb(160,150,135),50,0,0,1);}
+  for(let k=0;k<cnt;k++){const e=R()*b.ex.length|0;const X=b.x+b.ex[e]*c-b.ey[e]*s,Y=b.y+b.ex[e]*s+b.ey[e]*c;spawnDust(X,Y-1,(R()-.5)*power,-R()*power,rgb(160,150,135));}
 }
 function landBody(b,impact){
   impact*=1+Math.min(2.5,b.h/80); // heavy, tall chunks hit harder
@@ -526,7 +584,8 @@ function landBody(b,impact){
     if(bottom&&impact>2.5&&R()<.12)dust(X,Y-2);
   }
   {const r=rcount.length;let c=0;for(const j of list)if(KIND[t[j]]===S){rid[j]=r;c++;}rcount.push(c);} // settled debris counts as an intact piece
-  if(impact>1.8){snd(b.glassy?'glass':'crumble',b.x,b.y,{size:Math.min(2,Math.sqrt(b.n)/40),v:Math.min(1,impact/4),gap:.06});shake=Math.min(22,shake+Math.min(12,impact*Math.sqrt(b.n)/35)); rings.push({x:b.x,y:b.y+b.lh/2,r:3,vr:2+impact*.35,life:18,c:[190,180,160]});}
+  if(b.chunk){if(impact>1.5){for(let k=0;k<4;k++)spawnDust(b.x+(R()-.5)*b.lw,b.y+b.lh/2,(R()-.5)*1.5,-R()*.8,dustCol(b.lc[0]));if(R()<.3)snd('crumble',b.x,b.y,{size:.4,v:.3,gap:.12});}}
+  else if(impact>1.8){snd(b.glassy?'glass':'crumble',b.x,b.y,{size:Math.min(2,Math.sqrt(b.n)/40),v:Math.min(1,impact/4),gap:.06});shake=Math.min(22,shake+Math.min(12,impact*Math.sqrt(b.n)/35)); rings.push({x:b.x,y:b.y+b.lh/2,r:3,vr:2+impact*.35,life:18,c:[190,180,160]});}
   if(thrown)explode(b.x,b.y,Math.min(12,impact*1.3|0),{fire:.1});
 }
 function dust(X,Y){if(X<0||X>=W||Y<0||Y>=H)return;const i=Y*W+X;if(t[i]!==0)return;setc(i,SMOKE);const v=(R()*20)|0;col[i]=rgb(150+v,135+v,115+v);life[i]=70+R()*80;}
@@ -1205,14 +1264,21 @@ const MP=40000, px=new Float32Array(MP),py=new Float32Array(MP),pvx=new Float32A
 let np=0;
 // flags: 1 glow, 2 gravity, 4 drag
 function spawn(x,y,vx,vy,c,l,m,glow,grav=1,drag=0){if(np>=MP)return;px[np]=x;py[np]=y;pvx[np]=vx;pvy[np]=vy;pc[np]=c;pl[np]=l;pm[np]=m;pg[np]=(glow?1:0)|(grav?2:0)|(drag?4:0);np++;}
+// light tier: dust motes (flag 16). Never touch the grid, drift on low gravity + heavy drag, fade out at the end
+function spawnDust(x,y,vx,vy,c){const D=PHYS.dust;if(np>=MP*D.budget)return;spawn(x,y,vx,vy,c,D.life[0]+R()*(D.life[1]-D.life[0])|0,0,0,0,0);pg[np-1]|=16;}
+const dustCol=c=>rgb(((c&255)+170)>>1,(((c>>8)&255)+160)>>1,(((c>>16)&255)+145)>>1);
 function solidAt(x,y){if(x<0||x>=W||y>=H)return true;if(y<0)return false;const m=t[(y|0)*W+(x|0)],k=KIND[m];return(k===S&&m!==LEAF)||k===P;}
 function updParticles(){
-  const ss=stasis;
+  const ss=stasis,PP=PHYS.part,PD=PHYS.dust;
   for(let n=0;n<np;n++){
     if(ss){const dx=px[n]-ss.x,dy=py[n]-ss.y;if(dx*dx+dy*dy<ss.r*ss.r)continue;}
     const f=pg[n];
-    if(f&2)pvy[n]+=.15;
-    if(f&4){pvx[n]*=.9;pvy[n]*=.9;} else pvx[n]*=.99;
+    if(f&16){ // dust mote: no collision, just drift and expire
+      pvy[n]+=PD.grav;pvx[n]*=PD.drag;pvy[n]*=PD.drag;px[n]+=pvx[n];py[n]+=pvy[n];
+      if(--pl[n]<=0||px[n]<0||px[n]>=W||py[n]>=H){np--;px[n]=px[np];py[n]=py[np];pvx[n]=pvx[np];pvy[n]=pvy[np];pc[n]=pc[np];pl[n]=pl[np];pm[n]=pm[np];pg[n]=pg[np];n--;}
+      continue;}
+    if(f&2)pvy[n]+=PP.grav;
+    if(f&4){pvx[n]*=PP.dragHeavy;pvy[n]*=PP.dragHeavy;} else pvx[n]*=PP.drag;
     const ox=px[n],oy=py[n],nx=ox+pvx[n],ny=oy+pvy[n];
     let dead=--pl[n]<=0;
     if(!(f&4)&&ox>=0&&ox<W&&oy>=0&&oy<H){const oi=(oy|0)*W+(ox|0),om=t[oi];if(om!==0&&(KIND[om]===S||KIND[om]===P)){
@@ -1273,7 +1339,7 @@ function explode(cx,cy,r,opt={}){
   lastBoom={x:cx,y:cy,f:frame,r};
   if(r>=6&&!opt.quiet)fxBoom(cx,cy,r,opt);
   if(!opt.quiet||r>=9)snd(r>=6?'boom':'pop',cx,cy,{size:r/12,gap:r>=10?.025:.05,v:Math.min(1,.45+r/14)});
-  let parts=0,glassN=0,steelN=0;
+  let parts=0,glassN=0,steelN=0;exN=0;
   for(let y=-r;y<=r;y++)for(let x=-r;x<=r;x++){
     const d2=x*x+y*y;if(d2>r*r)continue;
     const X=cx+x|0,Y=cy+y|0;if(X<0||X>=W||Y<0||Y>=H)continue;
@@ -1282,6 +1348,7 @@ function explode(cx,cy,r,opt={}){
     if(HARD[m]>0&&R()*10<HARD[m]-(1-dn)*7)continue;
     if(m===STEEL&&R()<.25){if(R()<.3){steelN++;spawn(X,Y,(R()-.5)*4,-R()*3,rgb(255,210+R()*40|0,140),8+R()*10,0,1,1);}continue;}
     const k=KIND[m];if(m===GLASS)glassN++;
+    if(k===S&&exN<EXCAP){exI[exN]=i;exM[exN]=m;exC[exN++]=col[i];}
     if(m===PROPANE){booms.push([X,Y,7]);}
     if(R()<(k===S?.62:.45)&&parts<1800){parts++;
       const a=Math.atan2(y,x)+(R()-.5)*.9, sp=(1+R()*4.5*(1-dn))*(1+r/16);
@@ -1290,6 +1357,7 @@ function explode(cx,cy,r,opt={}){
     if(m===OIL){setc(i,FIRE);continue;}
     setc(i,fire&&R()<fire?(green?GFIRE:FIRE):EMPTY);
   }
+  if(!opt.quiet||r>=6)blastDebris(cx,cy,r);
   bgHit(cx,cy,r*1.2|0);
   if(glassN>5)snd('glass',cx,cy,{v:Math.min(1,glassN/30)});if(steelN>3)snd('clang',cx,cy,{v:Math.min(1,steelN/12),gap:.12});
   // shockwave: the crater rim cracks into loose rubble, loose stuff gets thrown
@@ -1313,6 +1381,35 @@ function explode(cx,cy,r,opt={}){
   if(r>=9&&!opt.quiet)shockFx(cx,cy,Math.min(1.4,r/18));
   if(r>=5)for(let n=0;n<r*r*1.6;n++){const an=R()*6.283,d=r*(.95+R()*.4),X=cx+Math.cos(an)*d|0,Y=cy+Math.sin(an)*d|0;if(X<0||X>=W||Y<0||Y>=H)continue;const i=Y*W+X;if(KIND[t[i]]===S&&t[i]!==ICE&&t[i]!==NEON)col[i]=shade(col[i],.55+R()*.25);} // scorched crater rim
   for(const b of bodies){const ddx=b.x-cx,ddy=b.y-cy,d=Math.hypot(ddx,ddy)||1;if(d<r*4+b.rmax){const f=r*3/(d+8)*Math.min(1,300/b.n);b.vx+=ddx/d*f;b.vy+=ddy/d*f-.3;b.va+=(R()-.5)*f*.04;}}
+}
+// what an explosion tears out leaves as two tiers of debris, scaled by blast size:
+// a few solid chunks (big blasts only) that tumble, bounce and settle, plus a cloud of light dust
+const EXCAP=1<<16, exI=new Int32Array(EXCAP), exM=new Uint8Array(EXCAP), exC=new Uint32Array(EXCAP); let exN=0;
+function blastDebris(cx,cy,r){
+  const CK=PHYS.chunk,D=PHYS.dust;
+  if(r>=CK.minR&&exN>=12&&bodies.length<130){
+    let live=0;for(const b of bodies)if(b.chunk)live++;
+    const want=Math.min(CK.perBoom,CK.max-live,130-bodies.length,Math.round((r-CK.minR+1)*CK.perR*(.7+R()*.6)));
+    const used=new Uint8Array(exN);
+    for(let c=0;c<want;c++){
+      const s0=R()*exN|0;if(used[s0])continue;
+      const sx=exI[s0]%W,sy=exI[s0]/W|0,rc=CK.size[0]+R()*Math.min(CK.size[1]-CK.size[0],r/8),rr=rc*rc;
+      const ids=[];let mx=W,my=H,Mx=0,My=0,gx=0,gy=0;
+      for(let k=0;k<exN;k++){if(used[k])continue;const x=exI[k]%W,y=exI[k]/W|0,dx=x-sx,dy=y-sy;if(dx*dx+dy*dy>rr+R()*2)continue;
+        ids.push(k);if(x<mx)mx=x;if(y<my)my=y;if(x>Mx)Mx=x;if(y>My)My=y;gx+=x;gy+=y;}
+      if(ids.length<4)continue;
+      const lw=Mx-mx+1,lh=My-my+1,lm=new Uint8Array(lw*lh),lc=new Uint32Array(lw*lh);
+      for(const k of ids){used[k]=1;const o=(exI[k]/W-my|0)*lw+exI[k]%W-mx;lm[o]=exM[k];lc[o]=exC[k];}
+      gx/=ids.length;gy/=ids.length;
+      const b=finishBody(lm,lc,lw,lh,gx-mx,gy-my,gx,gy,0,ids.length,false);b.chunk=true;
+      let dx=gx-cx,dy=gy-cy,d=Math.hypot(dx,dy);if(d<1){const a=R()*6.283;dx=Math.cos(a);dy=Math.sin(a);d=1;}
+      const v=CK.speed*r*(.5+R()*.7)/(1+ids.length/60);
+      b.vx=dx/d*v;b.vy=dy/d*v-1-R()*1.5;b.va=(R()-.5)*.2;
+    }
+  }
+  const nd=Math.min(D.max,r*r*D.perR2|0);
+  for(let k=0;k<nd;k++){const a=R()*6.283,d=R()*r*1.1,sp=.4+R()*(1+r*.12);
+    spawnDust(cx+Math.cos(a)*d,cy+Math.sin(a)*d,Math.cos(a)*sp,Math.sin(a)*sp-.6-R()*.8,dustCol(exN?exC[R()*exN|0]:rgb(150,140,125)));}
 }
 function bgHit(cx,cy,r){
   for(let y=-r;y<=r;y++)for(let x=-r;x<=r;x++){if(x*x+y*y>r*r)continue;const X=cx+x|0,Y=cy+y|0;if(X<0||X>=W||Y<0||Y>=H)continue;const i=Y*W+X;if(!bgB[i])continue;
@@ -1695,30 +1792,30 @@ const SPR_MAGNETO=[
 const PAL_MAGNETO={R:rgb(186,30,42),r:rgb(110,16,24),f:rgb(226,184,150),F:rgb(170,128,100),k:rgb(30,20,24),M:rgb(122,52,152),m:rgb(76,28,98),P:rgb(102,42,126),p:rgb(64,22,82)};
 const SPR_JUGG=[
 ".....hhhhh.....",
-"...hhHHHHHhh...",
-"..hHHjHHHjHHh..",
+"...hhHHjjHhh...",
+"..hHHHjjjHHHh..",
+".hHHHHjHHHHHHh.",
 ".hHHHHHHHHHHHh.",
-".hHHkkkkkkkHHh.",
-".hHjkfffffkjHh.",
-".hHHkfefefkHHh.",
-".hHHHkfFfkHHHh.",
-"..hHHHHHHHHHh..",
-".rrhhhHHHhhhrr.",
-"rRRRRrRRRrRRRRr",
-"rRRRRrRbRrRRRRr",
-"rRRRr.RbR.rRRRr",
-"rRRRr.RBR.rRRRr",
-"rRRr.bbBbb.rRRr",
-"sss..RRRRR..sss",
-"sss..RR.RR..sss",
-"....rRR.RRr....",
-"....rRR.RRr....",
-"....rRR.RRr....",
-"....hHH.HHh....",
-"...hHHH.HHHh...",
-"...hHHH.HHHh...",
-"...hhhh.hhhh..."];
-const PAL_JUGG={h:rgb(84,48,30),H:rgb(146,90,56),j:rgb(214,184,130),k:rgb(30,20,16),f:rgb(212,162,122),e:rgb(40,24,20),F:rgb(160,114,84),r:rgb(92,22,26),R:rgb(152,42,42),b:rgb(196,156,66),B:rgb(240,204,104),s:rgb(84,56,38)};
+"hHHHHkkkkkHHHHh",
+"hHHHkekkkekHHHh",
+"hHHHHkkfkkHHHHh",
+"hhHHHHkkkHHHHhh",
+"FffhHHHHHHHhffF",
+"fffFhRRRRRhFfff",
+"fRRFrRRjRRrFRRf",
+"fRRfrRRRRRrfRRf",
+"FffFrRrRrRrFffF",
+"FfFrRRrRrRRrFfF",
+"RRRrRRRRRRRrRRR",
+"fffrRRRRRRRrfff",
+"...rRRR.RRRr...",
+"...rRRR.RRRr...",
+"..rRRRr.rRRRr..",
+"..hRRRh.hRRRh..",
+"..rRRRr.rRRRr..",
+".rRRRRr.rRRRRr.",
+".hhhhhh.hhhhhh."];
+const PAL_JUGG={h:rgb(70,8,14),H:rgb(196,26,32),j:rgb(250,120,104),k:rgb(20,10,10),e:rgb(255,236,200),f:rgb(214,152,110),F:rgb(150,96,66),r:rgb(110,12,20),R:rgb(200,30,38)};
 const GLOWCH={e:1,'*':1,'@':1,V:1,'+':1};
 // ---- procedural animation rig. The hero sprite is re-posed every frame before drawing:
 //   leg   first leg row (rows below swing for walking / tuck for jumps / trail in flight)
@@ -1744,14 +1841,14 @@ const ANIM={
   strange:{leg:13,mid:6,armC:'BBb',tipC:'kkk',aw:2,al:5,fs:2,sh:[10,7],hide:rect(10,11,7,11),blink:null,cape:'Cc'},
   ultron:{leg:14,mid:6,armC:'WSs',tipC:'SSs',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null},
   magneto:{leg:13,mid:6,armC:'RRr',tipC:'MMm',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,12),blink:null,cape:'Pp'},
-  juggernaut:{leg:17,mid:7,armC:'RRr',tipC:'sss',aw:3,al:8,fs:4,sh:[12,10],hide:rect(11,14,10,16),blink:null},
+  juggernaut:{leg:17,mid:7,armC:'fRF',tipC:'fFf',aw:3,al:8,fs:4,sh:[12,10],hide:rect(11,14,10,16),blink:null},
   antman:{leg:13,mid:6,armC:'RRr',tipC:'kkk',aw:2,al:5,fs:2,sh:[10,7],hide:rect(10,11,7,12),blink:null},
   storm:{leg:13,mid:6,armC:'GKk',tipC:'ssS',aw:2,al:5,fs:2,sh:[10,7],hide:rect(10,11,7,12),blink:'e',lid:'s',cape:'Cc'},
 };
 const PP=8; // padding around the posed sprite for limbs that reach out
 const ARM_UP=new Set(['Conjure Chaos','Chaos Unleashed','Gravity Hex','Ward of Vishanti','No More','Giant-Man','Downburst','Heat Wave','Icicle Drop','Mjolnir Pin','Ice Golem','Telekinetic Rip','Blizzard','Phoenix Wings','Storm Call','Lightning Call','Thunderbolt','Tornado','Hailstorm','Phoenix Force','Ice Wall','Ball Lightning','Conductor Strike','Flash Flood','Eye of the Storm','Bifrost','God Blast']);
-const ARM_BOTH=new Set(['Transmute','Elemental Inversion','Reweave','Crimson Bands','Mirror Fold','Banish','Pym Burst','Chaos Field','EMP Burst','Not Today','Stealth Mode','Adamantium Skeleton','Mystic Shield','Thunderclap','Gale Force','Psychic Wave','Frost Nova','Mind Shield','Levitate Crowd','Debris Storm','Gamma Roar','Energy Shield','Avalanche']);
-const ARM_VISOR=new Set(['Bad Luck','Time Loop','Spider-Sense','Tactical Focus','Blackbird Strafe','Puppet Master','Optic Cage','Uncontrolled Blast','Optic Blast','Concussive Burst','Ricochet Shot','Full Power','Optic Sweep','Optic Barrage','Leg Sweep','Visor Overload']);
+const ARM_BOTH=new Set(['Hex Sphere','Crimson Crush','Mirror Shatter','Magnetic Implosion','Hex Storm','Transmute','Elemental Inversion','Reweave','Crimson Bands','Mirror Fold','Banish','Pym Burst','Chaos Field','EMP Burst','Not Today','Stealth Mode','Adamantium Skeleton','Mystic Shield','Thunderclap','Gale Force','Psychic Wave','Frost Nova','Mind Shield','Levitate Crowd','Debris Storm','Gamma Roar','Energy Shield','Avalanche']);
+const ARM_VISOR=new Set(['Annihilation Sweep','Bad Luck','Time Loop','Spider-Sense','Tactical Focus','Blackbird Strafe','Puppet Master','Optic Cage','Uncontrolled Blast','Optic Blast','Concussive Burst','Ricochet Shot','Full Power','Optic Sweep','Optic Barrage','Leg Sweep','Visor Overload']);
 function armMode(p){
   if(p.ball)return'clap';
   if(p.grip)return'grip';
@@ -2768,9 +2865,12 @@ const SPIDEY_POWERS=[
  // sticky web pellets: a hit enemy is wrapped up, a wall gets a splat of web
  {n:'Web Shot',fn:(a,p,use)=>{if(!use(4))return;cd=9;shots.push({x:a.h.x,y:a.h.y,vx:a.dx*7,vy:a.dy*7,type:'web',life:90,grav:.03,col:[236,236,242],
    onHit:sh=>{const e=enemyAt(sh.x,sh.y,3);if(e){webEnemy(e,150);fxWord(e.x,e.y-e.def.h/2-6,'THWIP!',.8,'#f3e9d2');}else for(let y=-2;y<=2;y++)for(let x=-2;x<=2;x++)if(x*x+y*y<6&&R()<.8)webCell(sh.x-sh.vx*.3+x|0,sh.y-sh.vy*.3+y|0);}});snd('whoosh',a.h.x,a.h.y,{v:.4,pitch:1.6});}},
- // a tightrope of silk strung between the walls on either side of the aim line (it holds weight)
- {n:'Web Line',fn:(a,p,use)=>{const f=ray(a.h.x,a.h.y,a.dx,a.dy,240),b=ray(a.h.x,a.h.y,-a.dx,-a.dy,240);if(!f.hit){fxWord(p.x,p.y-PH-6,'NOTHING TO STICK TO',.6,'#f3e9d2',true);return;}if(!use(10))return;cd=16;
-   const ax=b.hit?b.x:a.h.x,ay=b.hit?b.y:a.h.y;webLine(ax|0,ay|0,f.x|0,f.y|0);fxWord((ax+f.x)/2,(ay+f.y)/2-8,'THWIP!',.9,'#f3e9d2',true);snd('whoosh',p.x,p.y,{v:.5,pitch:1.8});}},
+ // web up every chunk of building around the cursor, then yank them all into each other
+ {n:'Web Wrecker',fn:(a,p,use)=>{const cx=mouse.wx,cy=mouse.wy,hits=[];for(let k=0;k<8;k++){const an=k/8*6.283+R()*.3,r=ray(cx,cy,Math.cos(an),Math.sin(an),110);if(r.hit)hits.push(r);}if(hits.length<2||!use(30))return;cd=55;let k=0;
+   for(const h of hits)webLine(cx|0,cy|0,h.x|0,h.y|0);fxWord(cx,cy-20,'WEB WRECKER!',1.2,'#f3e9d2',true);snd('whoosh',cx,cy,{pitch:1.6});
+   ACT.push(()=>{k++;for(const h of hits)beams.push({x0:cx,y0:cy,x1:h.x,y1:h.y,life:1,w:0,c:[240,240,246],g:[160,160,170]});if(k<14)return true;
+     for(const h of hits){const n=solidCells(h.x,h.y,9,false);if(n<12)continue;const b=makeBody(q,n,false);if(b){hurlBody(b,cx,cy,9);b.safeP=frame+20;}}
+     snd('rip',cx,cy);shake+=8;fxWord(cx,cy-20,'HEAVE!',1.2,'#f3e9d2',true);return false;});}},
  // a net that bursts open on impact: a lattice of web that tangles everything inside it
  {n:'Web Net',fn:(a,p,use)=>{if(!use(18))return;cd=30;shots.push({x:a.h.x,y:a.h.y,vx:a.dx*5.5,vy:a.dy*5.5,type:'web',life:80,grav:.05,col:[236,236,242],
    onHit:sh=>{const cx=sh.x-sh.vx*.4|0,cy=sh.y-sh.vy*.4|0;for(let y=-9;y<=9;y++)for(let x=-14;x<=14;x++)if((x%4===0||y%4===0)&&x*x/196+y*y/81<1)webCell(cx+x,cy+y);
@@ -2782,10 +2882,13 @@ const SPIDEY_POWERS=[
    const n=solidCells(r.x,r.y,5,false);if(n>=12){const b=makeBody(q,n,false);if(b){b.vx=dx/d*7;b.vy=dy/d*7-2;b.thrown=true;b.safeP=frame+30;}}}},
  // a sticky grenade that bursts into a cloud of webbing
  {n:'Web Bomb',fn:(a,p,use)=>{if(!use(20))return;cd=36;shots.push({x:a.h.x,y:a.h.y,vx:a.dx*4.5,vy:a.dy*4.5-1.5,type:'web',life:200,grav:.15,col:[236,236,242],
-   onHit:sh=>{const cx=sh.x|0,cy=sh.y-2|0;for(let k=0;k<260;k++){const an=R()*6.283,d=Math.sqrt(R())*18;webCell(cx+Math.cos(an)*d|0,cy+Math.sin(an)*d|0);}
+   onHit:sh=>{const cx=sh.x|0,cy=sh.y-2|0;explode(cx,cy,11,{col:[236,236,242]});damageEnemies(cx,cy,26,26,0,-3,true);for(let k=0;k<260;k++){const an=R()*6.283,d=Math.sqrt(R())*18;webCell(cx+Math.cos(an)*d|0,cy+Math.sin(an)*d|0);}
      for(const e of enemies)if(Math.hypot(e.x-cx,e.y-cy)<22+e.def.w/2)webEnemy(e,220);for(let k=0;k<30;k++)spawn(cx,cy,(R()-.5)*4,(R()-.5)*4,rgb(240,240,246),20,0,0,1);fxWord(cx,cy-16,'SPLORT!',1.1,'#f3e9d2',true);snd('pop',cx,cy);}});}},
- // danger sense: for seven seconds most hits are simply dodged
- {n:'Spider-Sense',fn:(a,p,use)=>{if(p.sense>0||!use(25))return;cd=30;p.sense=420;fxWord(p.x,p.y-PH-8,'MY SPIDER-SENSE!',1,'#f3e9d2',true);snd('charge',p.x,p.y,{pitch:1.8});}},
+ // slingshot himself off two web lines: a human cannonball that smashes through everything in the way
+ {n:'Human Cannonball',fn:(a,p,use)=>{if(!use(26))return;cd=50;const dx=a.dx,dy=a.dy;let k=0;fxWord(p.x,p.y-PH-8,'SLINGSHOT!',1.2,'#f3e9d2',true);snd('whoosh',p.x,p.y,{pitch:1.2});
+   ACT.push(()=>{k++;p.script=2;p.x=Math.max(5,Math.min(W-5,p.x+dx*8));p.y=Math.max(PH+2-SKY+VH/2,Math.min(H-8,p.y+dy*8));p.face=dx<0?-1:1;
+     carve(p.x+dx*4,p.y-PH/2+dy*4,7,dx*4,dy*4);damageEnemies(p.x,p.y-PH/2,14,16,dx*7,dy*7-2);afters.push({x:p.x,y:p.y,ang:0,face:p.face,life:10});if(k%3===0)shake=Math.max(shake,4);
+     if(k>=22){p.script=0;p.vx=dx*3;p.vy=dy*3-1;explode(p.x+dx*6|0,p.y-PH/2+dy*6|0,12,{self:true,col:[220,40,40],word:'THWA-KOOM!'});damageEnemies(p.x,p.y-PH/2,30,40,dx*6,-4,true);if(boxHit(p.x,p.y))punchOut(p);return false;}return true;});}},
  // a springy web hammock: anything that lands on it is flung high
  {n:'Web Trampoline',fn:(a,p,use)=>{if(!use(15))return;cd=24;const x=mouse.wx|0,gy=groundBelow(x,mouse.wy)-4;if(gy>=H-46)return;
    for(let k=-16;k<=16;k++)webCell(x+k,gy+Math.round(Math.abs(k)/16*2));for(const s of [-16,16])for(let y=gy;y<gy+4;y++)webCell(x+s,y+2);
@@ -2793,14 +2896,19 @@ const SPIDEY_POWERS=[
  // zip down a web line and dropkick whatever is at the end of it
  {n:'Swing Kick',fn:(a,p,use)=>{const r=ray(p.x,p.y-PH/2,a.dx,a.dy,190,true);if(!use(16))return;cd=30;const tx=r.x-a.dx*6,ty=r.y-a.dy*6+PH/2,x0=p.x,y0=p.y;let k=0;
    ACT.push(()=>{p.script=2;k++;const u=k/9;p.x=x0+(tx-x0)*u;p.y=y0+(ty-y0)*u;p.grip={x:r.x,y:r.y};p.face=a.dx<0?-1:1;afters.push({x:p.x,y:p.y,ang:0,face:p.face,life:8});beams.push({x0:p.x,y0:p.y-PH/2,x1:r.x,y1:r.y,life:1,w:0,c:[240,240,246],g:[160,160,170]});
-     if(k>=9){p.script=0;p.grip=null;p.vx=a.dx*3;p.vy=-2;damageEnemies(p.x+a.dx*6,p.y-PH/2,16,30,a.dx*7,a.dy*7-2);explode(p.x+a.dx*8|0,p.y-PH/2|0,4,{self:true,quiet:true});fxWord(p.x,p.y-PH-6,'THWAK!',1.2,'#f3e9d2',true);snd('punch',p.x,p.y);shake+=4;return false;}return true;});}},
+     if(k>=9){p.script=0;p.grip=null;p.vx=a.dx*3;p.vy=-2;damageEnemies(p.x+a.dx*6,p.y-PH/2,16,30,a.dx*7,a.dy*7-2);explode(p.x+a.dx*8|0,p.y-PH/2|0,11,{self:true,col:[220,40,40]});fxWord(p.x,p.y-PH-6,'THWAK!',1.2,'#f3e9d2',true);snd('punch',p.x,p.y);shake+=4;return false;}return true;});}},
  // web a whole building and haul it over
  {n:'Web Topple',fn:(a,p,use)=>{const r=ray(a.h.x,a.h.y,a.dx,a.dy,260);if(!r.hit)return;let n=grabRegion(r.x|0,r.y|0,6);if(!n)n=solidCells(r.x,r.y,6,false);if(n<12)return;if(!use(30))return;cd=60;
    const b=makeBody(q,n,false);if(!b)return;const dir=p.x<b.x?-1:1;b.vx=dir*3.5;b.vy=-1.5;b.va=dir*.03;b.topple=dir;b.thrown=true;b.safeP=frame+40;
    for(let k=0;k<3;k++)beams.push({x0:a.h.x,y0:a.h.y,x1:r.x+(R()-.5)*6,y1:r.y+(R()-.5)*6,life:10,w:0,c:[240,240,246],g:[160,160,170]});fxWord(r.x,r.y-12,'HEAVE!',1.2,'#f3e9d2',true);snd('rip',r.x,r.y);}},
- // cocoon a foe and string it up from the nearest ceiling
- {n:'Gotcha!',fn:(a,p,use)=>{const e=nearestEnemy(mouse.wx,mouse.wy,44);if(!e||e.def.title||e.hang)return;if(!use(22))return;cd=36;let top=-1;for(let d=e.def.h/2+2;d<140;d++){const Y=e.y-d|0;if(Y<2)break;const m=t[Y*W+(e.x|0)];if(m&&KIND[m]===S){top=Y+1;break;}}
-   if(top<0)top=Math.max(4,(camY|0)+4);e.hang={x:e.x,y:top,len:Math.min(40,Math.max(10,(e.y-top)*.5)),life:600};webEnemy(e,600);fxWord(e.x,e.y-14,'HANG AROUND!',.9,'#f3e9d2',true);snd('whoosh',e.x,e.y,{pitch:1.6});}},
+ // Maximum Spider: ricochet wall to wall to foe, every landing a blast
+ {n:'Maximum Spider',fn:(a,p,use)=>{if(!use(40))return;cd=80;let n=0,dx=a.dx,dy=a.dy,seg=0;fxWord(p.x,p.y-PH-10,'MAXIMUM SPIDER!',1.4,'#e23b2e',true);snd('whoosh',p.x,p.y,{pitch:1.4});
+   ACT.push(()=>{p.script=2;const nx=p.x+dx*9,ny=p.y+dy*9;afters.push({x:p.x,y:p.y,ang:0,face:p.face,life:10});damageLine(p.x,p.y-PH/2,nx,ny-PH/2,5,10);
+     if(boxHit(nx,ny)||nx<6||nx>W-6||ny<PH+2-SKY+VH/2||ny>H-10||++seg>14){n++;seg=0;explode(p.x|0,p.y-PH/2|0,9,{self:true,col:[220,40,40]});damageEnemies(p.x,p.y-PH/2,22,24,0,-3,true);shake=Math.max(shake,6);
+       const e=nearestEnemy(p.x,p.y,220);let tx,ty;if(e&&R()<.6){tx=e.x;ty=e.y+PH/2;}else{const an=R()*6.283;tx=p.x+Math.cos(an)*100;ty=p.y+Math.sin(an)*60;}const d=Math.hypot(tx-p.x,ty-p.y)||1;dx=(tx-p.x)/d;dy=(ty-p.y)/d;p.face=dx<0?-1:1;
+       fxWord(p.x,p.y-PH-6,['THWAK!','KRAK!','WHAM!','SMASH!'][n%4],.9,'#f3e9d2',true);snd('punch',p.x,p.y);}
+     else{p.x=nx;p.y=ny;}
+     if(n>=8){p.script=0;p.vx=0;p.vy=-2;if(boxHit(p.x,p.y))punchOut(p);return false;}return true;});}},
 ];
 const WANDA_POWERS=[
  // a chaos bolt: what it does when it lands is anyone's guess
@@ -2813,25 +2921,22 @@ const WANDA_POWERS=[
  {n:'Transmute',fn:(a,p,use)=>{if(!use(26))return;cd=40;const cx=mouse.wx|0,cy=mouse.wy|0,r=22;
    for(let y=-r;y<=r;y++)for(let x=-r;x<=r;x++){if(x*x+y*y>r*r)continue;const X=cx+x,Y=cy+y;if(X<0||X>=W||Y<0||Y>=H-44)continue;const i=Y*W+X,m=t[i];if(KIND[m]===S&&m!==OBSID){const c=col[i];setc(i,SAND);col[i]=mix3(c,[214,186,118],.35);}}
    rings.push({x:cx,y:cy,r:4,vr:3,life:10,c:[255,70,140]});flash(cx,cy,40,[255,60,130],6);fxWord(cx,cy-r-6,'TRANSMUTE',1.1,'#ff6fa8',true);snd('psi',cx,cy,{pitch:.6});}},
- // hold: a hex zone where enemy fire turns around and enemies fumble
- {n:'Chaos Field',fn:(a,p,use)=>{if(!use(.6))return;const cx=mouse.wx,cy=mouse.wy,r=42;
-   for(const e of enemies)if(Math.hypot(e.x-cx,e.y-cy)<r+e.def.w/2){e.hex=Math.max(e.hex||0,30);if(R()<.04){e.vx+=(R()-.5)*4;e.vy-=R()*2;}}
-   for(const s of shots)if(s.owner==='enemy'&&Math.hypot(s.x-cx,s.y-cy)<r){s.owner='player';s.vx*=-1.1;s.vy*=-1.1;s.col=[255,60,130];s.ecol=[255,60,130];}
-   for(let k=0;k<5;k++){const an=R()*6.283,rr=r*(.4+R()*.6);spawn(cx+Math.cos(an)*rr,cy+Math.sin(an)*rr,-Math.sin(an)*1.2,Math.cos(an)*1.2,rgb(255,60+R()*60|0,140),12,0,1,0,1);}
-   if(frame%3===0)rings.push({x:cx,y:cy,r:r,vr:-1.5,life:6,c:[255,60,130]});const h=hand();beams.push({pts:[[h.x,h.y],[(h.x+cx)/2+(R()-.5)*14,(h.y+cy)/2+(R()-.5)*14],[cx,cy]],life:1,c:[255,140,190],g:[255,40,120]});sndLoop('hexf','arc',cx,cy,{v:.5});}},
+ // hold: a storm of hex lightning tears up everything around the cursor
+ {n:'Hex Storm',fn:(a,p,use)=>{if(!use(.9))return;const cx=mouse.wx,cy=mouse.wy;if(frame%4===0){const x=cx+(R()-.5)*90,r=ray(x,cy-70,0,1,160,true),h=hand();
+     beams.push({pts:[[h.x,h.y],[(h.x+x)/2+(R()-.5)*20,(h.y+r.y)/2+(R()-.5)*20],[x,r.y]],life:3,c:[255,150,200],g:[255,40,120]});explode(x|0,r.y|0,5+(R()*4|0),{self:true,quiet:true,col:[255,60,130]});damageEnemies(x,r.y,12,8,0,-2,true);}
+   if(frame%3===0)rings.push({x:cx,y:cy,r:50,vr:-2,life:6,c:[255,60,130]});shake=Math.max(shake,2);sndLoop('hexf','arc',cx,cy,{v:.6});}},
  // "No more." Every weak enemy on screen simply stops existing; the rest are badly hurt
  {n:'No More',fn:(a,p,use)=>{if(!use(60))return;cd=180;let gone=0;fxWord(p.x,p.y-PH-12,'NO MORE.',1.8,'#ff6fa8',true);hitstop=Math.max(hitstop,5);fxImpact(p.x,p.y-PH/2,5);shockFx(p.x,p.y-PH/2,1.2);snd('screech',p.x,p.y,{pitch:.6});
    for(const e of enemies){if(e.x<camX-20||e.x>camX+VW+20||e.y<camY-20||e.y>camY+VH+20)continue;if(!e.def.title&&e.hp<=90){for(let k=0;k<30;k++)spawn(e.x+(R()-.5)*e.def.w,e.y+(R()-.5)*e.def.h,(R()-.5)*1.5,-R()*2,rgb(255,40+R()*80|0,120),30,0,1,0,1);e.mem.noScore=false;e.hp=0;gone++;}else hitEnemy(e,e.def.hp*.25,0,0);}
    flash(p.x,p.y-PH/2,200,[255,40,120],12);if(gone)fxWord(p.x,p.y-PH-34,gone+' ERASED',1.1,'#ff6fa8',true);}},
- // a hex of bad luck: weapons jam and backfire, they trip, every hit lands harder
- {n:'Bad Luck',fn:(a,p,use)=>{if(!use(24))return;cd=40;const cx=mouse.wx,cy=mouse.wy;let n=0;for(const e of enemies)if(Math.hypot(e.x-cx,e.y-cy)<70+e.def.w/2){e.hex=Math.max(e.hex||0,480);n++;}
-   rings.push({x:cx,y:cy,r:6,vr:5,life:14,c:[255,60,130]});fxWord(cx,cy-30,n?'JINXED':'...',1,'#ff6fa8',true);snd('psi',cx,cy,{pitch:1.3});}},
- // reweave reality: the city in the circle goes back to how it was before the fight
- {n:'Reweave',fn:(a,p,use)=>{if(!T0||!use(30))return;cd=50;const cx=mouse.wx|0,cy=mouse.wy|0,r=36,rr=rcount.length;let n=0;rcount.push(0);
-   for(let y=-r;y<=r;y++)for(let x=-r;x<=r;x++){if(x*x+y*y>r*r)continue;const X=cx+x,Y=cy+y;if(X<0||X>=W||Y<0||Y>=H-2)continue;const i=Y*W+X;
-     if(Math.abs(X-pl_.x)<=PW/2+1&&Y>pl_.y-PH-1&&Y<=pl_.y)continue;if(enemyAt(X,Y,0))continue;
-     if(t[i]!==T0[i]||col[i]!==C0[i]){setc(i,T0[i]);col[i]=C0[i];if(KIND[t[i]]===S){rid[i]=rr;str[i]=15;n++;}}if(bg[i]!==B0[i]){bg[i]=B0[i];bgB[i]=bg[i]!==bgD[i]?1:0;}}
-   rcount[rr]=n;for(let k=0;k<60;k++){const an=R()*6.283,d=R()*r;spawn(cx+Math.cos(an)*d,cy+Math.sin(an)*d,-Math.cos(an),-Math.sin(an),rgb(255,90,160),18,0,1,0,1);}fxWord(cx,cy-r-6,'REWOVEN',1.1,'#ff6fa8',true);snd('psi',cx,cy,{pitch:.8});}},
+ // a rupture in reality runs out from her hand, detonating everything along it
+ {n:'Reality Rupture',fn:(a,p,use)=>{if(!use(34))return;cd=55;const dx=a.dx,dy=a.dy,x0=a.h.x,y0=a.h.y;let k=0,x=x0,y=y0;fxWord(x+dx*40,y+dy*40-12,'RUPTURE!',1.3,'#ff6fa8',true);snd('screech',x,y,{pitch:.7,v:.6});
+   ACT.push(()=>{k++;x+=dx*7;y+=dy*7;if(k%2===0){explode(x+(R()-.5)*6|0,y+(R()-.5)*6|0,8+(R()*4|0),{self:true,quiet:k%6!==0,col:[255,60,130]});damageEnemies(x,y,16,22,dx*3,-3,true);}
+     beams.push({x0,y0,x1:x,y1:y,life:2,w:0,c:[255,170,210],g:[255,40,120]});shake=Math.max(shake,5);return k<40&&x>0&&x<W&&y<H;});}},
+ // tear a ball of the city loose, hold it in a hex sphere over her head, then hurl it
+ {n:'Hex Sphere',fn:(a,p,use)=>{const cx=mouse.wx|0,cy=mouse.wy|0,n=solidCells(cx,cy,16,false);if(n<40||!use(40))return;cd=70;const b=makeBody(q,n,true);if(!b)return;let k=0;fxWord(cx,cy-24,'HEX SPHERE',1.2,'#ff6fa8',true);snd('rip',cx,cy);shake+=6;
+   ACT.push(()=>{k++;if(!bodies.includes(b))return false;b.tx=p.x;b.ty=p.y-PH-b.rmax-10;if(k%2===0){const an=R()*6.283;spawn(b.x+Math.cos(an)*b.rmax,b.y+Math.sin(an)*b.rmax,0,0,rgb(255,60,130),10,0,1,0,1);}
+     if(k<40)return true;b.held=false;b.tx=b.ty=undefined;hurlBody(b,mouse.wx,mouse.wy,11);b.safeP=frame+30;fxWord(b.x,b.y-b.rmax,'BEGONE!',1,'#ff6fa8',true);snd('throw',b.x,b.y);return false;});}},
  // gravity runs backwards inside the hex for five seconds
  {n:'Gravity Hex',fn:(a,p,use)=>{if(!use(30))return;cd=50;gzones.push({x:mouse.wx,y:mouse.wy,r:62,life:300});fxWord(mouse.wx,mouse.wy-66,'UPSIDE DOWN',1.1,'#ff6fa8',true);snd('psi',mouse.wx,mouse.wy,{pitch:.5});}},
  // swap the elements: water to lava, lava to water, fire to ice, ice to fire, sand to glass and back
@@ -2853,19 +2958,23 @@ const STRANGE_POWERS=[
  // a pair of sling-ring portals. Anything that falls, flows, flies or walks into the blue one comes out of the orange one
  {n:'Portals',fn:(a,p,use)=>{if(!use(15))return;cd=14;const k=portals.next,P={x:mouse.wx,y:mouse.wy,r:11,life:1800};portals[k]=P;portals.next=k==='a'?'b':'a';
    fxWord(P.x,P.y-16,k==='a'?'IN':'OUT',.9,k==='a'?'#7fd6ff':'#ffb340',true);snd('psi',P.x,P.y,{pitch:k==='a'?1.4:1});for(let n=0;n<30;n++){const an=R()*6.283;spawn(P.x+Math.cos(an)*P.r,P.y+Math.sin(an)*P.r*1.4,(R()-.5),(R()-.5),k==='a'?rgb(110,200,255):rgb(255,170,60),20,0,1,0,1);}}},
- // the Crimson Bands of Cyttorak bind every foe near the cursor and crush them together
- {n:'Crimson Bands',fn:(a,p,use)=>{if(!use(24))return;cd=40;const cx=mouse.wx,cy=mouse.wy;let n=0;for(const e of enemies)if(Math.hypot(e.x-cx,e.y-cy)<48+e.def.w/2){e.frozen=Math.max(e.frozen||0,e.def.title?60:240);e.bound=e.frozen;e.vx+=(cx-e.x)*.08;e.vy+=(cy-e.y)*.08;hitEnemy(e,12,0,0);n++;}
-   fxWord(cx,cy-30,n?'BY THE CRIMSON BANDS!':'...',1,'#ff6b5c',true);rings.push({x:cx,y:cy,r:48,vr:-3,life:12,c:[255,60,50]});snd('clang',cx,cy,{v:.6});}},
+ // the Crimson Bands of Cyttorak close on the cursor: everything inside is crushed to rubble
+ {n:'Crimson Crush',fn:(a,p,use)=>{if(!use(30))return;cd=50;const cx=mouse.wx,cy=mouse.wy;let k=0,r=46;fxWord(cx,cy-40,'BY THE CRIMSON BANDS!',1.1,'#ff6b5c',true);snd('clang',cx,cy,{v:.6});
+   ACT.push(()=>{k++;r-=1.6;for(let n=0;n<3;n++)rings.push({x:cx,y:cy,r:r+n*2,vr:0,life:2,c:[255,60,50]});
+     for(const e of enemies)if(Math.hypot(e.x-cx,e.y-cy)<r+e.def.w/2){e.vx+=(cx-e.x)*.05;e.vy+=(cy-e.y)*.05;e.frozen=Math.max(e.frozen||0,4);if(k%5===0)hitEnemy(e,6,0,0);}
+     for(const b of bodies)if(!b.held&&Math.hypot(b.x-cx,b.y-cy)<r+b.rmax){b.vx+=(cx-b.x)*.04;b.vy+=(cy-b.y)*.04;}
+     if(r>8)return true;quake(cx,cy,{col:[255,80,60],r:32});damageEnemies(cx,cy,40,50,0,-4,true);return false;});}},
  // a golden whip of eldritch energy that cuts a curved line and drags what it hits toward him
  {n:'Eldritch Whip',fn:(a,p,use)=>{if(!use(10))return;cd=18;const h=hand(),base=Math.atan2(a.dy,a.dx);let k=0;snd('slash',h.x,h.y,{pitch:.7});
    ACT.push(()=>{k++;const hh=hand(),pts=[[hh.x,hh.y]],sw=base-.9+k/8*1.8;for(let s=1;s<=10;s++){const f=s/10,an=sw+Math.sin(f*Math.PI)*(.6-k*.08);pts.push([hh.x+Math.cos(an)*70*f,hh.y+Math.sin(an)*70*f]);}
      beams.push({pts,life:1,c:[255,230,150],g:[255,170,40]});for(const [x,y] of pts){const X=x|0,Y=y|0;if(X>0&&X<W-1&&Y>0&&Y<H-44){const m=t[Y*W+X];if(m&&KIND[m]!==G&&KIND[m]!==F&&m!==OBSID){if(R()<.4)spawn(X,Y,(R()-.5)*2,-R()*2,col[Y*W+X],40,KIND[m]===S?RUBBLE:m,0);setc(Y*W+X,EMPTY);}}
        const e=enemyAt(x,y,2);if(e&&!(e.mem.whipT>frame)){e.mem.whipT=frame+8;hitEnemy(e,18,(pl_.x-e.x)*.04,-1.5);}}
      return k<8;});}},
- // the Eye of Agamotto: turn his own clock back three seconds (position, health, energy)
- {n:'Eye of Agamotto',fn:(a,p,use)=>{if(RW.length<170||!use(30))return;cd=90;const s=RW[RW.length-170];RW.length=0;
-   for(let k=0;k<3;k++)rings.push({x:p.x,y:p.y-PH/2,r:6+k*6,vr:-1,life:14,c:[120,255,140]});p.x=s.x;p.y=s.y;p.vx=p.vy=0;p.hp=Math.max(p.hp,s.hp);p.en=Math.max(p.en,s.en);
-   for(let k=0;k<3;k++)rings.push({x:p.x,y:p.y-PH/2,r:20-k*6,vr:1.5,life:14,c:[120,255,140]});fxWord(p.x,p.y-PH-10,'TIME REVERSED',1.1,'#8dffb0',true);snd('psi',p.x,p.y,{pitch:.5});}},
+ // turn the city around the cursor into mirror-glass, then shatter it
+ {n:'Mirror Shatter',fn:(a,p,use)=>{if(mouse.wy<-20||!use(34))return;cd=60;const cx=mouse.wx|0,cy=mouse.wy|0,r=30;let k=0;
+   for(let y=-r;y<=r;y++)for(let x=-r;x<=r;x++){if(x*x+y*y>r*r)continue;const X=cx+x,Y=cy+y;if(X<0||X>=W||Y<0||Y>=H-44)continue;const i=Y*W+X;if(KIND[t[i]]===S&&t[i]!==OBSID){setc(i,GLASS);col[i]=(x+y)&3?rgb(200,220,240):rgb(255,230,160);}}
+   fxWord(cx,cy-r-6,'MIRROR DIMENSION',1.1,'#ffc93c',true);snd('psi',cx,cy,{pitch:.4});
+   ACT.push(()=>{if(++k<30)return true;for(let n=0;n<10;n++){const an=R()*6.283,d=R()*r;explode(cx+Math.cos(an)*d|0,cy+Math.sin(an)*d|0,7,{self:true,quiet:n>0,col:[220,235,255]});}damageEnemies(cx,cy,r+10,45,0,-4,true);fxWord(cx,cy-r-6,'SHATTER!',1.4,'#d8e4ff',true);snd('glass',cx,cy,{size:2});shake=Math.max(shake,12);return false;});}},
  // a floating golden mandala you (and anything else) can stand on, for eight seconds
  {n:'Seraphim Disc',fn:(a,p,use)=>{if(!use(15))return;cd=20;const cx=mouse.wx|0,cy=mouse.wy|0;
    for(let x=-14;x<=14;x++)for(let y=0;y<2;y++){const X=cx+x,Y=cy+y+(Math.abs(x)>11?1:0);if(X<0||X>=W||Y<0||Y>=H-44)continue;const i=Y*W+X;if(t[i]&&KIND[t[i]]!==G&&KIND[t[i]]!==F)continue;setc(i,NEON);col[i]=(x+y)&1?rgb(255,200,80):rgb(255,150,40);pin[i]=3;slide.push([i,frame+480+(R()*20|0)]);}
@@ -2882,8 +2991,11 @@ const STRANGE_POWERS=[
    for(let k=enemies.length-1;k>=0;k--){const e=enemies[k];if(Math.hypot(e.x-cx,e.y-cy)>50+e.def.w/2||e.grabbed)continue;if(e.def.title){hitEnemy(e,120,0,0);continue;}limbo.push({e,t:300});enemies.splice(k,1);n++;
      for(let q2=0;q2<20;q2++){const an=R()*6.283;spawn(e.x,e.y,Math.cos(an)*2,Math.sin(an)*2,rgb(255,190,70),18,0,1,0,1);}}
    rings.push({x:cx,y:cy,r:50,vr:-4,life:12,c:[255,190,70]});fxWord(cx,cy-30,n?'BEGONE!':'...',1.2,'#ffc93c',true);snd('screech',cx,cy,{pitch:.8,v:.6});}},
- // trap a foe in a time loop: every second it snaps back to where it started, hurting more each loop
- {n:'Time Loop',fn:(a,p,use)=>{const e=nearestEnemy(mouse.wx,mouse.wy,50);if(!e||e.loop)return;if(!use(26))return;cd=45;e.loop={x:e.x,y:e.y,k:0,n:0};fxWord(e.x,e.y-e.def.h/2-8,'AGAIN.',1.1,'#8dffb0',true);snd('psi',e.x,e.y,{pitch:.6});}},
+ // golden pillars burst up out of the street across the cursor, launching everything above them
+ {n:'Pillars of Vishanti',fn:(a,p,use)=>{if(!use(36))return;cd=60;const cx=mouse.wx,cy=mouse.wy;let k=0;fxWord(cx,cy-30,'PILLARS OF VISHANTI!',1.1,'#ffc93c',true);
+   ACT.push(()=>{if(k%6===0){const x=cx+(k/6-2)*22,gy=groundBelow(x,cy-40);if(gy<H-46){const n=solidCells(x,gy+6,8,false);if(n>=12){const b=makeBody(q,n,false);if(b){b.vy=-9-R()*3;b.vx=(R()-.5)*2;b.va=(R()-.5)*.2;b.thrown=true;b.safeP=frame+20;}}
+       explode(x|0,gy|0,7,{self:true,quiet:true,col:[255,200,80]});damageEnemies(x,gy-20,14,30,0,-8);beams.push({x0:x,y0:gy,x1:x,y1:gy-90,life:10,w:2,c:[255,240,180],g:[255,170,40]});shake=Math.max(shake,6);snd('slam',x,gy,{size:.7});}}
+     return++k<30;});}},
  // a warded dome: enemy fire dies against it and enemies are thrown out of it
  {n:'Ward of Vishanti',fn:(a,p,use)=>{if(!use(35))return;cd=70;const W0={x:mouse.wx,y:mouse.wy,r:46};let k=0;fxWord(W0.x,W0.y-50,'WARD OF VISHANTI',1,'#ffc93c',true);snd('charge',W0.x,W0.y,{pitch:1.2});
    ACT.push(()=>{k++;for(let n=shots.length-1;n>=0;n--){const s=shots[n];if(s.owner==='enemy'&&Math.hypot(s.x-W0.x,s.y-W0.y)<W0.r){flash(s.x,s.y,6,[255,200,80],2);shots.splice(n,1);}}
@@ -2896,24 +3008,27 @@ const ANT_POWERS=[
    explode(x|0,y|0,r,{self:true,quiet:SZ<1.5,col:[255,120,90]});damageEnemies(x,y,r+6,SZ>1.5?45:SZ<.8?32:20,a.dx*5*SZ,a.dy*5*SZ-2);fxWord(x,y-10,SZ>1.5?'KRA-THOOM!':SZ<.8?'TIK!':'POW!',SZ>1.5?1.4:.9,'#ffc93c',true);snd('punch',x,y,{pitch:SZ>1.5?.6:SZ<.8?1.8:1});}},
  {n:'Shrink',fn:(a,p,use)=>{if(!use(5))return;cd=20;p.sizeT=p.sizeT<.9?1:.45;fxWord(p.x,p.y-PH-6,p.sizeT<1?'SHRINK!':'BACK TO NORMAL',.8,'#ff6b5c',true);snd('charge',p.x,p.y,{pitch:p.sizeT<1?2:1.2});}},
  {n:'Giant-Man',fn:(a,p,use)=>{if(p.sizeT<=1.5&&!use(20))return;cd=30;p.sizeT=p.sizeT>1.5?1:2.2;fxWord(p.x,p.y-PH-10,p.sizeT>1?'GIANT-MAN!':'NORMAL SIZE',1.3,'#ff6b5c',true);snd('charge',p.x,p.y,{pitch:p.sizeT>1?.5:1.2});}},
- // call the ants: a swarm that crawls over the ground, bites enemies and eats anything leafy or wooden
- {n:'Ant Swarm',fn:(a,p,use)=>{if(!use(25))return;cd=45;for(let k=0;k<70;k++)ants.push({x:p.x+(R()-.5)*20,y:p.y-2,vx:(R()-.5)*2,vy:-R()*2,life:600+R()*200|0});fxWord(p.x,p.y-PH-8,'GO, MY ANTS!',1,'#ff6b5c',true);snd('crumble',p.x,p.y,{size:.4});}},
- // Pym disc: shrinks the enemy (and most of its strength) or the chunk of building it hits
- {n:'Shrink Disc',fn:(a,p,use)=>{if(!use(14))return;cd=22;shots.push({x:a.h.x,y:a.h.y,vx:a.dx*6,vy:a.dy*6,type:'pym',life:110,col:[255,70,60],
-   onHit:sh=>{const e=enemyAt(sh.x,sh.y,3);if(e){if(!(e.sc<1)){e.sc=e.def.title?.75:.5;e.hp*=e.def.title?.75:.4;fxWord(e.x,e.y-12,'SHRUNK!',1,'#ff6b5c',true);}else hitEnemy(e,15,0,0);snd('charge',e.x,e.y,{pitch:2});return;}
-     const n=solidCells(sh.x,sh.y,9,false);if(n>=12){scaleChunk(q,n,.5);fxWord(sh.x,sh.y-12,'SHRUNK!',.9,'#ff6b5c',true);}}});}},
+ // call the army: a swarm that chews straight through anything but steel, biting every enemy it reaches
+ {n:'Ant Army',fn:(a,p,use)=>{if(!use(25))return;cd=45;for(let k=0;k<120;k++)ants.push({x:p.x+(R()-.5)*20,y:p.y-2,vx:(R()-.5)*2,vy:-R()*2,life:500+R()*200|0});fxWord(p.x,p.y-PH-8,'EAT IT ALL, ANTS!',1,'#ff6b5c',true);snd('crumble',p.x,p.y,{size:.4});}},
+ // go full giant mid-step and bring a foot down: a crater and blasts rolling down the street
+ {n:'Giant Stomp',fn:(a,p,use)=>{if(!use(28))return;cd=50;p.sizeT=2.2;let k=0;p.vy=Math.min(p.vy,-4);p.ground=false;fxWord(p.x,p.y-PH-12,'GIANT STOMP!',1.3,'#ff6b5c',true);snd('charge',p.x,p.y,{pitch:.5});
+   ACT.push(()=>{k++;if(k<6)return true;if(!p.ground&&k<90){p.vy=Math.max(p.vy,6);return true;}quake(p.x,p.y,{col:[255,120,90],r:42});
+     for(let n=1;n<=4;n++){const x=p.x+p.face*n*26;explode(x|0,groundBelow(x,p.y-20)|0,9,{self:true,quiet:true,col:[200,190,160]});}damageEnemies(p.x,p.y-10,90,40,0,-6,true);return false;});}},
  // Pym disc: whatever chunk it hits grows to twice its size and comes crashing down
  {n:'Grow Disc',fn:(a,p,use)=>{if(!use(18))return;cd=26;shots.push({x:a.h.x,y:a.h.y,vx:a.dx*6,vy:a.dy*6,type:'pym',life:110,col:[80,140,255],
    onHit:sh=>{const e=enemyAt(sh.x,sh.y,3);if(e){hitEnemy(e,12,0,0);return;}const n=solidCells(sh.x,sh.y,5,false);if(n>=10){const b=scaleChunk(q,n,2.2);if(b){b.vy=-1;b.thrown=true;b.safeP=frame+30;fxWord(sh.x,sh.y-16,'ENLARGE!',1.2,'#7fb8ff',true);snd('crumble',sh.x,sh.y,{size:1});}}}});}},
  // go subatomic for a moment and dash straight through walls
  {n:'Quantum Dash',fn:(a,p,use)=>{if(!use(18))return;cd=30;const dx=a.dx,dy=a.dy;let k=0;const s0=p.sizeT;p.size=.3;fxWord(p.x,p.y-PH-6,'QUANTUM!',.9,'#7fb8ff',true);snd('whoosh',p.x,p.y,{pitch:1.8});
-   ACT.push(()=>{k++;p.script=2;p.x=Math.max(5,Math.min(W-5,p.x+dx*9));p.y=Math.max(PH+2-SKY+VH/2,Math.min(H-8,p.y+dy*9));damageLine(p.x-dx*9,p.y-dy*9,p.x,p.y,4,8);afters.push({x:p.x,y:p.y,ang:0,face:p.face,life:8});for(let q2=0;q2<4;q2++)spawn(p.x,p.y,(R()-.5)*2,(R()-.5)*2,rgb(120,170,255),10,0,1,0,1);
+   ACT.push(()=>{k++;p.script=2;p.x=Math.max(5,Math.min(W-5,p.x+dx*9));p.y=Math.max(PH+2-SKY+VH/2,Math.min(H-8,p.y+dy*9));carve(p.x,p.y-PH/2,6,dx*3,dy*3);damageLine(p.x-dx*9,p.y-dy*9,p.x,p.y,6,10);afters.push({x:p.x,y:p.y,ang:0,face:p.face,life:8});for(let q2=0;q2<4;q2++)spawn(p.x,p.y,(R()-.5)*2,(R()-.5)*2,rgb(120,170,255),10,0,1,0,1);
      if(k>=12){p.script=0;p.sizeT=s0;p.vx=dx*3;p.vy=dy*3;if(boxHit(p.x,p.y))punchOut(p);return false;}return true;});}},
  // ride a flying ant for eight seconds
  {n:'Flying Ant',fn:(a,p,use)=>{if(p.ant>0||!use(20))return;cd=30;p.ant=480;p.fly=true;p.vy=-1.5;fxWord(p.x,p.y-PH-6,'GOOD BOY, ANT-THONY!',.9,'#ff6b5c',true);snd('whoosh',p.x,p.y,{pitch:2});}},
- // a burst of Pym particles: every enemy around him shrinks
- {n:'Pym Burst',fn:(a,p,use)=>{if(!use(40))return;cd=80;let n=0;for(const e of enemies)if(Math.hypot(e.x-p.x,e.y-p.y)<90&&!(e.sc<1)){e.sc=e.def.title?.75:.55;e.hp*=e.def.title?.8:.5;n++;}
-   rings.push({x:p.x,y:p.y-PH/2,r:6,vr:6,life:16,c:[255,80,70]});flash(p.x,p.y-PH/2,100,[255,80,70],8);fxWord(p.x,p.y-PH-10,n?n+' SHRUNK':'PYM BURST',1.2,'#ff6b5c',true);snd('emp',p.x,p.y,{pitch:1.4});}},
+ // a Pym particle bomb: it pulls everything in for a moment, then goes off like a wrecking charge
+ {n:'Pym Bomb',fn:(a,p,use)=>{if(!use(40))return;cd=80;snd('whoosh',a.h.x,a.h.y,{pitch:1.6});shots.push({x:a.h.x,y:a.h.y,vx:a.dx*6,vy:a.dy*6,type:'pym',life:110,col:[255,70,60],
+   onHit:sh=>{const cx=sh.x,cy=sh.y;let k=0;fxWord(cx,cy-16,'PYM BOMB!',1.2,'#ff6b5c',true);snd('charge',cx,cy,{pitch:2});
+     ACT.push(()=>{k++;rings.push({x:cx,y:cy,r:40-k*1.6,vr:0,life:2,c:[255,80,70]});for(const e of enemies)if(Math.hypot(e.x-cx,e.y-cy)<70){e.vx+=(cx-e.x)*.03;e.vy+=(cy-e.y)*.03;}
+       for(const b of bodies)if(!b.held&&Math.hypot(b.x-cx,b.y-cy)<80){b.vx+=(cx-b.x)*.02;b.vy+=(cy-b.y)*.02;}
+       if(k<22)return true;explode(cx|0,cy|0,18,{col:[255,90,70]});damageEnemies(cx,cy,50,70,0,-5,true);shockFx(cx,cy,1.2);return false;});}});}},
  // the tank on Hank's keychain, enlarged mid-air over the cursor
  {n:'Keychain Tank',fn:(a,p,use)=>{if(!use(35))return;cd=90;const x=Math.max(30,Math.min(W-30,mouse.wx|0)),y=Math.max(30,(camY|0)+24);
    placeStruct((x0,y0)=>{fill(x0-16,y0-8,x0+16,y0,STEEL);tint(x0-16,y0-8,x0+16,y0,96,110,70,8);fill(x0-7,y0-14,x0+7,y0-8,STEEL);tint(x0-7,y0-14,x0+7,y0-8,110,124,80,8);fill(x0+7,y0-12,x0+24,y0-10,STEEL);tint(x0+7,y0-12,x0+24,y0-10,70,80,56,4);
@@ -2923,8 +3038,8 @@ const ANT_POWERS=[
 function updWave2(){
   // ants crawl along surfaces toward the nearest enemy, biting and eating anything organic
   for(let n=ants.length-1;n>=0;n--){const a=ants[n];if(--a.life<=0){ants.splice(n,1);continue;}const e=nearestEnemy(a.x,a.y,160);const tx=e?e.x:pl_.x+(n%20-10)*3;
-    a.vx+=(Math.sign(tx-a.x)*1.4-a.vx)*.1;a.vy+=.25;let nx=a.x+a.vx,ny=a.y+a.vy;if(solidAt(nx,a.y)){if(!solidAt(nx,a.y-2)){a.y-=2;}else{a.vy=-1.2;nx=a.x;}}
-    if(solidAt(nx,ny)){a.vy=0;ny=a.y;const bi=(ny+1|0)*W+(nx|0);if(bi>0&&bi<N){const m=t[bi];if((m===LEAF||m===GRASS||m===WOOD||m===WEB)&&R()<.01)setc(bi,EMPTY);}}a.x=nx;a.y=ny;
+    a.vx+=(Math.sign(tx-a.x)*1.4-a.vx)*.1;a.vy+=.25;let nx=a.x+a.vx,ny=a.y+a.vy;if(solidAt(nx,a.y)){const wi=(a.y|0)*W+(nx|0);if(wi>0&&wi<N-W*44&&t[wi]!==STEEL&&t[wi]!==OBSID&&R()<.08){setc(wi,EMPTY);if(bgB[wi]){bg[wi]=bgD[wi];bgB[wi]=0;}}else if(!solidAt(nx,a.y-2)){a.y-=2;}else{a.vy=-1.2;nx=a.x;}}
+    if(solidAt(nx,ny)){a.vy=0;ny=a.y;const bi=(ny+1|0)*W+(nx|0);if(bi>0&&bi<N){const m=t[bi];if(m&&m!==STEEL&&m!==OBSID&&bi<N-W*44&&R()<.03)setc(bi,EMPTY);}}a.x=nx;a.y=ny;
     if(e&&Math.abs(e.x-a.x)<e.def.w/2+1&&Math.abs(e.y-a.y)<e.def.h/2+1){hitEnemy(e,.25,0,0);if(R()<.05)a.life=0;}}
   for(let n=tramps.length-1;n>=0;n--){const tr=tramps[n];if(--tr.life<=0||t[tr.y*W+((tr.x0+tr.x1)>>1)]!==WEB){tramps.splice(n,1);continue;}
     const p=pl_;if(p.x>=tr.x0&&p.x<=tr.x1&&Math.abs(p.y-tr.y)<=2&&p.vy>=0&&!p.fly){p.vy=-9.5;p.ground=false;p.y-=2;snd('jump',p.x,p.y,{pitch:1.6});fxWord(p.x,p.y-PH-4,'BOING!',.7,'#f3e9d2');}
@@ -2982,7 +3097,7 @@ const JUGG_POWERS=[
  {n:'Wall Rip',fn:(a,p,use)=>{const dir=a.dx<0?-1:1,b=wallChunk(p.x,p.y-PH/2,dir,9);if(!b)return;if(!use(16)){b.vx=0;return;}cd=30;b.x=p.x;b.y=p.y-PH-b.rmax;hurlBody(b,mouse.wx,mouse.wy,10);b.safeP=frame+40;p.throwF=10;fxWord(p.x,p.y-PH-8,'RRRAH!',1,'#e23b2e',true);snd('rip',p.x,p.y);}},
  // a short head-first dash: whatever it hits is stunned
  {n:'Helmet Bash',fn:(a,p,use)=>{if(!use(10))return;cd=22;const dir=a.dx<0?-1:1;let k=0;p.face=dir;
-   ACT.push(()=>{p.vx=dir*7;crushAhead(p.x+dir*PW/2,p.y-PH*.75,dir,10,5);for(const e of enemies)if(Math.abs(e.x-(p.x+dir*8))<e.def.w/2+5&&Math.abs(e.y-(p.y-PH*.7))<e.def.h/2+8){hitEnemy(e,22,dir*6,-3);e.frozen=Math.max(e.frozen||0,90);}return++k<16;});fxWord(p.x,p.y-PH-6,'KLONNG!',1,'#e23b2e',true);snd('clang',p.x,p.y);}},
+   ACT.push(()=>{p.vx=dir*7;crushAhead(p.x+dir*PW/2,p.y-PH*.6,dir,PH*.9,9);for(const e of enemies)if(Math.abs(e.x-(p.x+dir*8))<e.def.w/2+5&&Math.abs(e.y-(p.y-PH*.7))<e.def.h/2+8){hitEnemy(e,22,dir*6,-3);e.frozen=Math.max(e.frozen||0,90);}return++k<16;});fxWord(p.x,p.y-PH-6,'KLONNG!',1,'#e23b2e',true);snd('clang',p.x,p.y);}},
  // leap onto the cursor and come down like a demolition weight
  {n:'Body Slam',fn:(a,p,use)=>{if(!p.ground||!use(22))return;cd=45;const dx=mouse.wx-p.x,s=Math.min(1,Math.abs(dx)/200);p.vx=Math.sign(dx)*(3+4*s);p.vy=-7;p.ground=false;p.slam=true;p.slamOpt={col:[214,184,130],dive:true};p.diveY=p.y-60;snd('leap',p.x,p.y,{size:.8});}},
  // the Crimson Gem: six seconds of invulnerability; anything that touches him gets hurt
@@ -2990,16 +3105,17 @@ const JUGG_POWERS=[
  // arms out and spin: a whirlwind of fists that clears everything around him
  {n:'Wrecking Spin',fn:(a,p,use)=>{if(!use(18))return;cd=36;let k=0;fxWord(p.x,p.y-PH-8,'WHIRRRR!',1,'#e23b2e',true);
    ACT.push(()=>{const an=k*.6;carve(p.x+Math.cos(an)*12,p.y-PH/2+Math.sin(an)*6,6,Math.cos(an)*3,0);damageEnemies(p.x,p.y-PH/2,18,4,0,-1,true);p.face=Math.cos(an)<0?-1:1;p.punchF=4;if(k%4===0)snd('whoosh',p.x,p.y,{v:.5});return++k<36;});}},
- // shrug off whatever is on him and keep coming
- {n:'Shrug Off',fn:(a,p,use)=>{if(!use(25))return;cd=60;p.hp=Math.min(CH.hp,p.hp+CH.hp*.2);damageEnemies(p.x,p.y-PH/2,40,10,0,-2,true);rings.push({x:p.x,y:p.y-PH/2,r:6,vr:4,life:12,c:[255,80,60]});fxWord(p.x,p.y-PH-8,'IS THAT ALL?',1,'#e23b2e',true);}},
+ // a stampede: five earth-shaking strides, each one a quake, crushing everything ahead
+ {n:'Seismic Stampede',fn:(a,p,use)=>{if(!p.ground||!use(30))return;cd=60;const dir=a.dx<0?-1:1;let k=0;p.face=dir;fxWord(p.x,p.y-PH-10,'STAMPEDE!',1.2,'#e23b2e',true);
+   ACT.push(()=>{k++;p.vx=dir*3.4;p.face=dir;crushAhead(p.x+dir*PW/2,p.y-PH/2,dir,PH+4,4);if(k%12===0){quake(p.x+dir*6,p.y,{col:[214,184,130],r:22});for(const e of enemies)if(Math.abs(e.x-p.x)<70&&!e.def.fly){e.vy=-5;hitEnemy(e,10,dir*3,0);}}return k<60;});}},
  // a double-fisted overhead smash: a huge crater and a crack running ahead
  {n:'Juggernaut Smash',fn:(a,p,use)=>{if(!use(32))return;cd=60;p.throwF=10;const dir=p.face,x=p.x+dir*12,y=p.y;explode(x|0,y|0,16,{self:true,col:[214,184,130],word:'KRA-KOOM!'});shockFx(x,y,1);for(let k=1;k<10;k++)crackCell(x+dir*k*4|0,y+(R()*6|0),dir);damageEnemies(x,y,40,50,dir*5,-4);hitstop=Math.max(hitstop,4);}},
 ];
 const ULTRON_POWERS=[
  {n:'Encephalo Beam',fn:(a,p,use)=>{if(!use(.9))return;const b=aimFrom(eyes());beamCore(b,{pow:110,rad:1,len:460,w:2+((frame>>1)&1),c:[255,200,190],g:[255,30,30],spark:()=>rgb(255,60+R()*100,50),dmg:5,noAsh:true});}},
  {n:'Concussion Blast',fn:(a,p,use)=>{if(!use(6))return;cd=10;shots.push({x:a.h.x,y:a.h.y,vx:a.dx*7,vy:a.dy*7,type:'repulsor',life:100,boom:9,fire:.1,col:[255,80,60],ecol:[255,80,60]});flash(a.h.x,a.h.y,10,[255,60,40],3);}},
- // release a swarm of loyal drones that hunt enemies and explode on them
- {n:'Sentry Swarm',fn:(a,p,use)=>{if(!use(30))return;cd=60;for(let k=0;k<6;k++){const e=spawnEnemy('swarmbot',p.x+(R()-.5)*20,p.y-PH-6);if(e){e.ally=1200;e.mem.noScore=true;}}fxWord(p.x,p.y-PH-10,'MY CHILDREN.',1,'#ff6b5c',true);snd('emp',p.x,p.y,{pitch:2,v:.5});}},
+ // four Ultron sentries: they orbit him firing concussion rays, then dive-bomb the cursor
+ {n:'Sentry Swarm',fn:(a,p,use)=>{if(drones.some(d=>d.red)||!use(30))return;cd=60;for(let k=0;k<4;k++)drones.push({x:p.x+(R()-.5)*20,y:p.y-PH-6,life:720,cool:10+k*6,ph:k*1.57,red:true});fxWord(p.x,p.y-PH-10,'MY CHILDREN.',1,'#ff6b5c',true);snd('emp',p.x,p.y,{pitch:2,v:.5});}},
  // a five-punch vibranium combo, each one a shockwave
  {n:'Vibranium Barrage',fn:(a,p,use)=>{if(!use(16))return;cd=30;let k=0;ACT.push(()=>{if(k%4===0){p.punchF=8;const A2=aim(),x=A2.h.x+A2.dx*8,y=A2.h.y+A2.dy*8;explode(x|0,y|0,6,{self:true,quiet:true,col:[255,120,90]});damageEnemies(x,y,12,14,A2.dx*4,A2.dy*4-1);snd('punch',x,y);}return++k<20;});fxWord(p.x,p.y-PH-8,'BAM-BAM-BAM!',1,'#ff6b5c',true);}},
  // adamantium plating: for six seconds almost nothing gets through
@@ -3009,17 +3125,17 @@ const ULTRON_POWERS=[
    for(let y=-r;y<=r;y++)for(let x=-r;x<=r;x++){if(x*x+y*y>r*r)continue;const X=cx+x,Y=cy+y;if(X<0||X>=W||Y<0||Y>=H-44)continue;const i=Y*W+X;if(KIND[t[i]]===S&&t[i]!==STEEL&&t[i]!==OBSID&&R()<.85){const c=col[i];setc(i,STEEL);col[i]=mix3(c,[150,158,176],.7);}}
    for(const e of enemies)if(isMetal(e)&&!e.def.title&&Math.hypot(e.x-cx,e.y-cy)<r+30){e.ally=900;n++;}
    fxWord(cx,cy-r-6,n?n+' ASSIMILATED':'ASSIMILATE',1.1,'#ff6b5c',true);rings.push({x:cx,y:cy,r:r,vr:-2,life:12,c:[255,60,50]});snd('emp',cx,cy);}},
- // drain the life out of every enemy around him to repair himself
- {n:'Data Siphon',fn:(a,p,use)=>{if(!use(.7))return;let got=0;for(const e of enemies){if(e.ally>0)continue;const d=Math.hypot(e.x-p.x,e.y-p.y);if(d<80){hitEnemy(e,.6,0,0);got+=.6;if(frame%3===0)zap(p.x,p.y-PH/2,e.x,e.y,[255,170,160],[255,40,40]);}}
-   p.hp=Math.min(CH.hp,p.hp+got*.5);sndLoop('siphon','arc',p.x,p.y,{v:.5});}},
+ // a lance of red energy from orbit drills a shaft straight down through the cursor
+ {n:'Orbital Lance',fn:(a,p,use)=>{if(!use(40))return;cd=70;const x=mouse.wx|0;let k=0;fxWord(x,camY+30,'TARGET ACQUIRED.',1,'#ff6b5c',true);snd('charge',x,mouse.wy,{pitch:.6});
+   ACT.push(()=>{k++;if(k<30){if(k%4<2)beams.push({x0:x,y0:camY,x1:x,y1:camY+VH,life:1,w:0,c:[255,90,70],g:[160,20,20]});return true;}
+     const y=Math.max(0,camY|0)+(k-30)*9;for(let yy=y;yy<y+9;yy+=3)explode(x+(R()-.5)*4|0,yy,7,{self:true,quiet:true,fire:.15,col:[255,60,40]});damageEnemies(x,y,16,20,0,4,true);
+     beams.push({x0:x,y0:camY,x1:x,y1:y+9,life:2,w:3,c:[255,220,210],g:[255,30,20]});shake=Math.max(shake,8);if(k%6===0)snd('boom',x,y,{size:.8});return k<100&&y<H-44;});}},
  // an overload nova: arcs of electricity to everything nearby, robots get stunned
  {n:'Overload Pulse',fn:(a,p,use)=>{if(!use(35))return;cd=60;const cx=p.x,cy=p.y-PH/2;for(const e of enemies){const d=Math.hypot(e.x-cx,e.y-cy);if(d<120){zap(cx,cy,e.x,e.y,[255,200,190],[255,40,40]);hitEnemy(e,30*(1-d/160),0,-2);if(isMetal(e))e.frozen=Math.max(e.frozen||0,90);}}
    explode(cx|0,cy|0,10,{self:true,col:[255,60,40]});shockFx(cx,cy,1);flash(cx,cy,120,[255,50,40],10);fxWord(cx,cy-30,'OVERLOAD!',1.3,'#ff6b5c',true);}},
- // a wall of red energy at the cursor: enemy fire dies in it and enemies are burned crossing it
- {n:'Firewall',fn:(a,p,use)=>{if(!use(24))return;cd=40;const x=mouse.wx,y1=groundBelow(x,mouse.wy),y0=y1-60;let k=0;fxWord(x,y0-8,'FIREWALL',1,'#ff6b5c',true);
-   ACT.push(()=>{k++;for(let n=shots.length-1;n>=0;n--){const s=shots[n];if(s.owner==='enemy'&&Math.abs(s.x-x)<4&&s.y>y0&&s.y<y1){flash(s.x,s.y,6,[255,60,40],2);shots.splice(n,1);}}
-     for(const e of enemies)if(Math.abs(e.x-x)<e.def.w/2+3&&e.y>y0-10&&e.y<y1+10)hitEnemy(e,.8,Math.sign(e.x-x)*.5,0);
-     if(k%2===0)beams.push({x0:x,y0:y0,x1:x,y1:y1,life:1,w:1,c:[255,190,180],g:[255,40,30]});return k<360;});}},
+ // a sweeping arc of encephalo fire from his eyes that cuts the city in half
+ {n:'Annihilation Sweep',fn:(a,p,use)=>{if(!use(38))return;cd=70;const base=Math.atan2(a.dy,a.dx);let k=0;fxWord(p.x,p.y-PH-10,'ANNIHILATION.',1.2,'#ff6b5c',true);
+   ACT.push(()=>{k++;const an=base-.9+k/40*1.8;beamCore({h:eyes(),dx:Math.cos(an),dy:Math.sin(an)},{pow:900,rad:4,len:520,w:5,c:[255,220,210],g:[255,30,20],spark:()=>rgb(255,60+R()*120,40),dmg:10,noAsh:true});shake=Math.max(shake,8);return k<40;});}},
  // upload into the nearest robot: Ultron's mind jumps bodies, the old shell explodes
  {n:'Upload',fn:(a,p,use)=>{let tg=null,bd=170;for(const e of enemies){if(!isMetal(e)||e.def.title)continue;const d=Math.hypot(e.x-p.x,e.y-p.y);if(d<bd){bd=d;tg=e;}}if(!tg){fxWord(p.x,p.y-PH-6,'NO HOST',.8,'#ff6b5c',true);return;}if(!use(25))return;cd=60;
    const ox=p.x,oy=p.y;zap(ox,oy-PH/2,tg.x,tg.y,[255,200,190],[255,40,40]);p.x=tg.x;p.y=tg.y+tg.def.h/2;tg.hp=0;p.hp=Math.min(CH.hp,p.hp+CH.hp*.3);explode(ox|0,oy-PH/2|0,8,{self:true,col:[255,80,60]});if(boxHit(p.x,p.y))punchOut(p);fxWord(p.x,p.y-PH-8,'UPLOADED.',1.1,'#ff6b5c',true);snd('zap',p.x,p.y);}},
@@ -3046,10 +3162,19 @@ const MAG_POWERS=[
  // a steel rod fired at magnetic speed: pierces everything in a straight line
  {n:'Rail Shot',fn:(a,p,use)=>{if(!use(26))return;cd=40;let x=a.h.x,y=a.h.y;for(let s=0;s<520;s++){x+=a.dx;y+=a.dy;const X=x|0,Y=y|0;if(X<1||X>=W-1||Y<1||Y>=H-44)break;const i=Y*W+X,m=t[i];if(m&&KIND[m]!==G&&KIND[m]!==F){if(R()<.3)spawn(X,Y,a.dx*3+(R()-.5)*2,a.dy*3-R()*2,col[i],40,KIND[m]===S?RUBBLE:m,0);setc(i,EMPTY);}}
    damageLine(a.h.x,a.h.y,x,y,4,60);beams.push({x0:a.h.x,y0:a.h.y,x1:x,y1:y,life:5,w:1,c:[240,230,255],g:[170,90,255]});fxWord(a.h.x+a.dx*40,a.h.y-10,'SHHHRAK!',1,'#c88cff',true);snd('zap',a.h.x,a.h.y,{pitch:.5});shake+=5;}},
- // hold: crush the metal in robots near the cursor
- {n:'Crush',fn:(a,p,use)=>{if(!use(.6))return;const cx=mouse.wx,cy=mouse.wy;for(const e of enemies)if(isMetal(e)&&Math.hypot(e.x-cx,e.y-cy)<40+e.def.w/2){hitEnemy(e,2.4,0,0);e.vx*=.6;e.vy*=.6;if(frame%3===0)spawn(e.x+(R()-.5)*e.def.w,e.y+(R()-.5)*e.def.h,(R()-.5)*2,(R()-.5)*2,rgb(255,230,160),8,0,1,1);}
-   if(frame%2===0)rings.push({x:cx,y:cy,r:30,vr:-2,life:5,c:[200,120,255]});sndLoop('crush','hum',cx,cy,{v:.7});}},
+ // hold: a magnetic implosion. Debris, wreckage, loose steel and robots are dragged into one crushing point
+ {n:'Magnetic Implosion',fn:(a,p,use)=>{if(!use(1))return;const cx=mouse.wx,cy=mouse.wy;
+   for(const b of bodies){if(b.held)continue;const dx=cx-b.x,dy=cy-b.y,d=Math.hypot(dx,dy)||1;if(d<160){b.vx+=dx/d*.9;b.vy+=dy/d*.9-.4;b.thrown=true;}}
+   for(let n=0;n<np;n++){const dx=cx-px[n],dy=cy-py[n],d2=dx*dx+dy*dy;if(d2<25600){const d=Math.sqrt(d2)||1;pvx[n]+=dx/d*.5;pvy[n]+=dy/d*.5-.15;}}
+   if(frame%2===0)for(let k=0;k<6;k++){const X=cx+(R()-.5)*180|0,Y=cy+(R()-.5)*120|0;if(X<1||X>=W-1||Y<1||Y>=H-44)continue;const i=Y*W+X;if(t[i]===STEEL||(KIND[t[i]]===S&&!gnd[i]&&R()<.3)){const c=col[i];setc(i,EMPTY);const dx=cx-X,dy=cy-Y,d=Math.hypot(dx,dy)||1;spawn(X,Y,dx/d*3,dy/d*3,c,80,RUBBLE,0,0);}}
+   for(const e of enemies){if(e.def.title)continue;const d=Math.hypot(e.x-cx,e.y-cy);if(d<90+e.def.w/2){e.vx+=(cx-e.x)*.02;e.vy+=(cy-e.y)*.02;if(isMetal(e))hitEnemy(e,1.6,0,0);}}
+   if(frame%2===0)rings.push({x:cx,y:cy,r:60,vr:-4,life:6,c:[200,120,255]});shake=Math.max(shake,2);sndLoop('crush','hum',cx,cy,{v:.8});}},
  // Asteroid M: rip a mountain of ground out from under the cursor and drop it from the sky
+ // every girder and steel beam around him tears loose and flies at the cursor as a storm of spikes
+ {n:'Girder Storm',fn:(a,p,use)=>{const L=[];for(let k=0;k<4000&&L.length<70;k++){const X=p.x+(R()-.5)*220|0,Y=p.y-PH/2+(R()-.5)*220|0;if(X<1||X>=W-1||Y<1||Y>=H-44)continue;const i=Y*W+X;if(t[i]===STEEL||(KIND[t[i]]===S&&!gnd[i]&&R()<.1))L.push(i);}
+   if(L.length<10){fxWord(p.x,p.y-PH-8,'NO METAL',.8,'#c88cff',true);return;}if(!use(45))return;cd=80;
+   L.forEach((i,n)=>{const X=i%W,Y=(i/W)|0;setc(i,EMPTY);const dx=mouse.wx-X,dy=mouse.wy-Y,d=Math.hypot(dx,dy)||1,v=6+R()*2;shots.push({x:X,y:Y,vx:dx/d*v,vy:dy/d*v,type:'spike',life:120,col:[170,176,190],boom:5,grav:.05,delay:n>>1});});
+   fxWord(p.x,p.y-PH-12,'GIRDER STORM!',1.4,'#c88cff',true);snd('rip',p.x,p.y);shake+=8;}},
  {n:'Asteroid M',fn:(a,p,use)=>{if(!use(55))return;cd=140;const cx=mouse.wx|0,cy=groundBelow(cx,mouse.wy)+10,n=solidCells(cx,cy,18,true);if(n<60)return;const b=makeBody(q,n,true);if(!b)return;b.tx=cx;b.ty=Math.max(30,camY+40);let k=0;
    fxWord(cx,cy-40,'ASTEROID M!',1.5,'#c88cff',true);snd('rip',cx,cy);shake+=10;ACT.push(()=>{k++;if(!bodies.includes(b))return false;if(k<60){b.tx=mouse.wx;b.ty=Math.max(30,camY+40);return true;}b.held=false;b.vx=0;b.vy=10;b.thrown=true;b.safeP=frame+30;return false;});}},
 ];
@@ -3369,15 +3494,16 @@ function updDrones(){
   for(let n=drones.length-1;n>=0;n--){
     const d=drones[n];d.ph+=.05;const tx=pl_.x+Math.cos(d.ph+n*2.1)*22,ty=pl_.y-28+Math.sin(d.ph*1.3+n)*7;
     d.x+=(tx-d.x)*.08;d.y+=(ty-d.y)*.08;
-    spawn(d.x+(R()-.5)*3,d.y+2,(R()-.5)*.3,.8+R(),R()<.5?rgb(255,200,90):gcol(),6,0,1,0);
+    spawn(d.x+(R()-.5)*3,d.y+2,(R()-.5)*.3,.8+R(),d.red?rgb(255,60+R()*90|0,40):R()<.5?rgb(255,200,90):gcol(),6,0,1,0);
+    if(d.red&&d.life<45){const dx=mouse.wx-d.x,dy=mouse.wy-d.y,dd=Math.hypot(dx,dy)||1;d.x+=dx/dd*6;d.y+=dy/dd*6;if(--d.life<=0||solidAt(d.x,d.y)||enemyAt(d.x,d.y,2)){explode(d.x|0,d.y|0,11,{fire:.25,col:[255,60,40]});damageEnemies(d.x,d.y,24,40,0,-3,true);drones.splice(n,1);}continue;}
     if(--d.cool<=0){ // laser ray: nearest enemy if any, else the cursor
       const e=nearestEnemy(d.x,d.y,240);const gx=e?e.x:mouse.wx,gy=e?e.y:mouse.wy;
       const dx=gx-d.x,dy=gy-d.y,dd=Math.hypot(dx,dy)||1;let x=d.x,y=d.y;
-      for(let s=0;s<300;s++){x+=dx/dd;y+=dy/dd;const X=x|0,Y=y|0;if(X<0||X>=W||Y<0||Y>=H)break;const hitE=enemyAt(x,y,1);if(hitE){hitEnemy(hitE,12,dx/dd*2,dy/dd*2);break;}const m=t[Y*W+X];if(m&&KIND[m]!==G&&KIND[m]!==F){explode(X,Y,4,{fire:.15,green:true});break;}}
+      for(let s=0;s<300;s++){x+=dx/dd;y+=dy/dd;const X=x|0,Y=y|0;if(X<0||X>=W||Y<0||Y>=H)break;const hitE=enemyAt(x,y,1);if(hitE){hitEnemy(hitE,12,dx/dd*2,dy/dd*2);break;}const m=t[Y*W+X];if(m&&KIND[m]!==G&&KIND[m]!==F){explode(X,Y,d.red?7:4,d.red?{fire:.15,col:[255,60,40]}:{fire:.15,green:true});break;}}
       beams.push({x0:d.x,y0:d.y,x1:x,y1:y,life:4,w:1,c:[255,120,90],g:[255,60,40]});
       d.cool=26+R()*12|0;
     }
-    if(--d.life<=0){explode(d.x,d.y,6,{fire:.2,green:true});drones.splice(n,1);}
+    if(--d.life<=0){explode(d.x,d.y,6,d.red?{fire:.2,col:[255,60,40]}:{fire:.2,green:true});drones.splice(n,1);}
   }
 }
 function updVortex(){
@@ -3813,6 +3939,7 @@ function drawComics(sx,sy){
 }
 addEventListener('resize',resize);
 function pix(x,y,c,glow){x=(x-CX)|0;y=(y-CY)|0;if(x<0||x>=VW||y<0||y>=VH)return;const o=y*VW+x;buf[o]=c;if(glow)gbuf[o]=glow;}
+function pixA(x,y,c,a){x=(x-CX)|0;y=(y-CY)|0;if(x<0||x>=VW||y<0||y>=VH)return;const o=y*VW+x,d=buf[o],e=1-a;buf[o]=rgb((c&255)*a+(d&255)*e,((c>>8)&255)*a+((d>>8)&255)*e,((c>>16)&255)*a+((d>>16)&255)*e);}
 function gaddS(x,y,r,g,b){if(x<0||x>=VW||y<0||y>=VH)return;const o=y*VW+x,c=gbuf[o];gbuf[o]=rgb(Math.min(255,(c&255)+r),Math.min(255,((c>>8)&255)+g),Math.min(255,((c>>16)&255)+b));}
 function line(x0,y0,x1,y1,c,g){const d=Math.max(Math.abs(x1-x0),Math.abs(y1-y0))|0;for(let k=0;k<=d;k++){const f=d?k/d:0;pix(x0+(x1-x0)*f,y0+(y1-y0)*f,c,g);}}
 function circle(x,y,r,c,g){const n=Math.max(12,r*6|0);for(let k=0;k<n;k++){const a=k/n*6.283;pix(x+Math.cos(a)*r,y+Math.sin(a)*r,c,g);}}
@@ -3911,7 +4038,7 @@ function render(){
       const so=(Y-CY)*VW+(X-CX);buf[so]=lut(fgL,bc);if(b.held&&!b.overhead&&((lx+ly+frame)&7)===0)gbuf[so]=rgb(40,160,70);
     }
   }
-  for(let n=0;n<np;n++){const c=pc[n],gl=pg[n]&1;pix(px[n],py[n],c,gl?c:0);const vx=pvx[n],vy=pvy[n];
+  for(let n=0;n<np;n++){const c=pc[n],gl=pg[n]&1;if(pg[n]&16){pixA(px[n],py[n],c,Math.min(1,pl[n]/PHYS.dust.fade)*.75);continue;}pix(px[n],py[n],c,gl?c:0);const vx=pvx[n],vy=pvy[n];
     if(vx*vx+vy*vy>4.5){const c2=shade(c,.62);pix(px[n]-vx*.45,py[n]-vy*.45,c2,gl?c2:0);}} // motion streaks on fast debris and sparks
   // projectiles
   for(const s of shots){
@@ -4101,7 +4228,7 @@ function tick(){
 function loop(now){
   const dt=Math.min(100,now-last);last=now;acc+=dt;
   const a=performance.now();
-  let n=0;if(GS==='play'){if(hitstop>0&&acc>=1000/60){hitstop--;acc=0;}else{while(acc>=1000/60&&n<2){if(!SPAWN.slow||(++slowTk&1))tick();acc-=1000/60;n++;}if(n===2)acc=0;}}else acc=0;
+  let n=0;if(GS==='play'){if(hitstop>0&&acc>=TICK){hitstop--;acc=0;}else{while(acc>=TICK&&n<PHYS.maxSteps){if(!SPAWN.slow||(++slowTk&1))tick();acc-=TICK;n++;}if(n===PHYS.maxSteps)acc=0;}}else acc=0;
   render();
   tickAudio();
   if(SET.sound){const on=GS==='play'||GS==='menu',md=MAPDEFS[mapSel.value];
