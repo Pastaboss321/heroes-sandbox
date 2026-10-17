@@ -1322,6 +1322,9 @@ window.HS_MINIMAP_Y=8; // minimap at the top edge on phones
   joy.addEventListener('pointerdown',e=>{e.preventDefault();jid=e.pointerId;try{joy.setPointerCapture(jid);}catch(_){}const [cx,cy]=centre();setJ(e.clientX-cx,e.clientY-cy);});
   joy.addEventListener('pointermove',e=>{if(e.pointerId!==jid)return;const [cx,cy]=centre();setJ(e.clientX-cx,e.clientY-cy);});
   const rel=e=>{if(e.pointerId!==jid)return;jid=null;setJ(0,0);};
+  // holding up keeps hopping: each time the hero is back on the ground (and not flying), W is pressed again.
+  // grounded-only, so it never trips the in-air double-tap that turns on flight
+  setInterval(()=>{const G=window.GAME,p=G&&G.pl_;if(J.KeyW&&p&&!p.fly&&p.ground&&G.GS==='play'){key('KeyW','w',false);key('KeyW','w',true);}},50);
   joy.addEventListener('pointerup',rel);joy.addEventListener('pointercancel',rel);joy.addEventListener('lostpointercapture',rel);
   // pause menu gains a sandbox section: the game's own hero and map pickers move in here
   const panel=document.querySelector('#pause .panel');
