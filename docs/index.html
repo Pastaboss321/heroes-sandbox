@@ -1179,6 +1179,16 @@ void main(){
   /* top-right: minimap in the corner, score and kills beside it, the Spawn button below the map */
   #scorebox{top:max(6px,env(safe-area-inset-top))!important;right:calc(max(10px,env(safe-area-inset-right)) + 262px)!important}
   #top{top:118px!important}
+  /* spawn menu: centred between the HUD and the thumb controls, bigger touch targets, a close button */
+  #spawn{left:50%!important;right:auto!important;transform:translateX(-50%)!important;top:max(54px,env(safe-area-inset-top))!important;bottom:150px!important;width:min(560px,70vw)!important;z-index:101!important}
+  #spawn .sp-head span{display:none}
+  #spawn .sp-grid{grid-template-columns:repeat(auto-fill,minmax(78px,1fr))}
+  #spawn .sp-item{min-height:58px;font-size:10px}
+  #spclose{font:18px Bangers,Impact,sans-serif;letter-spacing:1px;border:3px solid #fff8e8;background:#e23b2e;color:#fff8e8;padding:2px 12px}
+  /* while placing something: a big cancel button at the top */
+  #spcancel{position:fixed;left:50%;top:max(54px,env(safe-area-inset-top));transform:translateX(-50%);z-index:101;display:none;font:20px Bangers,Impact,sans-serif;letter-spacing:2px;border:3px solid #14110f;background:#e23b2e;color:#fff8e8;padding:6px 18px;box-shadow:3px 3px 0 #14110f}
+  body.placing #spcancel{display:block}
+  body.menu-open #spcancel{display:none}
   #toolchip{bottom:calc(max(8px,env(safe-area-inset-bottom)) + 112px)!important}
   #hud{left:max(10px,env(safe-area-inset-left))!important;top:max(8px,env(safe-area-inset-top))!important;transform:scale(.85);transform-origin:top left}
   #rot{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;background:#0d0a18;color:#ffc93c;font:28px Bangers,Impact,sans-serif;letter-spacing:2px;text-align:center}
@@ -1335,6 +1345,17 @@ window.HS_MINIMAP_Y=8; // minimap at the top edge on phones
     if(ch)document.getElementById('msbH').appendChild(ch);if(mp)document.getElementById('msbM').appendChild(mp);
     document.getElementById('msbW').onclick=()=>{document.getElementById('resume').click();document.getElementById('wavebtn').click();};
     document.getElementById('msbR').onclick=()=>{document.getElementById('regen').click();};}
+  // spawn menu on phones: close button in its header; picking something to place closes the menu so the
+  // next tap lands in the world; a CANCEL button stays up while a tool is armed
+  const cancel=document.createElement('button');cancel.id='spcancel';cancel.textContent='✕ CANCEL PLACING';document.body.appendChild(cancel);
+  const ui=()=>window.GAME&&GAME.spawnUI&&GAME.spawnUI();
+  cancel.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();GAME.SPAWN.tool=null;const u=ui();u&&u.select(null);});
+  const hookSpawn=()=>{const sp=document.getElementById('spawn');if(!sp||sp.dataset.m)return;sp.dataset.m=1;
+    const head=sp.querySelector('.sp-head'),x=document.createElement('button');x.id='spclose';x.textContent='CLOSE';head.appendChild(x);
+    x.onclick=()=>{const u=ui();u&&u.close();};
+    for(const ev of ['pointerdown','touchstart'])sp.addEventListener(ev,e=>e.stopPropagation());
+    sp.addEventListener('click',e=>{if(e.target.closest('.sp-item'))setTimeout(()=>{if(GAME.SPAWN.tool){const u=ui();u&&u.close();}},0);});};
+  setInterval(()=>{hookSpawn();document.body.classList.toggle('placing',!!(window.GAME&&GAME.SPAWN&&GAME.SPAWN.tool));},150);
   // hide the buttons while a menu is up
   const ov=['menu','pause','over','settings'].map(id=>document.getElementById(id)).filter(Boolean);
   const sync=()=>document.body.classList.toggle('menu-open',ov.some(o=>!o.classList.contains('hidden')));
