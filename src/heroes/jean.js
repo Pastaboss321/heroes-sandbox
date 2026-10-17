@@ -5,7 +5,7 @@ import { F, FIRE, G, HARD, KIND, L, P, R, RUBBLE, S, STEEL, rgb } from '../world
 import { H, W, col, markDirty, t, wake } from '../world/grid.js';
 import { bodies, q } from '../world/support.js';
 import { makeBody } from '../world/bodies.js';
-import { pg, pl, pvx, pvy, px, py, spawn } from '../world/particles.js';
+import { crumble, pg, pl, pvx, pvy, px, py, spawn } from '../world/particles.js';
 import { beams, flash, fxBurst, fxImpact, fxWord, rings } from '../render/fx.js';
 import { explode } from '../world/destruction.js';
 import { ANIM, rect } from '../render/rig.js';
@@ -56,7 +56,7 @@ const JEAN_POWERS=[
  {n:'Mind Crush',fn:(a,p,use)=>{if(!use(.7))return;const cx=mouse.wx,cy=mouse.wy,r=34;
    for(const e of enemies){const dx=cx-e.x,dy=cy-e.y,d=Math.hypot(dx,dy);if(d<r+e.def.w){e.vx+=dx/(d||1)*.6;e.vy+=dy/(d||1)*.6-.2;hitEnemy(e,1.4,0,0);}}
    for(let n=0;n<500;n++){const an=R()*6.283,d=Math.sqrt(R())*r,X=cx+Math.cos(an)*d|0,Y=cy+Math.sin(an)*d|0;if(X<1||X>=W-1||Y<1||Y>=H-1)continue;const i=Y*W+X,m=t[i];if(!m)continue;
-     if(KIND[m]===S&&d<12&&m!==STEEL&&R()<.05){t[i]=RUBBLE;markDirty(i);wake(i);}else if(KIND[m]===P&&R()<.3){spawn(X,Y,(cx-X)*.06,(cy-Y)*.06,col[i],40,m,0,0,1);t[i]=0;wake(i);}}
+     if(KIND[m]===S&&d<12&&m!==STEEL&&R()<.05){crumble(i);markDirty(i);wake(i);}else if(KIND[m]===P&&R()<.3){spawn(X,Y,(cx-X)*.06,(cy-Y)*.06,col[i],40,m,0,0,1);t[i]=0;wake(i);}}
    for(let k=0;k<4;k++){const an=R()*6.283,rr=r*(.6+R()*.4);spawn(cx+Math.cos(an)*rr,cy+Math.sin(an)*rr,-Math.cos(an)*1.5,-Math.sin(an)*1.5,rgb(255,120,210),14,0,1,0,1);}
    if(ST.frame%2===0)rings.push({x:cx,y:cy,r:r*.9,vr:-2,life:6,c:[255,110,200]});if(ST.frame%30===0)fxWord(cx,cy-r,'GRRKK!',.9,'#ff9ad8',true);const h=hand();beams.push({pts:[[h.x,h.y],[(h.x+cx)/2+(R()-.5)*10,(h.y+cy)/2+(R()-.5)*10],[cx,cy]],life:1,c:[255,170,230],g:[255,80,190]});}},
  {n:'Phoenix Force',fn:(a,p,use)=>{if(!use(60))return;ST.cd=120;const cx=p.x,cy=p.y-ST.PH/2;let k=0;fxWord(cx,cy-40,'SKREEEEE!',1.7,'#ffb340',true);ST.hitstop=Math.max(ST.hitstop,4);fxImpact(cx,cy,5);

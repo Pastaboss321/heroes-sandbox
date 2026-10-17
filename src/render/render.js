@@ -20,7 +20,7 @@ import { glowRGB, hand, mouse, pl_ } from '../player.js';
 import { ENEMY_TYPES, enemies } from '../enemies/core.js';
 import { bctx, blur, buf, circle, ctx, cv, gaddS, gbuf, gctx, gimg, glc, img, line, mbuf, mctx, mimg, mm, pix, pixA, sctx, sim } from './canvas.js';
 import { drawComics } from './comic.js';
-import { drawAxe, drawHammer, drawSprite } from './sprites.js';
+import { drawAxe, drawHammer, drawSlip, drawSprite } from './sprites.js';
 import { groundBelow } from '../ui/spawn.js';
 
 const flick=new Float32Array(256);
@@ -42,7 +42,7 @@ export function render(){
     return rgb(r>255?255:r,g>255?255:g,b>255?255:b);};
   for(let sy=0;sy<VH;sy++){
     const wy=sy+ST.CY;let i=wy*W+ST.CX,o=sy*VW;const frow=(Math.max(0,Math.min(H-1,sy+fyo)))*ST.FW+fx0; // above the map the skyline sinks away at half speed
-    if(wy<0){for(let sx=0;sx<VW;sx++,o++){const f=ST.far[frow+sx];buf[o]=sa>0?toSpace(f,sx,sy):f;}continue;}
+    if(wy<0){for(let sx=0;sx<VW;sx++,o++){let f=ST.far[frow+sx];if(sa>0)f=toSpace(f,sx,sy);buf[o]=ink&&!htm[o]&&!ST.farKeep[frow+sx]?lut(htL,f):f;}continue;}
     for(let sx=0;sx<VW;sx++,i++,o++){
       const m=t[i];
       if(m===0){const b=bg[i];if(b)buf[o]=lut(bgL,b);else{let f=ST.far[frow+sx];if(sa>0)f=toSpace(f,sx,sy);buf[o]=ink&&!htm[o]&&!ST.farKeep[frow+sx]?lut(htL,f):f;}continue;}
@@ -79,7 +79,7 @@ export function render(){
       const so=(Y-ST.CY)*VW+(X-ST.CX);buf[so]=lut(fgL,bc);if(b.held&&!b.overhead&&((lx+ly+ST.frame)&7)===0)gbuf[so]=rgb(40,160,70);
     }
   }
-  for(let n=0;n<ST.np;n++){const c=pc[n],gl=pg[n]&1;if(pg[n]&16){pixA(px[n],py[n],c,Math.min(1,pl[n]/PHYS.dust.fade)*.75);continue;}pix(px[n],py[n],c,gl?c:0);const vx=pvx[n],vy=pvy[n];
+  for(let n=0;n<ST.np;n++){const c=pc[n],gl=pg[n]&1;if(pg[n]&16){pixA(px[n],py[n],c,Math.min(1,pl[n]/PHYS.dust.fade)*.55);continue;}pix(px[n],py[n],c,gl?c:0);const vx=pvx[n],vy=pvy[n];
     if(vx*vx+vy*vy>4.5){const c2=shade(c,.62);pix(px[n]-vx*.45,py[n]-vy*.45,c2,gl?c2:0);}} // motion streaks on fast debris and sparks
   // projectiles
   for(const s of shots){
@@ -117,12 +117,12 @@ export function render(){
   // orbital targeting
   for(const s of strikes)if(s.t>0){const r=6+s.t*.6;circle(s.x,mouse.wy,r,rgb(120,255,150),rgb(40,200,80));line(s.x,mouse.wy-r-4,s.x,mouse.wy+r+4,rgb(120,255,150),rgb(40,200,80));if(ST.frame%6<3)line(s.x,ST.CY,s.x,ST.CY+VH,rgb(40,120,60),0);}
   // afterimages
-  for(const a of afters)drawSprite(a.x,a.y,a.ang,a.face,true);
+  for(const a of afters){ST.TG=a.col||null;drawSprite(a.x,a.y,a.ang,a.face,true);}ST.TG=null;
   // cape trail
   const p=pl_;
   if(ST.CH.cape&&p.hist.length>3){const yo=ST.PH-5;for(let k=1;k<Math.min(8,p.hist.length);k++){const [hx,hy]=p.hist[k];const wv=Math.sin(ST.frame*.3+k)*1.2;pix(hx-p.face*(2+k*.4),hy-yo+k*.6+wv,k<4?ST.CH.cape[0]:ST.CH.cape[1]);pix(hx-p.face*(2+k*.4),hy-yo+1+k*.6+wv,ST.CH.cape[1]);}}
   if(p.ant>0)drawSprite(p.x,p.y+5,0,p.face,false,(ST.frame>>2)&1?FANT_A:FANT_B,FANT_PAL);
-  drawSprite(p.x,p.y+PP*ST.SZ,p.ang,p.face,false,posePlayer(p),p.metal>0?metalPal():null,p.hurtF,p.stealth>0,ST.SZ);
+  if(p.slip)drawSlip(p.slip);else drawSprite(p.x,p.y+PP*ST.SZ,p.ang,p.face,false,posePlayer(p),p.metal>0?metalPal():null,p.hurtF,p.stealth>0,ST.SZ);
   const h=hand();
   if(ST.CH.id==='thor'&&!p.tow&&!pins.length&&!shots.some(s=>s.type==='hammer'||s.type==='pin')){for(let yy=0;yy<3;yy++)pix(h.x,h.y+yy,rgb(110,80,50));for(let yy=-2;yy<0;yy++)for(let xx=-1;xx<=1;xx++)pix(h.x+xx,h.y+yy,rgb(160,166,176));}
   else if(ST.CH.id!=='hulk')pix(h.x,h.y,glowRGB(),glowRGB());

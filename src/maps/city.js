@@ -124,7 +124,7 @@ function houseRow(x,GY){
   }
   return x;
 }
-function park(x,GY){
+export function park(x,GY){
   const w=150; fill(x,GY-2,x+w,GY,GRASS); fill(x,GY-1,x+w,GY,DIRT);
   // pond carved into street
   fill(x+50,GY,x+100,GY+6,EMPTY); fill(x+50,GY+1,x+100,GY+6,WATER); fill(x+49,GY+6,x+101,GY+7,CONC);

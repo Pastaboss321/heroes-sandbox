@@ -11,7 +11,7 @@ import { ANIM, rect } from '../render/rig.js';
 import { snd } from '../sfx.js';
 import { shots, surfaceY } from './powers.js';
 import { ACT, freezeArea, iceAt } from './xmen.js';
-import { mouse, pl_ } from '../player.js';
+import { SKY, mouse, pl_ } from '../player.js';
 import { damageEnemies, enemies, enemyAt, hitEnemy, nearestEnemy } from '../enemies/core.js';
 
 export const SPR_ICE=[
@@ -43,7 +43,7 @@ const PAL_ICE={i:rgb(128,188,234),I:rgb(200,236,255),J:rgb(68,128,194),K:rgb(38,
 ANIM.iceman={leg:14,mid:6,armC:'IiJ',tipC:'+Ii',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:'e',lid:'I'};
 const ICE_POWERS=[
  {n:'Ice Beam',fn:(a,p,use)=>{if(!use(.6))return;let x=a.h.x,y=a.h.y;
-   for(let s2=0;s2<300;s2++){x+=a.dx;y+=a.dy;const X=x|0,Y=y|0;if(X<0||X>=W||Y<0||Y>=H)break;const i=Y*W+X,m=t[i];
+   for(let s2=0;s2<300;s2++){x+=a.dx;y+=a.dy;const X=x|0,Y=y|0;if(X<0||X>=W||Y>=H||Y<-SKY)break;const i=Y*W+X,m=t[i];
      if(m===WATER||m===ACID){setc(i,ICE);continue;}if(m===LAVA){setc(i,OBSID);break;}if(KIND[m]===F){setc(i,EMPTY);continue;}
      const e=enemyAt(x,y,1);if(e){e.frozen=Math.max(e.frozen||0,60);hitEnemy(e,1.5,0,0);break;}
      if(m&&KIND[m]!==G){for(let k=0;k<3;k++)iceAt(X-a.dx*(1+R()*3)+(R()-.5)*3,Y-a.dy*(1+R()*3)+(R()-.5)*3);break;}}

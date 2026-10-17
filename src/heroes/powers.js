@@ -6,7 +6,7 @@ import { CHN, CW, H, N, VH, W, bg, bgB, bgD, booms, col, markDirty, setc, stamp,
 import { ignite } from '../world/sim.js';
 import { BLDS, NAT, bodies, gnd, q, vis } from '../world/support.js';
 import { bodyAt, makeBody } from '../world/bodies.js';
-import { MP, gcol, pvx, pvy, px, py, solidAt, spawn } from '../world/particles.js';
+import { MP, crumble, gcol, pvx, pvy, px, py, solidAt, spawn } from '../world/particles.js';
 import { afters, beams, flash, flashes, fxBurst, fxImpact, fxWord, rings } from '../render/fx.js';
 import { bgHit, explode } from '../world/destruction.js';
 import { iceAt } from './xmen.js';
@@ -24,6 +24,7 @@ export const shots=[],drones=[],strikes=[];
 export function aim(){const h=hand();const dx=mouse.wx-h.x,dy=mouse.wy-h.y,d=Math.hypot(dx,dy)||1;return{h,dx:dx/d,dy:dy/d,d};}
 export const CYAN=[150,235,255], BLUE=[160,205,255], GAMMA=[130,255,90];
 export const pickC=c=>rgb(c[0]*(.7+R()*.3),c[1]*(.7+R()*.3),c[2]*(.7+R()*.3));
+export const TSL=[]; // the hero's last five seconds (300 ticks) of position and health, for Doom's Timeslip
 
 // ================= extra powers =================
 export function zap(x0,y0,x1,y1,c,g){const pts=[[x0,y0]],n=Math.max(2,Math.hypot(x1-x0,y1-y0)/7|0);for(let k=1;k<n;k++){const f=k/n;pts.push([x0+(x1-x0)*f+(R()-.5)*7,y0+(y1-y0)*f+(R()-.5)*7]);}pts.push([x1,y1]);beams.push({pts,life:2,c,g});}
@@ -91,7 +92,7 @@ export function beamCore(a,o){
   if(ST.frame%26===0)fxWord(a.h.x+a.dx*34,a.h.y+a.dy*34-6,R()<.5?'ZZZAP!':'FZZZT!',.8,`rgb(${o.g[0]},${o.g[1]},${o.g[2]})`,true);
   let x=a.h.x,y=a.h.y,pow=o.pow;const x0=x,y0=y,rad=o.rad;
   for(let s=0;s<o.len&&pow>0;s++){
-    x+=a.dx;y+=a.dy;if(x<0||x>=W||y<0||y>=H)break;
+    x+=a.dx;y+=a.dy;if(x<0||x>=W||y>=H||y<-SKY)break; // beams keep going through the open sky above the map
     for(let oy=-rad;oy<=rad;oy++)for(let ox=-rad;ox<=rad;ox++){
       const X=x+ox|0,Y=y+oy|0;if(X<0||X>=W||Y<0||Y>=H)continue;const i=Y*W+X,m=t[i];if(m===0||KIND[m]===G)continue;
       pow-=.4+HARD[m]*.35;
@@ -123,7 +124,7 @@ export function quake(x,y,o={}){
   fxWord(x,y-18,'WHUDOOM!',1.5,'#ffc93c',true);snd('slam',x,y,{size:(o.r||36)/30});fxBurst(x,y,60,o.col?`rgb(${o.col[0]},${o.col[1]},${o.col[2]})`:'#8dffb0');ST.hitstop=Math.max(ST.hitstop,4);fxImpact(x,y,4);
   const r=o.r||36, gc=o.col||[120,255,160], green=!o.col;ST.shake=22;
   for(let yy=-r;yy<=r;yy++)for(let xx=-r;xx<=r;xx++){const d=Math.hypot(xx,yy);if(d>r)continue;const X=x+xx|0,Y=y+yy|0;if(X<0||X>=W||Y<0||Y>=H)continue;const i=Y*W+X,m=t[i];
-    if(KIND[m]===S&&m!==STEEL&&R()<(1-d/r)*.9/(1+HARD[m]*.15)){if(R()<.25&&Y<=y+3){spawn(X,Y,xx*.07+(R()-.5),-2-R()*3.5*(1-d/r),col[i],90,RUBBLE,0);t[i]=0;}else t[i]=RUBBLE;markDirty(i);wake(i);}
+    if(KIND[m]===S&&m!==STEEL&&R()<(1-d/r)*.9/(1+HARD[m]*.15)){if(R()<.25&&Y<=y+3){spawn(X,Y,xx*.07+(R()-.5),-2-R()*3.5*(1-d/r),col[i],90,RUBBLE,0);t[i]=0;}else crumble(i);markDirty(i);wake(i);}
     else if((KIND[m]===P||KIND[m]===L)&&R()<.35*(1-d/r)){spawn(X,Y,(R()-.5)*2,-2-R()*3.5,col[i],80,m,0);t[i]=0;wake(i);}
   }
   explode(x,y+2,7,{fire:.15,green,col:o.col,self:true});
@@ -140,7 +141,7 @@ export function lightning(a,o={}){
   const pts=[[a.h.x,a.h.y]];let x=a.h.x,y=a.h.y;const len=Math.min(260,a.d);let hitX=-1,hitY=-1;
   for(let s=0;s<len;s+=6){
     x+=a.dx*6+(R()-.5)*6;y+=a.dy*6+(R()-.5)*6;pts.push([x,y]);
-    const X=x|0,Y=y|0;if(X<0||X>=W||Y<0||Y>=H)break;const m=t[Y*W+X];if(m&&KIND[m]!==G&&KIND[m]!==F){hitX=X;hitY=Y;break;}
+    const X=x|0,Y=y|0;if(X<0||X>=W||Y>=H||Y<-SKY)break;const m=t[Y*W+X];if(m&&KIND[m]!==G&&KIND[m]!==F){hitX=X;hitY=Y;break;}
     if(enemyAt(x,y,3)){hitX=X;hitY=Y;break;}
   }
   beams.push({pts,life:2,c:C,g:Gc});sndLoop('arc','arc',a.h.x,a.h.y);
@@ -173,7 +174,7 @@ export function thunderclap(a){
   const cx=a.h.x,cy=a.h.y,R0=85,ang=Math.atan2(a.dy,a.dx);
   for(let n=0;n<6000;n++){const d=Math.sqrt(R())*R0,t2=ang+(R()-.5)*1.15,X=cx+Math.cos(t2)*d|0,Y=cy+Math.sin(t2)*d|0;if(X<0||X>=W||Y<0||Y>=H)continue;const i=Y*W+X,m=t[i];if(!m)continue;const f=1-d/R0;
     const vx=Math.cos(t2)*6*f,vy=Math.sin(t2)*6*f-1;
-    if(KIND[m]===S){if(m!==STEEL&&R()<f*.6/(1+HARD[m]*.3)){if(R()<.5){spawn(X,Y,vx,vy,col[i],90,RUBBLE,0);t[i]=0;}else t[i]=RUBBLE;markDirty(i);wake(i);}}
+    if(KIND[m]===S){if(m!==STEEL&&R()<f*.6/(1+HARD[m]*.3)){if(R()<.5){spawn(X,Y,vx,vy,col[i],90,RUBBLE,0);t[i]=0;}else crumble(i);markDirty(i);wake(i);}}
     else if(KIND[m]===P||KIND[m]===L){if(R()<f+.2){spawn(X,Y,vx*1.2,vy*1.2,col[i],80,m,0);t[i]=0;wake(i);}}
     else{t[i]=0;wake(i);}}
   for(let k=0;k<4;k++)bgHit(cx+a.dx*k*18,cy+a.dy*k*18,10);
@@ -196,7 +197,7 @@ export function nova(){
   const cx=p.x,cy=p.y-8,r=44; bgHit(cx,cy,30);
   for(let yy=-r;yy<=r;yy++)for(let xx=-r;xx<=r;xx++){const d=Math.hypot(xx,yy);if(d>r||d<10)continue;const X=cx+xx|0,Y=cy+yy|0;if(X<0||X>=W||Y<0||Y>=H)continue;const i=Y*W+X,m=t[i];if(!m)continue;
     const f=1-d/r;
-    if(KIND[m]===S){if(m!==STEEL&&R()<f*.8/(1+HARD[m]*.3)){if(R()<.5){spawn(X,Y,xx/d*5*f+R()-.5,yy/d*5*f-1,col[i],90,RUBBLE,0);t[i]=0;}else t[i]=RUBBLE;markDirty(i);wake(i);}}
+    if(KIND[m]===S){if(m!==STEEL&&R()<f*.8/(1+HARD[m]*.3)){if(R()<.5){spawn(X,Y,xx/d*5*f+R()-.5,yy/d*5*f-1,col[i],90,RUBBLE,0);t[i]=0;}else crumble(i);markDirty(i);wake(i);}}
     else if(KIND[m]===P||KIND[m]===L){if(R()<f+.2){spawn(X,Y,xx/d*6*f,yy/d*6*f-1,col[i],80,m,0);t[i]=0;wake(i);}}
     else{t[i]=0;wake(i);}
   }
@@ -302,7 +303,7 @@ export function updShots(world=true){
       continue;}
     if(s.type==='axe'){ // Stormbreaker: a razor-thin cut through everything on its line
       s.spin+=.6;const st=Math.ceil(Math.hypot(s.vx,s.vy)),sp=Math.hypot(s.vx,s.vy)||1,nx=-s.vy/sp,ny=s.vx/sp;
-      for(let k=0;k<st;k++){s.x+=s.vx/st;s.y+=s.vy/st;if(s.x<1||s.x>=W-1||s.y<1||s.y>=H-1){s.life=0;break;}
+      for(let k=0;k<st;k++){s.x+=s.vx/st;s.y+=s.vy/st;if(s.x<1||s.x>=W-1||s.y<-SKY||s.y>=H-1){s.life=0;break;}
         for(let w=-1;w<=1;w++){const X=s.x+nx*w|0,Y=s.y+ny*w|0;if(X<0||X>=W||Y<0||Y>=H-42)continue;const i=Y*W+X,m=t[i];if(!m||KIND[m]===G||KIND[m]===F)continue;if(m===OBSID&&R()<.7)continue;
           if(ST.np<MP-300&&R()<.25)spawn(X,Y,s.vx*.2+(R()-.5)*2,s.vy*.2-R()*2,KIND[m]===S&&R()<.5?rgb(200,220,255):col[i],40,KIND[m]===S?RUBBLE:KIND[m]===L?m:0,KIND[m]===S?1:0);if(bgB[i]){bg[i]=bgD[i];bgB[i]=0;}setc(i,EMPTY);}}
       for(const e of enemies){if(!s.hitSet.has(e)&&Math.abs(e.x-s.x)<e.def.w/2+4&&Math.abs(e.y-s.y)<e.def.h/2+4){s.hitSet.add(e);hitEnemy(e,45,s.vx*.6,s.vy*.6);flash(s.x,s.y,16,BLUE,4);snd('slash',s.x,s.y);}}
@@ -342,7 +343,7 @@ export function updShots(world=true){
         if(ST.decoy&&Math.abs(s.x-ST.decoy.x)<=4&&s.y>=ST.decoy.y-ST.SH&&s.y<=ST.decoy.y){ST.decoy.hp-=s.dmg||7;hit='player';break;}}
       else{
         if(s.type!=='missile')for(const b of bodies){if(b.held)continue;if(Math.abs(s.x-b.x)<b.rmax+1&&Math.abs(s.y-b.y)<b.rmax+1&&bodyAt(b,s.x,s.y)){hit=true;break;}}
-        const he=enemyAt(s.x,s.y,1);if(he&&he!==s.src)hit=true;
+        const he=enemyAt(s.x,s.y,1);if(he&&he!==s.src&&!(s.team&&he.team===s.team))hit=true;
       }
       if(hit)break;
     }
@@ -364,7 +365,7 @@ export function updDrones(){
     if(--d.cool<=0){ // laser ray: nearest enemy if any, else the cursor
       const e=nearestEnemy(d.x,d.y,240);const gx=e?e.x:mouse.wx,gy=e?e.y:mouse.wy;
       const dx=gx-d.x,dy=gy-d.y,dd=Math.hypot(dx,dy)||1;let x=d.x,y=d.y;
-      for(let s=0;s<300;s++){x+=dx/dd;y+=dy/dd;const X=x|0,Y=y|0;if(X<0||X>=W||Y<0||Y>=H)break;const hitE=enemyAt(x,y,1);if(hitE){hitEnemy(hitE,12,dx/dd*2,dy/dd*2);break;}const m=t[Y*W+X];if(m&&KIND[m]!==G&&KIND[m]!==F){explode(X,Y,d.red?7:4,d.red?{fire:.15,col:[255,60,40]}:{fire:.15,green:true});break;}}
+      for(let s=0;s<300;s++){x+=dx/dd;y+=dy/dd;const X=x|0,Y=y|0;if(X<0||X>=W||Y>=H||Y<-SKY)break;const hitE=enemyAt(x,y,1);if(hitE){hitEnemy(hitE,12,dx/dd*2,dy/dd*2);break;}const m=t[Y*W+X];if(m&&KIND[m]!==G&&KIND[m]!==F){explode(X,Y,d.red?7:4,d.red?{fire:.15,col:[255,60,40]}:{fire:.15,green:true});break;}}
       beams.push({x0:d.x,y0:d.y,x1:x,y1:y,life:4,w:1,c:[255,120,90],g:[255,60,40]});
       d.cool=26+R()*12|0;
     }
@@ -378,7 +379,7 @@ export function updVortex(){
     const a=R()*6.283,d=Math.sqrt(R())*r,X=v.x+Math.cos(a)*d|0,Y=v.y+Math.sin(a)*d|0;
     if(X<1||X>=W-1||Y<1||Y>=H-1)continue;const i=Y*W+X,m=t[i];if(m===0)continue;
     if(d<4){if(R()<.5)spawn(X,Y,(R()-.5)*2,(R()-.5)*2,col[i],12,0,1,0);setc(i,EMPTY);continue;}
-    if(KIND[m]===S){if(m!==STEEL&&R()<.05*(1-d/r)*(6/(1+HARD[m]))){if(R()<.4){spawn(X,Y,(v.x-X)*.05,(v.y-Y)*.05,col[i],90,RUBBLE,0,1);t[i]=0;}else t[i]=RUBBLE;markDirty(i);wake(i);}continue;}
+    if(KIND[m]===S){if(m!==STEEL&&R()<.05*(1-d/r)*(6/(1+HARD[m]))){if(R()<.4){spawn(X,Y,(v.x-X)*.05,(v.y-Y)*.05,col[i],90,RUBBLE,0,1);t[i]=0;}else crumble(i);markDirty(i);wake(i);}continue;}
     const ux=(v.x-X)/d,uy=(v.y-Y)/d,sx=ux-uy*.8,sy=uy+ux*.8;
     const nx=X+Math.round(sx),ny=Y+Math.round(sy),j=ny*W+nx;
     if(t[j]===0)swap(i,j);

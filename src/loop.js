@@ -9,7 +9,7 @@ import { bodies, supportCheck } from './world/support.js';
 import { updBodies } from './world/bodies.js';
 import { SET } from './render/look.js';
 import { updParticles } from './world/particles.js';
-import { SPAWN, updDecoy, updDrones, updFx, updJets, updPins, updShots, updStasis, updStorm, updStrikes, updTelekinesis, updTherm, updVortex, updWaves } from './heroes/powers.js';
+import { SPAWN, TSL, updDecoy, updDrones, updFx, updJets, updPins, updShots, updStasis, updStorm, updStrikes, updTelekinesis, updTherm, updVortex, updWaves } from './heroes/powers.js';
 import { ACT } from './heroes/xmen.js';
 import { updSlide } from './heroes/iceman.js';
 import { updWave2 } from './heroes/wave2.js';
@@ -32,7 +32,7 @@ export function tick(){
   if(mouse.down){if(SPAWN.tool)useTool();else cast();}if(ST.cd>0)ST.cd--;
   updTelekinesis();
   const world=!(ST.slowT>0&&(ST.slowT--&1))&&!SPAWN.pause; // Tactical Focus runs the world at half speed; the spawn menu can freeze it
-  updPlayer();updShots(world);
+  updPlayer();if(!pl_.slip){TSL.push({x:pl_.x,y:pl_.y,hp:pl_.hp,face:pl_.face});if(TSL.length>300)TSL.shift();}updShots(world);
   if(world){updDrones();updVortex();updStrikes();updStorm();updEnemies();updJets();}
   updPins();updTherm();updDecoy();if(world)updWave2();
   for(let n=ACT.length-1;n>=0;n--)if(ACT[n]()===false)ACT.splice(n,1);

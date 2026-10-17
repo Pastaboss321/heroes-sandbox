@@ -4,7 +4,7 @@ import { ST } from '../state.js';
 import { CONC, DIRT, GLASS, GRASS, KIND, L, LEAF, NEON, NM, OBSID, P, R, RUBBLE, S, STEEL, STONE, WEB, WOOD } from './materials.js';
 import { H, N, W, bg, bgB, bgD, col, markDirty, t, vel, wake } from './grid.js';
 import { dust, makeBody } from './bodies.js';
-import { MP, spawn } from './particles.js';
+import { MP, crumble, spawn } from './particles.js';
 import { shade } from './destruction.js';
 import { snd } from '../sfx.js';
 
@@ -177,7 +177,7 @@ function flood(s,init){
     collapses++;snd('crumble',cmx/mass,My,{size:Math.min(2.2,Math.sqrt(tl)/30)});
     const cut=My-Math.min(12,4+tl/900|0); let k2=0;
     for(let k=0;k<tl;k++){const i=q[k],y=(i/W)|0;
-      if(y>=cut){ if(R()<.5){const x=i%W;spawn(x,y,(R()-.5)*4,-R()*2.5,col[i],90,RUBBLE,t[i]===GLASS?1:0);t[i]=0;}else{t[i]=RUBBLE;vel[i]=3;} wake(i); if(R()<.05)dust(i%W,y-1); }
+      if(y>=cut){ if(R()<.5){const x=i%W;spawn(x,y,(R()-.5)*4,-R()*2.5,col[i],90,RUBBLE,t[i]===GLASS?1:0);t[i]=0;}else{crumble(i);vel[i]=3;} wake(i); if(R()<.05)dust(i%W,y-1); }
       else q[k2++]=i; }
     ST.shake=Math.min(22,ST.shake+3+Math.sqrt(tl)/20);
     const b=makeBody(q,k2,false); if(b)b.vy=.8;

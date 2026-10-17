@@ -35,5 +35,11 @@ addEventListener('blur',()=>{for(const k in keys)keys[k]=false;mouse.down=false;
 cv.addEventListener('mousemove',e=>{mouse.sx=(e.clientX-ST.ox)/ST.scale;mouse.sy=(e.clientY-ST.oy)/ST.scale;});
 cv.addEventListener('mousedown',e=>{if(e.button===0)mouse.down=true;if(e.button===2)mouse.right=true;});
 addEventListener('mouseup',e=>{if(e.button===0)mouse.down=false;if(e.button===2)mouse.right=false;});
+// touch: a finger on the game aims and casts (hold for beams), lifting it stops
+const touchAim=e=>{const t0=e.touches[0];if(!t0)return;mouse.sx=(t0.clientX-ST.ox)/ST.scale;mouse.sy=(t0.clientY-ST.oy)/ST.scale;};
+cv.style.touchAction='none';
+cv.addEventListener('touchstart',e=>{e.preventDefault();touchAim(e);mouse.down=true;},{passive:false});
+cv.addEventListener('touchmove',e=>{e.preventDefault();touchAim(e);},{passive:false});
+for(const ev of ['touchend','touchcancel'])cv.addEventListener(ev,e=>{if(!e.touches.length)mouse.down=false;});
 cv.addEventListener('contextmenu',e=>e.preventDefault());
 cv.addEventListener('wheel',e=>{selPower(ST.cur+(e.deltaY>0?1:-1));e.preventDefault();},{passive:false});

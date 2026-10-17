@@ -88,6 +88,8 @@ export const ST={
   CX:0,
   CY:0,
   GL:false,
+  // render/sprites.js
+  TG:null, // glow tint override for afterimages
   // loop.js
   fps:60,
   simMs:0,

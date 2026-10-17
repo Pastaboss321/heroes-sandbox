@@ -1,5 +1,5 @@
 // Map registry (MAPDEFS), map select and regen().
-import '../ui/hud.js'; // evaluation order: runs after ui/hud.js
+import { ambIncursion, genIncursion } from './incursion.js';
 import { ST } from '../state.js';
 import { GRASS, KIND, LEAF, S, cl, rgb } from '../world/materials.js';
 import { H, N, W, bg, bgB, bgD, booms, col, t } from '../world/grid.js';
@@ -19,10 +19,12 @@ import { slide } from '../heroes/iceman.js';
 import { RW, ants, gzones, limbo, portals, tramps } from '../heroes/wave2.js';
 import { pl_, spawnPlayer } from '../player.js';
 import { clearEnemies } from '../enemies/core.js';
+import { ambRetro, genRetro } from './retro.js';
 
 export const mapSel=document.getElementById('map');
-// maps: id -> {name, gen, amb (optional per-tick ambience)}
 export const MAPDEFS={city:{name:'City',gen:genCity},nyc:{name:'New York',gen:genNYC},nyc2099:{name:'NYC 2099',gen:genNYC2099,amb:amb2099,rain:true},forest:{name:'Forest',gen:genForest},xmansion:{name:'X-Mansion',gen:genXMansion},
+  retro:{name:'Earth-828 NYC',gen:genRetro,amb:ambRetro},
+  incursion:{name:'Incursion NYC',gen:genIncursion,amb:ambIncursion},
   savage:{name:'Savage Land',gen:genSavageLand,amb:ambSavage},arctic:{name:'Weapon X',gen:genArctic,amb:ambArctic,wind:true}};
 for(const id in MAPDEFS){const o=document.createElement('option');o.value=id;o.textContent=MAPDEFS[id].name;mapSel.appendChild(o);}
 function shadeWorld(){

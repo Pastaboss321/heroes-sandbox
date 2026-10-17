@@ -1,4 +1,4 @@
-import './robots.js'; // evaluation order: runs after modes/robots.js
+import './doomsday.js'; // evaluation order: runs after modes/doomsday.js
 import { ST } from '../state.js';
 import { fxWord } from '../render/fx.js';
 import { pl_ } from '../player.js';

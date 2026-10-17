@@ -36,7 +36,7 @@ function sentinelThink(e){
 defineEnemy('sentinel',{hp:900,w:18,h:42,fly:false,score:150,boom:18,spd:.45,glow:'*o',
   sprite:SENT_SPR,pal:{p:rgb(84,40,120),P:rgb(122,62,168),M:rgb(206,112,170),m:rgb(150,70,124),F:rgb(184,176,206),f:rgb(140,132,166),K:rgb(36,30,46),H:rgb(196,104,160),h:rgb(150,70,124),'*':rgb(255,222,90),o:rgb(255,80,80)},
   think:sentinelThink});
-defineEnemy('master_mold',{hp:6500,w:36,h:84,fly:false,score:0,boom:32,spd:.26,scale:2,title:'MASTER MOLD',glow:'*o',
+defineEnemy('master_mold',{hp:6500,w:29,h:67,fly:false,score:0,boom:32,spd:.26,scale:1.6,title:'MASTER MOLD',glow:'*o',
   sprite:SENT_SPR,pal:{p:rgb(58,40,78),P:rgb(92,70,120),M:rgb(150,92,140),m:rgb(104,60,98),F:rgb(150,146,170),f:rgb(108,104,130),K:rgb(26,22,34),H:rgb(150,92,140),h:rgb(104,60,98),'*':rgb(255,90,60),o:rgb(255,60,60)},
   think:sentinelThink});
 defineEnemy('sentinel_scout',{hp:140,w:9,h:16,fly:true,score:40,boom:7,glow:'*o',

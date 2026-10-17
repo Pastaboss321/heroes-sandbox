@@ -10,7 +10,7 @@ import { beams, flash, fxWord, rings } from '../render/fx.js';
 import { explode } from '../world/destruction.js';
 import { snd } from '../sfx.js';
 import { SPAWN, inStasis, shots } from '../heroes/powers.js';
-import { hurt, pl_ } from '../player.js';
+import { SKY, hurt, pl_ } from '../player.js';
 import { mapSel } from '../maps/index.js';
 
 // ================= enemies =================
@@ -30,33 +30,39 @@ export const ENEMY_TYPES={}, enemies=[], spawnQ=[];
 export function defineEnemy(name,def){ENEMY_TYPES[name]=Object.assign({name,hp:30,w:7,h:7,fly:true,score:10,boom:5,glow:'*',think:null,onDeath:null},def);}
 export function spawnEnemy(name,x,y){
   const d=ENEMY_TYPES[name];if(!d||enemies.length>=48)return null;
-  const e={def:d,x,y,vx:0,vy:0,hp:d.hp,face:-1,t:0,cd:30+R()*60|0,flash:0,ground:false,mem:{}};
+  const e={def:d,x,y,vx:0,vy:0,hp:d.hp,face:-1,t:0,cd:30+R()*60|0,flash:0,ground:false,mem:{},team:d.team||null};
   enemies.push(e);for(let k=0;k<12;k++)spawn(x,y,(R()-.5)*2,(R()-.5)*2,rgb(255,90,70),12,0,1,0,1);return e;
 }
 // what enemy AI aims at: a puppet's chosen victim, Iceman's decoy, where a cloaked Iron Man was last seen, or the hero
 export const player=()=>ST.AI_T||(ST.decoy?{x:ST.decoy.x,y:ST.decoy.y-ST.PH/2}:pl_.stealth>0&&pl_.lastSeen?pl_.lastSeen:{x:pl_.x,y:pl_.y-ST.PH/2});
 export function pdist(e){const p=player();return Math.hypot(p.x-e.x,p.y-e.y);}
 export function seek(e,x,y,sp,acc=.1){const dx=x-e.x,dy=y-e.y,d=Math.hypot(dx,dy)||1;e.vx+=(dx/d*sp-e.vx)*acc;e.vy+=(dy/d*sp-e.vy)*acc;}
-export function los(e,x,y){const dx=x-e.x,dy=y-e.y,d=Math.hypot(dx,dy)||1;for(let s=e.def.w/2+1;s<d;s+=2){const X=e.x+dx/d*s|0,Y=e.y+dy/d*s|0;if(X<0||X>=W||Y<0||Y>=H)return false;const k=KIND[t[Y*W+X]];if(k===S||k===P)return false;}return true;}
+export function los(e,x,y){const dx=x-e.x,dy=y-e.y,d=Math.hypot(dx,dy)||1;for(let s=e.def.w/2+1;s<d;s+=2){const X=e.x+dx/d*s|0,Y=e.y+dy/d*s|0;if(X<0||X>=W||Y>=H||Y<-SKY)return false;const k=KIND[t[Y*W+X]];if(k===S||k===P)return false;}return true;}
 export function enemyShoot(e,o={}){
   if(SPAWN.peace&&ST.AI_ALLY!==e)return;
   if(e.hex>0&&R()<.45){explode(e.x|0,e.y|0,3,{quiet:true,self:true,col:[255,60,130]});hitEnemy(e,6,0,0);if(R()<.3)fxWord(e.x,e.y-10,'*JAM*',.6,'#ff6fa8');return;} // Bad Luck: the gun backfires
   const ex=e.x+(o.ox||0),ey=e.y+(o.oy||0),p=player(),lead=o.lead||0,tx=p.x+pl_.vx*lead,ty=p.y+pl_.vy*lead,dx=tx-ex,dy=ty-ey,d=Math.hypot(dx,dy)||1,sp=o.speed||3.5,spr=o.spread||.06;
   const a=Math.atan2(dy,dx)+(R()-.5)*spr*2,off=o.ox!==undefined||o.oy!==undefined?3:null;
-  shots.push({x:off?ex+Math.cos(a)*3:e.x+Math.cos(a)*(e.def.w/2+2),y:off?ey+Math.sin(a)*3:e.y+Math.sin(a)*(e.def.h/2+2),vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,type:'eshot',owner:ST.AI_ALLY===e?'ally':'enemy',src:e,life:o.life||200,dmg:o.dmg||7,col:o.col||[255,80,60],boom:o.boom||3,fire:o.fire||0});
+  shots.push({x:off?ex+Math.cos(a)*3:e.x+Math.cos(a)*(e.def.w/2+2),y:off?ey+Math.sin(a)*3:e.y+Math.sin(a)*(e.def.h/2+2),vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,type:'eshot',owner:ST.AI_ALLY===e?'ally':'enemy',src:e,team:e.team,life:o.life||200,dmg:o.dmg||7,col:o.col||[255,80,60],boom:o.boom||3,fire:o.fire||0});
   flash(e.x,e.y,8,o.col||[255,80,60],3);snd('eshot',e.x,e.y,{v:.55,gap:.03});
 }
 export function enemyBeam(e,o={}){
   if(SPAWN.peace&&ST.AI_ALLY!==e)return false;
   const ox=e.x+(o.ox||0),oy=e.y+(o.oy||0),p=player(),dx=p.x-ox,dy=p.y-oy,a=o.ang??Math.atan2(dy,dx)+(R()-.5)*(o.spread||.08),c=o.col||[255,60,50];
   let x=ox,y=oy,hit=false;
-  for(let s=0;s<(o.len||320);s++){x+=Math.cos(a);y+=Math.sin(a);const X=x|0,Y=y|0;if(X<0||X>=W||Y<0||Y>=H)break;
-    if(ST.AI_ALLY===e){const he=enemyAt(x,y,1);if(he&&he!==e){hitEnemy(he,(o.dmg||10)*1.5,Math.cos(a),Math.sin(a));hit=true;break;}}
+  for(let s=0;s<(o.len||320);s++){x+=Math.cos(a);y+=Math.sin(a);const X=x|0,Y=y|0;if(X<0||X>=W||Y>=H||Y<-SKY)break;
+    if(ST.AI_ALLY===e){const he=enemyAt(x,y,1);if(he&&he!==e&&!(e.team&&he.team===e.team)){hitEnemy(he,(o.dmg||10)*1.5,Math.cos(a),Math.sin(a));hit=true;break;}}
     else{if(Math.abs(x-pl_.x)<=ST.PW/2+1&&y>=pl_.y-ST.PH&&y<=pl_.y){hurt(o.dmg||10);hit=true;break;}
       if(ST.decoy&&Math.abs(x-ST.decoy.x)<=4&&y>=ST.decoy.y-ST.SH&&y<=ST.decoy.y){ST.decoy.hp-=o.dmg||10;hit=true;break;}}
     const m=t[Y*W+X];if(m&&KIND[m]!==G&&KIND[m]!==F){explode(X,Y,o.boom||3,{enemy:ST.AI_ALLY!==e,self:true,col:c,dmg:0,quiet:o.quiet});break;}}
   beams.push({x0:ox,y0:oy,x1:x,y1:y,life:5,w:o.w||1,c:[255,200,190],g:c});flash(x,y,10,c,3);snd('elaser',ox,oy,{v:.6,gap:.05});
   return hit;
+}
+// a teamed enemy's current enemy-of-choice: the nearest member of another team, when it is closer than the hero
+function rivalOf(e){
+  if(e.t%20===0||(e.mem.rv&&e.mem.rv.hp<=0)){e.mem.rv=null;let bd=240,b=null;for(const o of enemies){if(!o.team||o.team===e.team||o.hp<=0||o.grabbed)continue;const d=Math.hypot(o.x-e.x,o.y-e.y);if(d<bd){bd=d;b=o;}}
+    if(b&&(bd<pdist(e)*.85||R()<.3))e.mem.rv=b;}
+  return e.mem.rv&&e.mem.rv.hp>0?e.mem.rv:null;
 }
 export function enemyAt(x,y,pad){for(const e of enemies){if(Math.abs(x-e.x)<=e.def.w/2+pad&&Math.abs(y-e.y)<=e.def.h/2+pad)return e;}return null;}
 export function nearestEnemy(x,y,r){let b=null,bd=r;for(const e of enemies){const d=Math.hypot(e.x-x,e.y-y);if(d<bd){bd=d;b=e;}}return b;}
@@ -93,6 +99,8 @@ export function updEnemies(){
         ST.AI_ALLY=e;ST.AI_TE=tg;ST.AI_T=tg?{x:tg.x,y:tg.y}:{x:pl_.x-pl_.face*24,y:pl_.y-ST.PH/2-12};try{d.think(e);}finally{ST.AI_T=ST.AI_TE=ST.AI_ALLY=null;}
         if(ST.frame%4===0)spawn(e.x+(R()-.5)*e.def.w,e.y+(R()-.5)*e.def.h,0,-.4,rgb(255,120,210),12,0,1,0,1);
         if(e.ally===0){hitEnemy(e,e.def.hp*.3,0,0);fxWord(e.x,e.y-e.def.h/2-6,'SNAP!',1,'#ff9ad8',true);}}
+      else if(e.team){const rv=rivalOf(e); // faction war: TVA and Doombots attack each other as readily as the hero
+        if(rv){ST.AI_ALLY=e;ST.AI_TE=rv;ST.AI_T={x:rv.x,y:rv.y};try{d.think(e);}finally{ST.AI_T=ST.AI_TE=ST.AI_ALLY=null;}}else d.think(e);}
       else d.think(e);}
     // physics
     if(d.fly){e.vx*=.97;e.vy*=.97;}else{e.vy=Math.min(6,e.vy+.35);e.vx*=e.ground?.8:.98;

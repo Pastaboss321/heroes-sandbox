@@ -1,5 +1,5 @@
 // Player state (pl_), input state, movement, hurt, camera.
-import './heroes/magneto.js'; // evaluation order: runs after heroes/magneto.js
+import './heroes/thing.js'; // evaluation order: runs after heroes/thing.js
 import { ST } from './state.js';
 import { ACID, DENS, EMPTY, F, FIRE, G, GLASS, ICE, KIND, L, LAVA, LEAF, OBSID, PROPANE, R, RUBBLE, S, STEEL, WOOD, rgb } from './world/materials.js';
 import { H, N, VH, VW, W, booms, col, setc, t } from './world/grid.js';

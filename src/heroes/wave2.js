@@ -9,7 +9,7 @@ import { pvx, pvy, px, py, solidAt, spawn } from '../world/particles.js';
 import { fxWord, rings } from '../render/fx.js';
 import { snd } from '../sfx.js';
 import { shots, smashOverlap } from './powers.js';
-import { hand, pl_ } from '../player.js';
+import { SKY, hand, pl_ } from '../player.js';
 import { enemies, enemyAt, hitEnemy, nearestEnemy } from '../enemies/core.js';
 import { line, pix } from '../render/canvas.js';
 
@@ -20,7 +20,7 @@ export const FANT_A=["..w...w..",".wwwkwww.","..kRRRk..","kk.kkk.kk"],FANT_B=["w
 export function webEnemy(e,t){e.frozen=Math.max(e.frozen||0,t);e.webbed=Math.max(e.webbed||0,t);hitEnemy(e,4,0,0);}
 export function webCell(X,Y){if(X<0||X>=W||Y<0||Y>=H-44)return;const i=Y*W+X;if(t[i]===0||KIND[t[i]]===G){setc(i,WEB);const v=R()*14|0;col[i]=rgb(222+v,222+v,228+v);}}
 export function webLine(x0,y0,x1,y1){const n=Math.max(1,Math.hypot(x1-x0,y1-y0)|0);for(let k=0;k<=n;k++)webCell(x0+(x1-x0)*k/n|0,y0+(y1-y0)*k/n|0);}
-export function ray(x0,y0,dx,dy,max,enemiesToo){let x=x0,y=y0;for(let s=0;s<max;s++){x+=dx;y+=dy;const X=x|0,Y=y|0;if(X<0||X>=W||Y<0||Y>=H)return{x,y,hit:false};if(enemiesToo){const e=enemyAt(x,y,1);if(e)return{x,y,e,hit:true};}const m=t[Y*W+X];if(m&&(KIND[m]===S||KIND[m]===P))return{x,y,hit:true,i:Y*W+X};}return{x,y,hit:false};}
+export function ray(x0,y0,dx,dy,max,enemiesToo){let x=x0,y=y0;for(let s=0;s<max;s++){x+=dx;y+=dy;const X=x|0,Y=y|0;if(X<0||X>=W||Y>=H||Y<-SKY)return{x,y,hit:false};if(enemiesToo){const e=enemyAt(x,y,1);if(e)return{x,y,e,hit:true};}const m=t[Y*W+X];if(m&&(KIND[m]===S||KIND[m]===P))return{x,y,hit:true,i:Y*W+X};}return{x,y,hit:false};}
 export function scaleChunk(list,n,f){let mx=W,my=H,Mx=0,My=0;for(let k=0;k<n;k++){const i=list[k],x=i%W,y=(i/W)|0;if(x<mx)mx=x;if(y<my)my=y;if(x>Mx)Mx=x;if(y>My)My=y;}
   const lw=Mx-mx+1,lh=My-my+1,src=new Uint8Array(lw*lh),sc=new Uint32Array(lw*lh);
   for(let k=0;k<n;k++){const i=list[k],x=i%W-mx,y=((i/W)|0)-my;src[y*lw+x]=t[i];sc[y*lw+x]=col[i];t[i]=0;pin[i]=0;wake(i);markDirty(i);}

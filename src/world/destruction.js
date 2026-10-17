@@ -4,11 +4,12 @@ import { ST } from '../state.js';
 import { EMBER, EMPTY, FIRE, GFIRE, GLASS, HARD, ICE, KIND, L, NEON, OBSID, OIL, P, PROPANE, R, RUBBLE, S, SMOKE, STEEL, rgb } from './materials.js';
 import { PHYS } from './physics.js';
 import { H, W, bg, bgB, bgD, booms, col, markDirty, setc, t, vel, wake } from './grid.js';
-import { bodies, pin } from './support.js';
-import { dust, finishBody } from './bodies.js';
-import { MP, dustCol, gcol, solidAt, spawn, spawnDust } from './particles.js';
+import { bodies, pin, q } from './support.js';
+import { dust, finishBody, makeBody } from './bodies.js';
+import { MP, dustCol, gcol, rubbleCol, solidAt, spawn, spawnDust } from './particles.js';
 import { snd } from '../sfx.js';
 import { pickC, shockFx } from '../heroes/powers.js';
+import { solidCells } from '../heroes/wave2.js';
 import { hurt, pl_ } from '../player.js';
 import { damageEnemies } from '../enemies/core.js';
 
@@ -36,14 +37,14 @@ export function explode(cx,cy,r,opt={}){
     if(m===OIL){setc(i,FIRE);continue;}
     setc(i,fire&&R()<fire?(green?GFIRE:FIRE):EMPTY);
   }
-  if(!opt.quiet||r>=6)blastDebris(cx,cy,r);
+  if(!opt.quiet||r>=4)blastDebris(cx,cy,r);
   bgHit(cx,cy,r*1.2|0);
   if(glassN>5)snd('glass',cx,cy,{v:Math.min(1,glassN/30)});if(steelN>3)snd('clang',cx,cy,{v:Math.min(1,steelN/12),gap:.12});
   // shockwave: the crater rim cracks into loose rubble, loose stuff gets thrown
   const r2=r*1.7;
   for(let n=0;n<r*r*3;n++){const a=R()*6.283,d=r+R()*(r2-r),X=cx+Math.cos(a)*d|0,Y=cy+Math.sin(a)*d|0;if(X<0||X>=W||Y<0||Y>=H)continue;const i=Y*W+X,m=t[i];if(!m)continue;
     const f=1-(d-r)/(r2-r);
-    if(KIND[m]===S){if(m!==STEEL&&m!==OBSID&&R()<f*.4/(1+HARD[m]*.25)){if(R()<.4){spawn(X,Y,Math.cos(a)*2.5*f,Math.sin(a)*2.5*f-1.5,col[i],90,RUBBLE,0);t[i]=0;}else{t[i]=RUBBLE;vel[i]=3;}markDirty(i);wake(i);}}
+    if(KIND[m]===S){if(m!==STEEL&&m!==OBSID&&R()<f*.4/(1+HARD[m]*.25)){if(R()<.4){spawn(X,Y,Math.cos(a)*2.5*f,Math.sin(a)*2.5*f-1.5,col[i],90,RUBBLE,0);t[i]=0;}else if(R()<PHYS.mix.rimRubble){t[i]=RUBBLE;col[i]=rubbleCol(col[i]);vel[i]=3;}else{spawnDust(X,Y,Math.cos(a)*f,Math.sin(a)*f-.5,dustCol(col[i]));t[i]=0;}markDirty(i);wake(i);}}
     else if((KIND[m]===P||KIND[m]===L)&&R()<.6){spawn(X,Y,Math.cos(a)*3*f,Math.sin(a)*3*f-1.8,col[i],70,m,0);t[i]=0;wake(i);}}
   // flung embers spread fire; dust + smoke cloud
   if(fire&&!green)for(let n=0;n<r;n++){const a=R()*6.283,sp=1+R()*3;spawn(cx,cy,Math.cos(a)*sp,Math.sin(a)*sp-2,rgb(255,150,40),80,EMBER,1);}
@@ -67,13 +68,13 @@ const EXCAP=1<<16, exI=new Int32Array(EXCAP), exM=new Uint8Array(EXCAP), exC=new
  let exN=0;
 function blastDebris(cx,cy,r){
   const CK=PHYS.chunk,D=PHYS.dust;
-  if(r>=CK.minR&&exN>=12&&bodies.length<130){
+  if(r>=CK.minR&&exN>=12&&bodies.length<140){
     let live=0;for(const b of bodies)if(b.chunk)live++;
-    const want=Math.min(CK.perBoom,CK.max-live,130-bodies.length,Math.round((r-CK.minR+1)*CK.perR*(.7+R()*.6)));
+    const want=Math.min(CK.perBoom,CK.max-live,140-bodies.length,Math.round((r-CK.minR+1)*CK.perR*(.7+R()*.6)));
     const used=new Uint8Array(exN);
     for(let c=0;c<want;c++){
       const s0=R()*exN|0;if(used[s0])continue;
-      const sx=exI[s0]%W,sy=exI[s0]/W|0,rc=CK.size[0]+R()*Math.min(CK.size[1]-CK.size[0],r/8),rr=rc*rc;
+      const sx=exI[s0]%W,sy=exI[s0]/W|0,rc=CK.size[0]+R()*Math.min(CK.size[1]-CK.size[0],r/4),rr=rc*rc;
       const ids=[];let mx=W,my=H,Mx=0,My=0,gx=0,gy=0;
       for(let k=0;k<exN;k++){if(used[k])continue;const x=exI[k]%W,y=exI[k]/W|0,dx=x-sx,dy=y-sy;if(dx*dx+dy*dy>rr+R()*2)continue;
         ids.push(k);if(x<mx)mx=x;if(y<my)my=y;if(x>Mx)Mx=x;if(y>My)My=y;gx+=x;gy+=y;}
@@ -87,6 +88,12 @@ function blastDebris(cx,cy,r){
       b.vx=dx/d*v;b.vy=dy/d*v-1-R()*1.5;b.va=(R()-.5)*.2;
     }
   }
+  if(r>=6&&bodies.length<140){const K=Math.min(10,Math.round(r*PHYS.mix.ringChunks*(.7+R()*.6)));
+    for(let k=0;k<K&&bodies.length<140;k++){const a=R()*6.283,d=r*(1.1+R()*.4),rc=6+R()*Math.min(8,r/2);
+      const n0=solidCells(cx+Math.cos(a)*d,cy+Math.sin(a)*d,rc|0,false);let n=0;
+      for(let j=0;j<n0;j++)if(KIND[t[q[j]]]===S)q[n++]=q[j]; // solid cells only, no loose powder
+      if(n<14)continue;
+      const b=makeBody(q,n,false);if(b){b.chunk=true;b.vx+=Math.cos(a)*(.8+R());b.vy+=Math.sin(a)*(.8+R())-1;}}}
   const nd=Math.min(D.max,r*r*D.perR2|0);
   for(let k=0;k<nd;k++){const a=R()*6.283,d=R()*r*1.1,sp=.4+R()*(1+r*.12);
     spawnDust(cx+Math.cos(a)*d,cy+Math.sin(a)*d,Math.cos(a)*sp,Math.sin(a)*sp-.6-R()*.8,dustCol(exN?exC[R()*exN|0]:rgb(150,140,125)));}

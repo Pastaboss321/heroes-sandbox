@@ -12,7 +12,7 @@ import { ANIM, rect } from '../render/rig.js';
 import { snd } from '../sfx.js';
 import { beamCore, jets, pickC, shots } from './powers.js';
 import { ACT, aimFrom, eyes } from './xmen.js';
-import { mouse, pl_ } from '../player.js';
+import { SKY, mouse, pl_ } from '../player.js';
 import { damageCone, damageLine, enemies, enemyAt, hitEnemy } from '../enemies/core.js';
 
 const SPR_CYC=[
@@ -67,7 +67,7 @@ export function opticThrust(p,on,ax){
   let dx=-ax*.35,dy=1;const d=Math.hypot(dx,dy);dx/=d;dy/=d;
   p.vy=Math.max(-3.2,p.vy-.78);p.vx-=dx*.18;p.ground=false;
   const o=eyes();let x=o.x,y=o.y,hit=false;
-  for(let k=0;k<140;k++){x+=dx;y+=dy;const X=x|0,Y=y|0;if(X<0||X>=W||Y<0||Y>=H)break;const m=t[Y*W+X];if(m&&KIND[m]!==G&&KIND[m]!==F){hit=true;
+  for(let k=0;k<140;k++){x+=dx;y+=dy;const X=x|0,Y=y|0;if(X<0||X>=W||Y>=H||Y<-SKY)break;const m=t[Y*W+X];if(m&&KIND[m]!==G&&KIND[m]!==F){hit=true;
     if(R()<.08&&KIND[m]!==L&&m!==STEEL&&m!==OBSID){spawn(X,Y,(R()-.5)*2,-R()*2,col[Y*W+X],50,KIND[m]===S?RUBBLE:m,0);setc(Y*W+X,EMPTY);} break;}}
   beams.push({x0:o.x,y0:o.y,x1:x,y1:y,life:1,w:1+((ST.frame>>1)&1),c:[255,215,205],g:[255,40,30]});
   if(hit){for(let k=0;k<4;k++)spawn(x,y-1,(R()-.5)*3,-R()*2.5,R()<.5?rgb(255,120,80):rgb(255,220,160),10+R()*8,0,1,1);flash(x,y,16,[255,60,40],2);if(ST.frame%5===0)for(let k=0;k<3;k++)dust(x+(R()-.5)*8|0,y-2);}

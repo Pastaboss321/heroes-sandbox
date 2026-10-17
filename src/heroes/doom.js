@@ -1,12 +1,14 @@
 // Doom: sprite, palette, rig entry, powers and roster entry.
-import './xmen.js'; // evaluation order: runs after heroes/xmen.js
+import { ACT } from './xmen.js';
 import { ST } from '../state.js';
 import { GFIRE, R, rgb } from '../world/materials.js';
 import { gcol, spawn } from '../world/particles.js';
-import { flash, rings } from '../render/fx.js';
-import { ANIM, rect } from '../render/rig.js';
-import { beam, drones, lightning, nova, shield, shots, strikes } from './powers.js';
-import { mouse, toggleFly } from '../player.js';
+import { flash, fxWord, rings } from '../render/fx.js';
+import { punchOut } from '../world/destruction.js';
+import { ANIM, posePlayer, rect } from '../render/rig.js';
+import { snd } from '../sfx.js';
+import { TSL, beam, drones, lightning, nova, shield, shots, strikes } from './powers.js';
+import { boxHit, mouse, toggleFly } from '../player.js';
 import { damageCone } from '../enemies/core.js';
 
 // ================= player / heroes =================
@@ -55,6 +57,17 @@ const DOOM_POWERS=[
  {n:'Orbital Strike',fn:(a,p,use)=>{if(!use(40))return;strikes.push({x:mouse.wx|0,t:45,dig:0,beam:0});ST.cd=60;}},
  {n:'Telekinesis',tk:{r:12,range:0,tether:true,throwMul:1.6}},
  {n:'Mystic Nova',fn:(a,p,use)=>{if(!use(30))return;nova();ST.cd=50;}},
+ // Timeslip (Loki's time-slipping): Doom's body stretches out into threads of himself, snaps away, and the threads
+ // knit back together where he stood five seconds ago, with the health he had then
+ {n:'Timeslip',fn:(a,p,use)=>{if(TSL.length<30||p.slip||!use(30))return;ST.cd=90;const o=TSL[0];let k=0;
+   p.slip={rows:posePlayer(p).slice(),face:p.face,x:p.x,y:p.y,t:0,dir:o.x<p.x?-1:1};
+   fxWord(p.x,p.y-ST.PH-10,'TIMESLIP',1.2,'#ffb050',true);snd('psi',p.x,p.y,{pitch:.6});
+   ACT.push(()=>{k++;const S=p.slip;if(!S)return false;p.script=3;p.vx=0;p.vy=0;ST.caPulse=Math.max(ST.caPulse,3);
+     if(k<=18){S.t=k/18;p.x=S.x;p.y=S.y;if(k%4===0)ST.shake=Math.max(ST.shake,2);}
+     else if(k===19){p.x=o.x;p.y=o.y;S.x=o.x;S.y=o.y;S.dir=-S.dir;p.hp=Math.max(p.hp,o.hp);TSL.length=0;flash(o.x,o.y-ST.PH/2,30,[255,150,40],6);snd('zap',o.x,o.y,{pitch:.5,v:.6});}
+     else{S.t=Math.max(0,1-(k-19)/16);p.x=S.x;p.y=S.y;}
+     if(k>=35){p.slip=null;rings.push({x:o.x,y:o.y-ST.PH/2,r:4,vr:3,life:12,c:[255,170,60]});if(boxHit(p.x,p.y))punchOut(p);return false;}
+     return true;});}},
 ];
 
 // roster entry (CHARS in heroes/index.js)

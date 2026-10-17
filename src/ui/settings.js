@@ -22,6 +22,8 @@ $('svol').onchange=()=>snd('ui',ST.camX+VW/2,ST.camY+VH/2);
 // browsers only allow audio after a user gesture
 addEventListener('pointerdown',()=>initAudio(),true);
 addEventListener('keydown',()=>initAudio(),true);
+addEventListener('touchend',()=>initAudio(),true); // iOS Safari only unlocks audio on touchend
+addEventListener('gesturestart',e=>e.preventDefault()); // no pinch-zoom on iOS
 document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('button,.card,.chip'))snd('ui',ST.camX+VW/2,ST.camY+VH/2,{gap:.03});},true);
 $('sback').onclick=closeSettings;
 $('msettings').onclick=()=>openSettings('menu');

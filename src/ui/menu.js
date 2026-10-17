@@ -12,7 +12,8 @@ function buildMenu(){
     for(const [tag,cl2,txt] of parts){const e=document.createElement(tag);if(cl2)e.className=cl2;e.textContent=txt;d.appendChild(e);}
     if(bgc){d.style.background=bgc;d.style.color=fg||'#fff8e8';}d.onclick=click;parent.appendChild(d);};
   $('modes').innerHTML='';for(const id in MODES){const m=MODES[id],b=bestOf(id);
-    mk($('modes'),'card mode',[['b','',m.name.toUpperCase()],['span','sub',m.sub.toUpperCase()],['span','desc',m.desc],...(b?[['span','best','BEST '+b.toLocaleString()]]:[])],SEL.mode===id,()=>{SEL.mode=id;buildMenu();});}
+    mk($('modes'),'card mode',[['b','',m.name.toUpperCase()],['span','sub',m.sub.toUpperCase()]],SEL.mode===id,()=>{SEL.mode=id;buildMenu();});}
+  {const m=MODES[SEL.mode],b=bestOf(SEL.mode),el=$('mdesc');el.innerHTML='';const h=document.createElement('b');h.textContent=m.name.toUpperCase();el.append(h,m.desc+(b?' · BEST '+b.toLocaleString():''));} // the selected story's blurb, shown once instead of on every card
   $('heroes').innerHTML='';CHARS.forEach((c,i)=>mk($('heroes'),'card',[['b','',c.name.toUpperCase()],['span','sub',`${c.hp} HP · ${MOVE_TAG[c.id]||(c.fly?'FLIES':'LEAPS')}`]],SEL.hero===i,()=>{SEL.hero=i;buildMenu();},false,HERO_UI[c.id],HERO_DARK.has(c.id)?'#14110f':null));
   const fixed=MODES[SEL.mode].map;
   $('maps').innerHTML='';for(const id in MAPDEFS)mk($('maps'),'chip',[['span','',MAPDEFS[id].name.toUpperCase()]],fixed?fixed===id:SEL.map===id,()=>{SEL.map=id;buildMenu();},fixed&&fixed!==id);

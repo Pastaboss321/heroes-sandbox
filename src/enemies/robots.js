@@ -1,4 +1,4 @@
-import './basic.js'; // evaluation order: runs after enemies/basic.js
+import './doomsday.js'; // evaluation order: runs after enemies/doomsday.js
 import { ST } from '../state.js';
 import { R, rgb } from '../world/materials.js';
 import { spawn } from '../world/particles.js';

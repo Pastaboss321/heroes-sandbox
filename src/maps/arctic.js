@@ -4,7 +4,7 @@ import { CONC, DIRT, EMPTY, GLASS, ICE, KIND, LAVA, NEON, OBSID, OIL, PROPANE, R
 import { H, VW, W, bg, bgD, col, setc, sxy, t } from '../world/grid.js';
 import { SURF, bgRect, clearAll, fill, makeFar, tint } from './gen.js';
 import { noise2 } from './city.js';
-import { spawn } from '../world/particles.js';
+import { spawnFlake } from '../world/particles.js';
 
 // ---- Weapon X: the secret facility dug into a snowbound mountain. Snowfields that slide, a frozen lake,
 // labs with experiment tanks behind a blast door, a fuel depot and a radio mast.
@@ -59,5 +59,5 @@ export function genArctic(){
   ST.SPAWNX=140;
 }
 export function ambArctic(){ // steady snowfall; a little of it settles
-  for(let k=0;k<3;k++){const x=ST.camX+R()*(VW+40)-20;spawn(x,ST.camY-2,(R()-.5)*.4-.25,.5+R()*.5,R()<.5?rgb(240,244,252):rgb(214,224,240),400,R()<.08?SNOW:0,0,0,1);}
+  for(let k=0;k<3;k++){const x=ST.camX+R()*(VW+40)-20;spawnFlake(x,ST.camY-2,(R()-.5)*.4-.25,.5+R()*.5,R()<.5?rgb(240,244,252):rgb(214,224,240),400,R()<.08?SNOW:0);}
 }

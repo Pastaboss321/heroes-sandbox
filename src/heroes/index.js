@@ -6,7 +6,7 @@ import { spawn } from '../world/particles.js';
 import { flash, fxWord, rings } from '../render/fx.js';
 import { punchOut } from '../world/destruction.js';
 import { snd } from '../sfx.js';
-import { aim } from './powers.js';
+import { TSL, aim } from './powers.js';
 import { CHAR_DOOM } from './doom.js';
 import { CHAR_HULK } from './hulk.js';
 import { CHAR_THOR } from './thor.js';
@@ -24,19 +24,23 @@ import { CHAR_ANTMAN } from './antman.js';
 import { CHAR_JUGGERNAUT } from './juggernaut.js';
 import { CHAR_ULTRON } from './ultron.js';
 import { CHAR_MAGNETO } from './magneto.js';
+import { CHAR_REED } from './reed.js';
+import { CHAR_SUE } from './sue.js';
+import { CHAR_TORCH } from './torch.js';
+import { CHAR_THING } from './thing.js';
 import { buildPowerBar, pwDiv } from '../ui/hud.js';
 
-export const CHARS=[CHAR_DOOM,CHAR_HULK,CHAR_THOR,CHAR_IRON,CHAR_WOLVERINE,CHAR_CYCLOPS,CHAR_ICEMAN,CHAR_JEAN,CHAR_SPIDEY,CHAR_WANDA,CHAR_STRANGE,CHAR_ANTMAN,CHAR_JUGGERNAUT,CHAR_ULTRON,CHAR_MAGNETO,CHAR_STORM]; // entries live in src/heroes/<hero>.js
+export const CHARS=[CHAR_DOOM,CHAR_HULK,CHAR_THOR,CHAR_IRON,CHAR_WOLVERINE,CHAR_CYCLOPS,CHAR_ICEMAN,CHAR_JEAN,CHAR_SPIDEY,CHAR_WANDA,CHAR_STRANGE,CHAR_ANTMAN,CHAR_JUGGERNAUT,CHAR_ULTRON,CHAR_MAGNETO,CHAR_STORM,CHAR_REED,CHAR_SUE,CHAR_TORCH,CHAR_THING]; // entries live in src/heroes/<hero>.js
 ST.CH=CHARS[0];
-export const HERO_UI={juggernaut:'#7a2a1e',ultron:'#8a909e',magneto:'#5a2470',spidey:'#c8282f',wanda:'#a8183a',strange:'#2a52a0',antman:'#8a1c1c',doom:'#2f8f4e',hulk:'#6aa84f',thor:'#3a6fd8',iron:'#c23a2b',wolverine:'#e8b21f',cyclops:'#1f3c8a',iceman:'#7cc8f0',jean:'#c42a3a',storm:'#2a2a33'};
-export const HERO_DARK=new Set(['hulk','wolverine','iceman']);
-export const MOVE_TAG={juggernaut:'UNSTOPPABLE',spidey:'WEB-SWINGS',antman:'SHRINKS & GROWS',hulk:'GAMMA LEAPS',wolverine:'CLIMBS WALLS',cyclops:'OPTIC THRUST',iceman:'ICE SLIDES'};
+export const HERO_UI={juggernaut:'#7a2a1e',ultron:'#8a909e',magneto:'#5a2470',spidey:'#c8282f',wanda:'#a8183a',strange:'#2a52a0',antman:'#8a1c1c',doom:'#2f8f4e',hulk:'#6aa84f',thor:'#3a6fd8',iron:'#c23a2b',wolverine:'#e8b21f',cyclops:'#1f3c8a',iceman:'#7cc8f0',jean:'#c42a3a',storm:'#2a2a33',reed:'#4f86b8',sue:'#7fb2d8',torch:'#e8731f',thing:'#d0702c'};
+export const HERO_DARK=new Set(['hulk','wolverine','iceman','sue']);
+export const MOVE_TAG={juggernaut:'UNSTOPPABLE',spidey:'WEB-SWINGS',antman:'SHRINKS & GROWS',hulk:'GAMMA LEAPS',wolverine:'CLIMBS WALLS',cyclops:'OPTIC THRUST',iceman:'ICE SLIDES',reed:'STRETCHES',sue:'FORCE FIELDS',torch:'FLAME ON',thing:'ROCK SOLID'};
 export function setChar(i){
   const p=pl_, prevH=ST.PH, hpF=p.hp/ST.CH.hp;
   ST.CH=CHARS[(i+CHARS.length)%CHARS.length];p.hp=hpF*ST.CH.hp;ST.SZ=1;RW.length=0;ST.SPR=ST.CH.spr;ST.SPC=ST.CH.pal;ST.SW=ST.SPR[0].length;ST.SH=ST.SPR.length;ST.PW=ST.CH.pw;ST.PH=ST.CH.ph;
   if(!ST.CH.fly)p.fly=false;
   if(ST.held){ST.held.held=false;ST.held=null;}
-  Object.assign(p,{size:1,sizeT:1,ant:0,web:null,sense:0,ceil:0,shell:0,surge:0,jcharge:0,script:0,ball:0,tow:null,grip:null,cling:0,crouch:0,stealth:0,grit:0,sprint:0,ang:0});
+  TSL.length=0;Object.assign(p,{slip:null,size:1,sizeT:1,ant:0,web:null,sense:0,ceil:0,shell:0,surge:0,jcharge:0,script:0,ball:0,tow:null,grip:null,cling:0,crouch:0,stealth:0,grit:0,sprint:0,ang:0});
   ST.cur=0;ST.cd=0;buildPowerBar();
   if(boxHit(p.x,p.y))punchOut(p);
   rings.push({x:p.x,y:p.y-ST.PH/2,r:2,vr:2.5,life:16,c:ST.CH.glow},{x:p.x,y:p.y-ST.PH/2,r:12,vr:-.6,life:16,c:ST.CH.glow});flash(p.x,p.y-ST.PH/2,40,ST.CH.glow,10);

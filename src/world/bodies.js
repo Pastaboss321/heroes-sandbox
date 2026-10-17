@@ -4,7 +4,7 @@ import { ST } from '../state.js';
 import { ASH, DENS, EMPTY, F, G, GLASS, GRASS, HARD, ICE, KIND, L, LEAF, P, R, RUBBLE, S, SMOKE, STEEL, WATER, rgb } from './materials.js';
 import { PHYS } from './physics.js';
 import { BACK, H, W, bg, bgB, bgD, col, life, markDirty, setc, t, vel, wake } from './grid.js';
-import { MP, dustCol, spawn, spawnDust } from './particles.js';
+import { MP, crumble, dustCol, rubbleCol, spawn, spawnDust } from './particles.js';
 import { flash, fxWord, rings } from '../render/fx.js';
 import { explode, shade } from './destruction.js';
 import { snd } from '../sfx.js';
@@ -12,7 +12,7 @@ import { inStasis } from '../heroes/powers.js';
 import { hurt, mouse, pl_ } from '../player.js';
 
 export function makeBody(list,n,held){
-  if(n<10||bodies.length>=150){ for(let k=0;k<n;k++){const i=list[k];t[i]=RUBBLE;pin[i]=0;wake(i);} return null; }
+  if(n<10||bodies.length>=150){ for(let k=0;k<n;k++){const i=list[k];crumble(i);pin[i]=0;wake(i);} return null; }
   if(n>1200&&ST.MODE&&ST.MODE.onCollapse&&!ST.genMode)ST.MODE.onCollapse(n,ST.MS);
   let mx=W,my=H,Mx=0,My=0,sx=0,sy=0;
   for(let k=0;k<n;k++){const i=list[k],x=i%W,y=(i/W)|0;if(x<mx)mx=x;if(y<my)my=y;if(x>Mx)Mx=x;if(y>My)My=y;sx+=x;sy+=y;}
@@ -129,7 +129,7 @@ export function updBodies(){
       const ny=b.y+b.vy/ns;
       let dv=0;
       if(!bodyHitPose(b,b.x,ny,b.a))b.y=ny;
-      else if(b.vy>3&&!b.held&&!b.chunk&&b.n>=30&&(dv=crush(b,b.x,ny,b.a,b.vy,0,1))){b.vy-=dv;b.y=ny;}
+      else if(b.vy>PB.crushV&&b.age>PB.grace&&!b.held&&!b.chunk&&b.n>=30&&(dv=crush(b,b.x,ny,b.a,b.vy,0,1))){b.vy-=dv;b.y=ny;}
       else if(b.chunk&&b.vy>0&&!b.held){ // small chunk: bounce, skid and tumble, then rest
         grounded=true;
         if(b.vy>CK.minBounceV){b.vy*=-CK.bounce;b.vx*=1-CK.friction;b.va=b.va*.5+b.vx*CK.roll;if(b.vy<-.8)debrisBurst(b,1.2,2);}
@@ -139,7 +139,7 @@ export function updBodies(){
         grounded=true;
         const hit=b.vy+Math.abs(b.va)*b.rmax*.6, c=contacts(b);
         const off=b.x-c.avg, stable=c.n===0||(b.x>=c.min-1&&b.x<=c.max+1);
-        if(hit>5||(stable&&Math.abs(b.va)<.01)){landed=true;impact=hit;break;}
+        if((hit>PB.landV&&b.age>PB.grace)||(stable&&Math.abs(b.va)<.01)){landed=true;impact=hit;break;}
         if(!stable){ // tip over the edge: torque from the overhanging centre of mass
           b.va+=Math.sign(off)*Math.min(.014,Math.abs(off)*.0009+.002); b.vx+=Math.sign(off)*.04;
         }
@@ -149,12 +149,12 @@ export function updBodies(){
       // horizontal
       const nx=b.x+b.vx/ns;
       if(!bodyHitPose(b,nx,b.y,b.a))b.x=nx;
-      else if(Math.abs(b.vx)>3&&!b.held&&!b.chunk&&b.n>=30&&(dv=crush(b,nx,b.y,b.a,Math.abs(b.vx),Math.sign(b.vx),0))){b.vx-=Math.sign(b.vx)*dv;b.x=nx;}
-      else{ if(Math.abs(b.vx)>4.5&&!b.held&&!b.chunk){landed=true;impact=Math.abs(b.vx);break;} b.vx*=b.chunk?-CK.bounce:-PB.wallBounce; }
+      else if(Math.abs(b.vx)>PB.crushV&&b.age>PB.grace&&!b.held&&!b.chunk&&b.n>=30&&(dv=crush(b,nx,b.y,b.a,Math.abs(b.vx),Math.sign(b.vx),0))){b.vx-=Math.sign(b.vx)*dv;b.x=nx;}
+      else{ if(Math.abs(b.vx)>PB.wallV&&b.age>PB.grace&&!b.held&&!b.chunk){landed=true;impact=Math.abs(b.vx);break;} b.vx*=b.chunk?-CK.bounce:-PB.wallBounce; }
       // rotation
       const na=b.a+b.va/ns;
       if(!bodyHitPose(b,b.x,b.y,na))b.a=na;
-      else{ if(Math.abs(b.va)*b.rmax>5&&!b.held&&!b.chunk){landed=true;impact=Math.abs(b.va)*b.rmax;break;} b.va*=-PB.spinBounce; }
+      else{ if(Math.abs(b.va)*b.rmax>PB.spinV&&b.age>PB.grace&&!b.held&&!b.chunk){landed=true;impact=Math.abs(b.va)*b.rmax;break;} b.va*=-PB.spinBounce; }
     }
     if(!landed&&!b.held){
       if(grounded&&Math.abs(b.vx)<.4&&Math.abs(b.vy)<.6&&Math.abs(b.va)<.006)b.rest++;else b.rest=Math.max(0,b.rest-1);
@@ -180,8 +180,8 @@ function debrisBurst(b,power,cnt){
   for(let k=0;k<cnt;k++){const e=R()*b.ex.length|0;const X=b.x+b.ex[e]*c-b.ey[e]*s,Y=b.y+b.ex[e]*s+b.ey[e]*c;spawnDust(X,Y-1,(R()-.5)*power,-R()*power,rgb(160,150,135));}
 }
 function landBody(b,impact){
-  impact*=1+Math.min(2.5,b.h/80); // heavy, tall chunks hit harder
-  if(impact>4.5&&b.n>=100&&b.gen<2&&!b.held&&bodies.length<140){fracture(b,impact);return;}
+  impact*=1+Math.min(1,b.h/120); // heavy, tall chunks hit harder (was up to 3.5x, which shattered slow landings)
+  if(impact>PHYS.body.fractureV&&b.n>=100&&b.gen<2&&!b.held&&bodies.length<140){fracture(b,impact);return;}
   ST.bgen++;
   const c=Math.cos(b.a),s=Math.sin(b.a),hw=b.lw/2+2,hh=b.lh/2+2;
   const ext=Math.ceil(Math.abs(hw*c)+Math.abs(hh*s))+2, eyt=Math.ceil(Math.abs(hw*s)+Math.abs(hh*c))+2;
@@ -191,25 +191,25 @@ function landBody(b,impact){
     const dx=X-b.x,dy=Y-b.y,lx=Math.round(dx*c+dy*s+b.cx),ly=Math.round(-dx*s+dy*c+b.cy);
     if(lx<0||ly<0||lx>=b.lw||ly>=b.lh)continue;const o=ly*b.lw+lx,m=b.lm[o];if(!m)continue;
     const j=Y*W+X;if(t[j]!==0&&KIND[t[j]]!==G&&KIND[t[j]]!==F)continue;
-    if(m===BACK){ // backdrop wall smashes into a heap of wreckage
-      if(R()<.5){if(impact>2&&R()<.4){spawn(X,Y,(R()-.5)*impact*.8,-R()*impact*.6,b.lc[o],90,RUBBLE,0);}else{t[j]=RUBBLE;col[j]=b.lc[o];life[j]=0;vel[j]=2;wake(j);}}
-      else if(R()<.05)dust(X,Y);
+    if(m===BACK){ // backdrop wall stays with the wreck as back wall (only a hard landing breaks some of it up)
+      if(impact>PHYS.body.crumbleV&&R()<.25){if(R()<.3)spawnDust(X,Y,(R()-.5)*1.5,-R(),dustCol(b.lc[o]));}
+      else if(!bgB[j]){bg[j]=b.lc[o];bgB[j]=1;}
       continue;}
     t[j]=m;col[j]=b.lc[o];life[j]=0;vel[j]=0;pin[j]=0;gnd[j]=NAT[m];str[j]=12;bm[j]=ST.bgen;wake(j);markDirty(j);list.push(j);
   }
   const thrown=b.thrown&&impact>4;
   // crack lines across tall chunks so they keep breaking apart
-  const cracks=[]; if(b.h>24&&impact>2.5)for(let k=0;k<Math.min(6,b.h/18|0);k++)cracks.push(R()*b.h|0);
+  const cracks=[]; if(b.h>24&&impact>PHYS.body.crumbleV)for(let k=0;k<Math.min(6,b.h/18|0);k++)cracks.push(R()*b.h|0);
   let burst=0;
   for(const j of list){
     const X=j%W,Y=(j/W)|0;if(Y>=H-1)continue;const m=t[j], bottom=bm[j+W]!==ST.bgen;
     const ly=Math.round(-(X-b.x)*s+(Y-b.y)*c+b.cy);
-    let p=m===GLASS||m===ICE&&b.icicle?(impact>1.2?1:.4):Math.max(0,(impact-1.4)*.16)*(bottom?2.4:1)/(1+HARD[m]*.08);
-    if(cracks.includes(ly))p=Math.max(p,.9);
+    let p=m===GLASS||m===ICE&&b.icicle?(impact>1.2?1:.4):b.chunk?0:Math.max(0,(impact-PHYS.body.crumbleV)*.16)*(bottom?2.4:1)/(1+HARD[m]*.08)*PHYS.mix.landCrumble;
+    if(cracks.includes(ly)&&!b.chunk)p=Math.max(p,.9*PHYS.mix.landCrumble*2);
     if(R()<p){
       if(R()<.45&&impact>2.2&&burst<2500){burst++;const up=bottom?1.4:1;
         spawn(X,Y,(R()-.5)*impact*.9+b.vx*.4,-R()*impact*.7*up+b.vy*.2,col[j],90+R()*60,KIND[m]===S?RUBBLE:m,m===GLASS?1:0);t[j]=0;}
-      else t[j]=m===LEAF||m===GRASS?(R()<.5?ASH:RUBBLE):RUBBLE;
+      else{t[j]=m===LEAF||m===GRASS?(R()<.5?ASH:RUBBLE):RUBBLE;if(t[j]===RUBBLE)col[j]=rubbleCol(col[j]);}
       wake(j);
     }
     if(bottom&&impact>2.5&&R()<.12)dust(X,Y-2);
