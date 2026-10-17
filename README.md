@@ -1,6 +1,6 @@
 # Heroes Sandbox
 
-A browser falling-sand superhero game: fully destructible pixel worlds, rigid-body collapse, liquids, fire and snow, and nine heroes (Doom, Hulk, Thor, Iron Man, Wolverine, Cyclops, Iceman, Jean Grey, Storm) with 12 powers each.
+A browser falling-sand superhero game: fully destructible pixel worlds, rigid-body collapse, liquids, fire and snow, and 16 heroes: Doom, Hulk, Thor, Iron Man, Wolverine, Cyclops, Iceman, Jean Grey, Storm (12 powers each), Spider-Man, Scarlet Witch, Doctor Strange, Ant-Man, and the playable villains Juggernaut, Ultron and Magneto (10 each).
 
 - 7 maps: City, New York, NYC 2099, Forest, X-Mansion, Savage Land, Weapon X
 - 6 modes: Sandbox (with a spawn menu for enemies, objects, terrain and tools), Robot Uprising, Sentinel Siege, Wrecking Crew, Boss Rush, Savage Land Swarm
