@@ -1218,7 +1218,7 @@ function updParticles(){
     if(!(f&4)&&ox>=0&&ox<W&&oy>=0&&oy<H){const oi=(oy|0)*W+(ox|0),om=t[oi];if(om!==0&&(KIND[om]===S||KIND[om]===P)){
       if(pm[n]&&pm[n]!==GFIRE)for(let u=1;u<5;u++){const j=oi-u*W;if(j>=0&&t[j]===0){t[j]=pm[n];col[j]=pc[n];life[j]=lifeOf(pm[n]);wake(j);break;}}
       np--;px[n]=px[np];py[n]=py[np];pvx[n]=pvx[np];pvy[n]=pvy[np];pc[n]=pc[np];pl[n]=pl[np];pm[n]=pm[np];pg[n]=pg[np];n--;continue;}}
-    if(nx<0||nx>=W||ny>=H||ny<-60)dead=true;
+    if(nx<0||nx>=W||ny>=H||ny<-SKY-60)dead=true;
     else if(ny>=0){
       const j=(ny|0)*W+(nx|0),tm=t[j];
       if(tm!==0&&KIND[tm]!==G&&KIND[tm]!==F&&!(f&4&&!pm[n])){
@@ -1846,7 +1846,7 @@ function boxHit(x,y){for(let yy=Math.ceil(y-PH);yy<=Math.floor(y-1);yy++)for(let
 let SPAWNX=50;
 function spawnPlayer(){
   const x=pl_.x=SPAWNX+R()*30|0;let y=0;while(y<H-1&&!solidAt(x,y))y++;pl_.y=y-1;pl_.vx=pl_.vy=0;pl_.hp=CH.hp;pl_.en=100;pl_.fly=false;pl_.slam=false;pl_.leap=false;
-  camX=Math.max(0,Math.min(W-VW,pl_.x-VW/2));camY=Math.max(0,Math.min(H-VH,pl_.y-VH/2));
+  snapCam();
 }
 const keys={}, pressed={};
 const mouse={sx:VW/2,sy:VH/2,wx:0,wy:0,down:false,right:false};
@@ -2060,7 +2060,7 @@ function updPlayer(){
   {const fi=((p.y+1)|0)*W+(p.x|0);p.onIce=p.ground&&fi>=0&&fi<N&&(t[fi]===ICE||t[fi-1]===ICE||t[fi+1]===ICE);}
   if(p.fly&&p.boring)p.y=Math.min(H-2,p.y);
   else if(boxHit(p.x,p.y)){if(!boxHit(p.x,p.y-1))p.y-=1;else if(!boxHit(p.x,p.y-2))p.y-=2;else punchOut(p);}
-  p.x=Math.max(4,Math.min(W-4,p.x));if(p.y<PH+1)p.y=PH+1,p.vy=Math.max(0,p.vy);
+  p.x=Math.max(4,Math.min(W-4,p.x));if(p.y<PH+1-SKY+VH/2)p.y=PH+1-SKY+VH/2,p.vy=Math.max(0,p.vy);
   if(p.y>H+20)p.hp=0;
   // hazards
   let dmg=0;
@@ -2090,14 +2090,33 @@ function hand(){
 }
 
 // ================= camera =================
-let camX=0,camY=0;
+// Deadzone follow: the hero moves freely inside a box around the screen centre without moving the view.
+// Only leaving the box drags the focus point, and the camera eases onto it with a critically damped
+// spring, so footsteps, idle bob, small hops and aim twitches never reach the screen.
+// Above the map is open sky (SKY px of it) that fades to space the higher you fly.
+const SKY=900;
+const DZX=VW*.11, DZU=VH*.17, DZD=VH*.09; // deadzone half-width, room above and below the focus
+let camX=0,camY=0,camVX=0,camVY=0,focX=0,focY=0,lookX=0,lookY=0,spaceA=0;
+function snapCam(){const p=pl_;focX=p.x;focY=p.y-PH/2;lookX=lookY=camVX=camVY=0;
+  camX=Math.max(0,Math.min(W-VW,focX-VW/2));camY=Math.max(-SKY,Math.min(H-VH,focY-VH/2));}
 function updCamera(){
-  const p=pl_, a=aim();
-  const sp=Math.hypot(p.vx,p.vy);
-  const tx=p.x+a.dx*40+p.vx*14-VW/2, ty=p.y-8+a.dy*30+p.vy*12-VH/2;
-  const k=Math.min(.35,.08*(1+sp/CH.fs*2.6));
-  camX+=(tx-camX)*k; camY+=(ty-camY)*k;
-  camX=Math.max(0,Math.min(W-VW,camX)); camY=Math.max(0,Math.min(H-VH,camY));
+  const p=pl_, cy=p.y-PH/2, sp=Math.hypot(p.vx,p.vy);
+  if(p.x>focX+DZX)focX=p.x-DZX;else if(p.x<focX-DZX)focX=p.x+DZX;
+  if(p.ground&&!p.fly)focY+=(cy-focY)*.06; // standing: settle onto the hero's height slowly
+  if(cy<focY-DZU)focY=cy+DZU;else if(cy>focY+DZD)focY=cy-DZD;
+  // look-ahead only for fast travel (not the aim, so moving the mouse never drags the view); heavily filtered
+  const lead=sp>.01?Math.min(110,Math.max(0,sp-1.8)*45)/sp:0;
+  lookX+=(p.vx*lead-lookX)*.025; lookY+=(p.vy*lead*.6-lookY)*.025;
+  const tx=focX+lookX-VW/2, ty=focY+lookY-VH/2;
+  const w=.07+Math.min(.11,sp*.011); // stiffer when moving fast so the hero never outruns the view
+  camVX+=(tx-camX)*w*w-2*w*camVX; camVY+=(ty-camY)*w*w-2*w*camVY;
+  camX+=camVX; camY+=camVY;
+  const mx=VW*.2, my=VH*.2; // hard margin: always keep the hero on screen (teleports, rockets)
+  if(p.x<camX+mx){camX=p.x-mx;camVX=Math.max(0,camVX);}else if(p.x>camX+VW-mx){camX=p.x-VW+mx;camVX=Math.min(0,camVX);}
+  if(cy<camY+my){camY=cy-my;camVY=Math.max(0,camVY);}else if(cy>camY+VH-my){camY=cy-VH+my;camVY=Math.min(0,camVY);}
+  if(camX<0||camX>W-VW){camX=Math.max(0,Math.min(W-VW,camX));camVX=0;}
+  if(camY<-SKY||camY>H-VH){camY=Math.max(-SKY,Math.min(H-VH,camY));camVY=0;}
+  spaceA=Math.max(0,Math.min(1,(-camY-60)/(SKY-200)));spaceA=spaceA*spaceA*(3-2*spaceA);
   mouse.wx=camX+mouse.sx; mouse.wy=camY+mouse.sy;
 }
 
@@ -2572,7 +2591,7 @@ THOR_POWERS.push(
  {n:'Hammer Tow',fn:(a,p,use)=>{if(p.tow||!use(20))return;cd=40;const dx=a.dx,dy=a.dy;let k=0;if(CH.fly&&!p.fly)toggleFly(true);p.tow={dx,dy};fxWord(p.x,p.y-PH-8,'HYAAAH!',1.1,'#bfe3ff',true);snd('whoosh',p.x,p.y);
    ACT.push(()=>{k++;p.script=2;p.fly=true;
      for(let s=0;s<3;s++){p.x+=dx*3;p.y+=dy*3;carve(p.x+dx*11,p.y-PH/2+dy*11,6.5,dx*6,dy*6);if(s===1)carve(p.x,p.y-PH/2,5,dx*4,dy*4);}
-     p.x=Math.max(5,Math.min(W-5,p.x));p.y=Math.max(PH+2,Math.min(H-8,p.y));
+     p.x=Math.max(5,Math.min(W-5,p.x));p.y=Math.max(PH+2-SKY+VH/2,Math.min(H-8,p.y));
      const hx=p.x+dx*11,hy=p.y-PH/2+dy*11;damageEnemies(hx,hy,12,14,dx*6,dy*6);
      for(const b of bodies){if(!b.held&&Math.hypot(b.x-hx,b.y-hy)<b.rmax+8){b.vx+=dx*2;b.vy+=dy*2;b.thrown=true;}}
      if(k%3===0)zap(hx,hy,hx+(R()-.5)*40,hy+(R()-.5)*40,[230,240,255],[120,170,255]);spawn(hx,hy,(R()-.5)*2,(R()-.5)*2,pickC(BLUE),12,0,1,0,1);
@@ -2852,7 +2871,8 @@ const STRANGE_POWERS=[
    for(let x=-14;x<=14;x++)for(let y=0;y<2;y++){const X=cx+x,Y=cy+y+(Math.abs(x)>11?1:0);if(X<0||X>=W||Y<0||Y>=H-44)continue;const i=Y*W+X;if(t[i]&&KIND[t[i]]!==G&&KIND[t[i]]!==F)continue;setc(i,NEON);col[i]=(x+y)&1?rgb(255,200,80):rgb(255,150,40);pin[i]=3;slide.push([i,frame+480+(R()*20|0)]);}
    fxWord(cx,cy-12,'SERAPHIM!',.9,'#ffc93c',true);snd('psi',cx,cy,{pitch:1.6});}},
  // fold space: the block under the cursor flips upside down, buildings and all
- {n:'Mirror Fold',fn:(a,p,use)=>{if(!use(32))return;cd=60;const cx=mouse.wx|0,cy=mouse.wy|0,R2=24,x0=Math.max(1,cx-R2),x1=Math.min(W-2,cx+R2),y0=Math.max(1,cy-R2),y1=Math.min(H-46,cy+R2);
+ {n:'Mirror Fold',fn:(a,p,use)=>{if(mouse.wy<-20||!use(32))return; // nothing to fold up in the open sky
+  cd=60;const cx=mouse.wx|0,cy=mouse.wy|0,R2=24,x0=Math.max(1,cx-R2),x1=Math.min(W-2,cx+R2),y0=Math.max(1,cy-R2),y1=Math.min(H-46,cy+R2);
    const w=x1-x0+1,h=y1-y0+1,tt=new Uint8Array(w*h),cc=new Uint32Array(w*h),bb=new Uint32Array(w*h);
    for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=(y0+y)*W+x0+x;tt[y*w+x]=t[i];cc[y*w+x]=col[i];bb[y*w+x]=bg[i];}
    for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=(y0+y)*W+x0+x,o=(h-1-y)*w+(w-1-x);setc(i,tt[o]);col[i]=cc[o];bg[i]=bb[o];bgB[i]=bg[i]!==bgD[i]?1:0;}
@@ -2887,7 +2907,7 @@ const ANT_POWERS=[
    onHit:sh=>{const e=enemyAt(sh.x,sh.y,3);if(e){hitEnemy(e,12,0,0);return;}const n=solidCells(sh.x,sh.y,5,false);if(n>=10){const b=scaleChunk(q,n,2.2);if(b){b.vy=-1;b.thrown=true;b.safeP=frame+30;fxWord(sh.x,sh.y-16,'ENLARGE!',1.2,'#7fb8ff',true);snd('crumble',sh.x,sh.y,{size:1});}}}});}},
  // go subatomic for a moment and dash straight through walls
  {n:'Quantum Dash',fn:(a,p,use)=>{if(!use(18))return;cd=30;const dx=a.dx,dy=a.dy;let k=0;const s0=p.sizeT;p.size=.3;fxWord(p.x,p.y-PH-6,'QUANTUM!',.9,'#7fb8ff',true);snd('whoosh',p.x,p.y,{pitch:1.8});
-   ACT.push(()=>{k++;p.script=2;p.x=Math.max(5,Math.min(W-5,p.x+dx*9));p.y=Math.max(PH+2,Math.min(H-8,p.y+dy*9));damageLine(p.x-dx*9,p.y-dy*9,p.x,p.y,4,8);afters.push({x:p.x,y:p.y,ang:0,face:p.face,life:8});for(let q2=0;q2<4;q2++)spawn(p.x,p.y,(R()-.5)*2,(R()-.5)*2,rgb(120,170,255),10,0,1,0,1);
+   ACT.push(()=>{k++;p.script=2;p.x=Math.max(5,Math.min(W-5,p.x+dx*9));p.y=Math.max(PH+2-SKY+VH/2,Math.min(H-8,p.y+dy*9));damageLine(p.x-dx*9,p.y-dy*9,p.x,p.y,4,8);afters.push({x:p.x,y:p.y,ang:0,face:p.face,life:8});for(let q2=0;q2<4;q2++)spawn(p.x,p.y,(R()-.5)*2,(R()-.5)*2,rgb(120,170,255),10,0,1,0,1);
      if(k>=12){p.script=0;p.sizeT=s0;p.vx=dx*3;p.vy=dy*3;if(boxHit(p.x,p.y))punchOut(p);return false;}return true;});}},
  // ride a flying ant for eight seconds
  {n:'Flying Ant',fn:(a,p,use)=>{if(p.ant>0||!use(20))return;cd=30;p.ant=480;p.fly=true;p.vy=-1.5;fxWord(p.x,p.y-PH-6,'GOOD BOY, ANT-THONY!',.9,'#ff6b5c',true);snd('whoosh',p.x,p.y,{pitch:2});}},
@@ -3326,7 +3346,7 @@ function updShots(world=true){
     else if(s.type==='bomb'&&frame%3===0)spawn(s.x,s.y,0,0,rgb(255,120,60),6,0,1,0);
     let hit=false;const steps=Math.ceil(Math.hypot(s.vx,s.vy))||1;
     for(let k=0;k<steps;k++){s.x+=s.vx/steps;s.y+=s.vy/steps;
-      if(s.x<0||s.x>=W||s.y>=H||s.y<-60){hit='out';break;}
+      if(s.x<0||s.x>=W||s.y>=H||s.y<-SKY-60){hit='out';break;}
       if(s.y>=0){const m=t[(s.y|0)*W+(s.x|0)];if(m!==0&&KIND[m]!==G&&KIND[m]!==F){hit=true;break;}}
       if(s.owner==='enemy'){const p=pl_;if(Math.abs(s.x-p.x)<=PW/2+1&&s.y>=p.y-PH&&s.y<=p.y){hurt(s.dmg);hit='player';break;}
         if(decoy&&Math.abs(s.x-decoy.x)<=4&&s.y>=decoy.y-SH&&s.y<=decoy.y){decoy.hp-=s.dmg||7;hit='player';break;}}
@@ -3838,18 +3858,26 @@ function drawEnemy(e){
   if(e.hp<d.hp&&!d.title){const w=Math.max(4,sw*S),f=Math.max(0,e.hp/d.hp);for(let k=0;k<w;k++)pix(x0+k,y0-3,k<w*f?rgb(255,70,60):rgb(60,20,20));}
 }
 const flick=new Float32Array(256);
+const SPACE_ROW=new Uint32Array(VH);for(let y=0;y<VH;y++){const k=Math.pow(y/VH,3);SPACE_ROW[y]=rgb(3+k*22|0,4+k*38|0,12+k*70|0);}
 const htm=new Uint8Array(VW*VH);for(let y=0;y<VH;y++)for(let x=0;x<VW;x++){const ox2=(y>>2)&1?2:0,dx=((x+ox2)&3)-1.5,dy=(y&3)-1.5;htm[y*VW+x]=dx*dx+dy*dy<1.8?1:0;}
 function render(){
   CX=camX|0;CY=camY|0;
   gbuf.fill(0);const ink=SET.ink;let nFire=0,nLava=0;
-  const fl=frame, fx0=(CX*PAR)|0, fyo=(CY*.5)|0;
+  const fl=frame, fx0=(CX*PAR)|0, fyo=(CY*.5)|0, sa=spaceA, sa1=1-sa;
   for(let i=0;i<256;i++)flick[i]=R();
   let fi=0;
+  // space: near-black with a thin blue limb toward the horizon, and a slow-parallax star field
+  const spc=SPACE_ROW, stX=(CX*.04)|0, stY=(CY*.04)|0;
+  const toSpace=(f,sx,sy)=>{const s=spc[sy];let r=(f&255)*sa1+(s&255)*sa,g=((f>>8)&255)*sa1+((s>>8)&255)*sa,b=((f>>16)&255)*sa1+((s>>16)&255)*sa;
+    const X=sx+stX,Y=sy+stY,h=Math.imul(X*73856093^Y*19349663,2654435761)>>>0;
+    if((h&1023)<3){const tw=(h>>>10&255)/255,v=(130+tw*125)*(.75+.25*Math.sin(fl*.05+h))*sa*sa;r+=v;g+=v;b+=v*1.05;}
+    return rgb(r>255?255:r,g>255?255:g,b>255?255:b);};
   for(let sy=0;sy<VH;sy++){
-    const wy=sy+CY;let i=wy*W+CX,o=sy*VW;const frow=(Math.min(H-1,sy+fyo))*FW+fx0;
+    const wy=sy+CY;let i=wy*W+CX,o=sy*VW;const frow=(Math.max(0,Math.min(H-1,sy+fyo)))*FW+fx0; // above the map the skyline sinks away at half speed
+    if(wy<0){for(let sx=0;sx<VW;sx++,o++){const f=far[frow+sx];buf[o]=sa>0?toSpace(f,sx,sy):f;}continue;}
     for(let sx=0;sx<VW;sx++,i++,o++){
       const m=t[i];
-      if(m===0){const b=bg[i];if(b)buf[o]=lut(bgL,b);else{const f=far[frow+sx];buf[o]=ink&&!htm[o]&&!farKeep[frow+sx]?lut(htL,f):f;}continue;}
+      if(m===0){const b=bg[i];if(b)buf[o]=lut(bgL,b);else{let f=far[frow+sx];if(sa>0)f=toSpace(f,sx,sy);buf[o]=ink&&!htm[o]&&!farKeep[frow+sx]?lut(htL,f):f;}continue;}
       switch(m){
         case FIRE:{nFire++;const l=life[i];const c=rgb(255,90+Math.min(160,l*4)+(flick[fi++&255]*30|0),20+(flick[fi++&255]*30|0));buf[o]=c;gbuf[o]=c;break;}
         case GFIRE:{nFire++;const f=flick[fi++&255];const c=f<.3?rgb(200,255,210):f<.7?rgb(60,255,100):rgb(20,180,60);buf[o]=c;gbuf[o]=c;break;}
@@ -3944,7 +3972,10 @@ function render(){
     else if(T.cat==='objects'){const gy=SPAWN.snap?groundBelow(x,y):y;for(let k=-8;k<=8;k++)pix(x+k,gy,c,c);for(let yy=y;yy<gy;yy+=3)pix(x,yy,c,0);}
     else circle(x,y,SPAWN.brush+.5,c,0);}
   sctx.putImageData(img,0,0);if(SET.bloom||GL&&SET.light)gctx.putImageData(gimg,0,0);
-  const sk=SET.shake/100,sx=(R()-.5)*shake*scale*.5*sk,sy=(R()-.5)*shake*scale*.5*sk;shake*=.88;if(shake<.2)shake=0;
+  // shake: trauma curve (small rumbles barely register, big hits still land) driven by smooth noise, not per-frame random jumps
+  const sk=SET.shake/100,tr=Math.min(1,shake/22),amp=tr*Math.sqrt(tr)*22*scale*.3*sk,sf=frame;
+  let sx=amp*(Math.sin(sf*.93)*.6+Math.sin(sf*1.71+1.3)*.4),sy=amp*(Math.sin(sf*1.07+2.1)*.6+Math.sin(sf*1.93+.4)*.4);shake*=.88;if(shake<.2)shake=0;
+  sx-=(camX-CX)*scale;sy-=(camY-CY)*scale; // sub-pixel camera: the frame glides instead of stepping a whole pixel at a time
   if(GL){presentGL(ox+sx,oy+sy,VW*scale,VH*scale,scale,{bloom:SET.bloom,light:SET.light,time:performance.now()/1000,ca:SET.fx?Math.min(4,caPulse):0,haze:SET.fx?.6:0,
       waves:SET.fx?waves.map(w=>({x:w.x-CX,y:w.y-CY,r:w.r,s:w.s*Math.min(1,w.life/12)})):null,tint:slowT>0?[.72,.88,1.3,.6]:SPAWN.pause?[.8,.86,1.05,.45]:null,
       heat:heatZ&&SET.fx?[heatZ.x-CX,heatZ.y-CY,heatZ.r*1.3,Math.min(1,heatZ.life/40)*1.2]:null});ctx.clearRect(0,0,cv.width,cv.height);} // WebGL draws the frame + bloom under the 2D overlay
@@ -4360,4 +4391,4 @@ function useTool(){const T=SPAWN.tool;if(!T||GS!=='play')return;const x=mouse.wx
   if(T.id==='fire'){for(let n=0;n<r*r;n++){const X=x+(R()-.5)*r*2|0,Y=y+(R()-.5)*r*2|0;if(X<0||X>=W||Y<0||Y>=H)continue;const i=Y*W+X,m=t[i];if(FLAM[m]>0)ignite(i);else if(!m&&R()<.3)setc(i,FIRE);}return;}
   if(T.id==='freeze'){if(frame%4===0)freezeArea(x,y,r*2+2,90,0);for(let n=0;n<r*r;n++){iceAt(x+(R()-.5)*r*2,y+(R()-.5)*r*2);}return;}}
 resize();initGL(sim,glc,cv).then(ok=>{GL=ok;});buildSpawnUI();$('spawnbtn').onclick=e=>{spawnUI.toggle();e.target.blur();};syncSettings();mapSel.value='nyc2099';regen();showMenu();requestAnimationFrame(loop);
-window.GAME={dbg:()=>({rid,rcount,gnd}),pose:()=>posePlayer(pl_).filter(r=>/[^.]/.test(r)).join('|'),set hitstop(v){hitstop=v},startRun,showMenu,MODES,defineMode,get GS(){return GS},get MS(){return MS},get dbox(){return[dx0,dy0,dx1,dy1]},explode:(x,y,r)=>explode(x,y,r),get pin(){return pin},supportCheck:()=>supportCheck(false),t,W,H,pl_,mouse,keys,pressed,selPower,cast:()=>cast(),regen,tick,render,bodies,shots,drones,strikes,get vortex(){return vortex},get held(){return held},get fps(){return fps},get simMs(){return simMs},get frameMs(){return frameMs},get np(){return np},get cam(){return[camX,camY]},count:m=>{let c=0;for(let i=0;i<N;i++)if(t[i]===m)c++;return c;},MATS,toggleFly,BLD,bodyHit,setChar,CHARS,get CH(){return CH},enemies,spawnEnemy,startWave,clearEnemies,ENEMY_TYPES,defineEnemy,get storm(){return storm},cut:(x0,x1,y0,y1)=>{for(let y=y0;y<y1;y++)for(let x=x0;x<x1;x++)setc(y*W+x,EMPTY);},setCam:(x,y)=>{camX=x;camY=y;},comics,rings,flashes,waves,SET,SPAWN,get decoy(){return decoy},get stasis(){return stasis},pins,therm,jets,get slowT(){return slowT},placeStruct,OBJS,spawnUI:()=>spawnUI,MAPDEFS,mapSel};
+window.GAME={dbg:()=>({rid,rcount,gnd}),pose:()=>posePlayer(pl_).filter(r=>/[^.]/.test(r)).join('|'),set hitstop(v){hitstop=v},startRun,showMenu,MODES,defineMode,get GS(){return GS},get MS(){return MS},get dbox(){return[dx0,dy0,dx1,dy1]},explode:(x,y,r)=>explode(x,y,r),get pin(){return pin},supportCheck:()=>supportCheck(false),t,W,H,pl_,mouse,keys,pressed,selPower,cast:()=>cast(),regen,tick,render,bodies,shots,drones,strikes,get vortex(){return vortex},get held(){return held},get fps(){return fps},get simMs(){return simMs},get frameMs(){return frameMs},get np(){return np},get cam(){return[camX,camY]},count:m=>{let c=0;for(let i=0;i<N;i++)if(t[i]===m)c++;return c;},MATS,toggleFly,BLD,bodyHit,setChar,CHARS,get CH(){return CH},enemies,spawnEnemy,startWave,clearEnemies,ENEMY_TYPES,defineEnemy,get storm(){return storm},cut:(x0,x1,y0,y1)=>{for(let y=y0;y<y1;y++)for(let x=x0;x<x1;x++)setc(y*W+x,EMPTY);},setCam:(x,y)=>{camX=x;camY=y;camVX=camVY=0;focX=x+VW/2;focY=y+VH/2;},snapCam,get spaceA(){return spaceA},comics,rings,flashes,waves,SET,SPAWN,get decoy(){return decoy},get stasis(){return stasis},pins,therm,jets,get slowT(){return slowT},placeStruct,OBJS,spawnUI:()=>spawnUI,MAPDEFS,mapSel};
