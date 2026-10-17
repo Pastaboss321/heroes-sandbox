@@ -4480,7 +4480,7 @@ function render(){
   drawComics(sx,sy);
   // minimap
   if(frame%15===0){for(let y=0;y<H/8;y++)for(let x=0;x<W/8;x++){const i=(y*8+4)*W+x*8+4,m=t[i];mbuf[y*(W/8)+x]=m?col[i]:(bg[i]?bg[i]:rgb(20,24,40));}mctx.putImageData(mimg,0,0);}
-  const mw=W/8*1.2,mh=H/8*1.2,mx=cv.width-mw-16,my=100;
+  const mw=W/8*1.2,mh=H/8*1.2,mx=cv.width-mw-16,my=window.HS_MINIMAP_Y??100; // the phone build lifts it to the top edge
   if(GS==='menu'||GS==='over')return;
   ctx.fillStyle='#14110f';ctx.fillRect(mx+3,my+3,mw+4,mh+4);ctx.drawImage(mm,mx,my,mw,mh);ctx.strokeStyle='#ffc93c';ctx.lineWidth=2;ctx.strokeRect(mx+CX/8*1.2,my+CY/8*1.2,VW/8*1.2,VH/8*1.2);ctx.strokeStyle='#14110f';ctx.lineWidth=3;ctx.strokeRect(mx-1,my-1,mw+2,mh+2);
   for(const e of enemies){const b=!!e.def.title;ctx.fillStyle=e.ally>0?'#ff9ad8':b?'#c88cff':'#ff6b5c';const s2=b?4:2;ctx.fillRect(mx+e.x/8*1.2-s2/2,my+e.y/8*1.2-s2/2,s2,s2);} // enemies on the minimap

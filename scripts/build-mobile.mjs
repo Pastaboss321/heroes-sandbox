@@ -80,6 +80,9 @@ const head = `
   body.menu-open #powers{display:none!important}
   #top{right:max(10px,env(safe-area-inset-right))!important;gap:6px!important}
   #top .sb{padding:6px 10px!important;font-size:12px!important}
+  /* top-right: minimap in the corner, score and kills beside it, the Spawn button below the map */
+  #scorebox{top:max(6px,env(safe-area-inset-top))!important;right:calc(max(10px,env(safe-area-inset-right)) + 262px)!important}
+  #top{top:118px!important}
   #toolchip{bottom:calc(max(8px,env(safe-area-inset-bottom)) + 112px)!important}
   #hud{left:max(10px,env(safe-area-inset-left))!important;top:max(8px,env(safe-area-inset-top))!important;transform:scale(.85);transform-origin:top left}
   #rot{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;background:#0d0a18;color:#ffc93c;font:28px Bangers,Impact,sans-serif;letter-spacing:2px;text-align:center}
@@ -97,6 +100,7 @@ const body = `
   </div>
 </div>
 <script>
+window.HS_MINIMAP_Y=8; // minimap at the top edge on phones
 (function(){
   // on-screen buttons press and release real keys, so the game needs no changes
   for(const b of document.querySelectorAll('#tc button')){
