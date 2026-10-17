@@ -8,7 +8,7 @@ import { afters, flash, fxBurst, fxWord, rings } from './render/fx.js';
 import { bgHit, explode, punchOut, shade } from './world/destruction.js';
 import { ANIM, aimLocal, armLen, armMode } from './render/rig.js';
 import { snd } from './sfx.js';
-import { GAMMA, SPAWN, aim, pickC, quake } from './heroes/powers.js';
+import { GAMMA, SPAWN, pickC, quake } from './heroes/powers.js';
 import { aimFrom, slashFx } from './heroes/xmen.js';
 import { PAL_DOOM, SPR_DOOM } from './heroes/doom.js';
 import { opticThrust } from './heroes/cyclops.js';
@@ -22,7 +22,7 @@ export function boxHit(x,y){for(let yy=Math.ceil(y-ST.PH);yy<=Math.floor(y-1);yy
 // SPAWNX: shared state (ST in state.js)
 export function spawnPlayer(){
   const x=pl_.x=ST.SPAWNX+R()*30|0;let y=0;while(y<H-1&&!solidAt(x,y))y++;pl_.y=y-1;pl_.vx=pl_.vy=0;pl_.hp=ST.CH.hp;pl_.en=100;pl_.fly=false;pl_.slam=false;pl_.leap=false;
-  ST.camX=Math.max(0,Math.min(W-VW,pl_.x-VW/2));ST.camY=Math.max(0,Math.min(H-VH,pl_.y-VH/2));
+  snapCam();
 }
 export const keys={}, pressed={};
 export const mouse={sx:VW/2,sy:VH/2,wx:0,wy:0,down:false,right:false};
@@ -236,7 +236,7 @@ export function updPlayer(){
   {const fi=((p.y+1)|0)*W+(p.x|0);p.onIce=p.ground&&fi>=0&&fi<N&&(t[fi]===ICE||t[fi-1]===ICE||t[fi+1]===ICE);}
   if(p.fly&&p.boring)p.y=Math.min(H-2,p.y);
   else if(boxHit(p.x,p.y)){if(!boxHit(p.x,p.y-1))p.y-=1;else if(!boxHit(p.x,p.y-2))p.y-=2;else punchOut(p);}
-  p.x=Math.max(4,Math.min(W-4,p.x));if(p.y<ST.PH+1)p.y=ST.PH+1,p.vy=Math.max(0,p.vy);
+  p.x=Math.max(4,Math.min(W-4,p.x));if(p.y<ST.PH+1-SKY+VH/2)p.y=ST.PH+1-SKY+VH/2,p.vy=Math.max(0,p.vy);
   if(p.y>H+20)p.hp=0;
   // hazards
   let dmg=0;
@@ -266,13 +266,32 @@ export function hand(){
 }
 
 // ================= camera =================
-// camX, camY: shared state (ST in state.js)
+// Deadzone follow: the hero moves freely inside a box around the screen centre without moving the view.
+// Only leaving the box drags the focus point, and the camera eases onto it with a critically damped
+// spring, so footsteps, idle bob, small hops and aim twitches never reach the screen.
+// Above the map is open sky (SKY px of it) that fades to space the higher you fly.
+export const SKY=900;
+const DZX=VW*.11, DZU=VH*.17, DZD=VH*.09; // deadzone half-width, room above and below the focus
+let lookX=0,lookY=0;
+export function snapCam(){const p=pl_;ST.focX=p.x;ST.focY=p.y-ST.PH/2;lookX=lookY=ST.camVX=ST.camVY=0;
+  ST.camX=Math.max(0,Math.min(W-VW,ST.focX-VW/2));ST.camY=Math.max(-SKY,Math.min(H-VH,ST.focY-VH/2));}
 export function updCamera(){
-  const p=pl_, a=aim();
-  const sp=Math.hypot(p.vx,p.vy);
-  const tx=p.x+a.dx*40+p.vx*14-VW/2, ty=p.y-8+a.dy*30+p.vy*12-VH/2;
-  const k=Math.min(.35,.08*(1+sp/ST.CH.fs*2.6));
-  ST.camX+=(tx-ST.camX)*k; ST.camY+=(ty-ST.camY)*k;
-  ST.camX=Math.max(0,Math.min(W-VW,ST.camX)); ST.camY=Math.max(0,Math.min(H-VH,ST.camY));
+  const p=pl_, cy=p.y-ST.PH/2, sp=Math.hypot(p.vx,p.vy);
+  if(p.x>ST.focX+DZX)ST.focX=p.x-DZX;else if(p.x<ST.focX-DZX)ST.focX=p.x+DZX;
+  if(p.ground&&!p.fly)ST.focY+=(cy-ST.focY)*.06; // standing: settle onto the hero's height slowly
+  if(cy<ST.focY-DZU)ST.focY=cy+DZU;else if(cy>ST.focY+DZD)ST.focY=cy-DZD;
+  // look-ahead only for fast travel (not the aim, so moving the mouse never drags the view); heavily filtered
+  const lead=sp>.01?Math.min(110,Math.max(0,sp-1.8)*45)/sp:0;
+  lookX+=(p.vx*lead-lookX)*.025; lookY+=(p.vy*lead*.6-lookY)*.025;
+  const tx=ST.focX+lookX-VW/2, ty=ST.focY+lookY-VH/2;
+  const w=.07+Math.min(.11,sp*.011); // stiffer when moving fast so the hero never outruns the view
+  ST.camVX+=(tx-ST.camX)*w*w-2*w*ST.camVX; ST.camVY+=(ty-ST.camY)*w*w-2*w*ST.camVY;
+  ST.camX+=ST.camVX; ST.camY+=ST.camVY;
+  const mx=VW*.2, my=VH*.2; // hard margin: always keep the hero on screen (teleports, rockets)
+  if(p.x<ST.camX+mx){ST.camX=p.x-mx;ST.camVX=Math.max(0,ST.camVX);}else if(p.x>ST.camX+VW-mx){ST.camX=p.x-VW+mx;ST.camVX=Math.min(0,ST.camVX);}
+  if(cy<ST.camY+my){ST.camY=cy-my;ST.camVY=Math.max(0,ST.camVY);}else if(cy>ST.camY+VH-my){ST.camY=cy-VH+my;ST.camVY=Math.min(0,ST.camVY);}
+  if(ST.camX<0||ST.camX>W-VW){ST.camX=Math.max(0,Math.min(W-VW,ST.camX));ST.camVX=0;}
+  if(ST.camY<-SKY||ST.camY>H-VH){ST.camY=Math.max(-SKY,Math.min(H-VH,ST.camY));ST.camVY=0;}
+  ST.spaceA=Math.max(0,Math.min(1,(-ST.camY-60)/(SKY-200)));ST.spaceA=ST.spaceA*ST.spaceA*(3-2*ST.spaceA);
   mouse.wx=ST.camX+mouse.sx; mouse.wy=ST.camY+mouse.sy;
 }

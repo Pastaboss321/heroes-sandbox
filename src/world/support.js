@@ -1,7 +1,7 @@
 // Structural support: anchor flood, support checks, back-wall orphan sweep, cluster flood into rigid bodies.
 import './sim.js'; // evaluation order: runs after world/sim.js
 import { ST } from '../state.js';
-import { CONC, DIRT, GLASS, GRASS, KIND, LEAF, NEON, NM, OBSID, P, R, RUBBLE, S, STEEL, STONE, WEB, WOOD } from './materials.js';
+import { CONC, DIRT, GLASS, GRASS, KIND, L, LEAF, NEON, NM, OBSID, P, R, RUBBLE, S, STEEL, STONE, WEB, WOOD } from './materials.js';
 import { H, N, W, bg, bgB, bgD, col, markDirty, t, vel, wake } from './grid.js';
 import { dust, makeBody } from './bodies.js';
 import { MP, spawn } from './particles.js';
@@ -46,19 +46,33 @@ MASS[WEB]=.05; // spider silk: featherweight and strong, so strands span gaps
 let collapses=0;
 const vis2=new Uint32Array(N), GCAP=150000;
  let ggen=0, gstart=0;
+const PCAP=8192, pcand=new Int32Array(PCAP), fcand=new Int32Array(PCAP);
+// loose debris under a structure only holds it up if the pile itself stands on something else.
+// Follow the loose column down: rubble trapped inside the very piece being checked (crater rims,
+// cracked walls) or still falling through the air holds nothing, so that piece must fall.
+function pileHolds(j,vm,id){
+  for(let n=0;n<400;n++){
+    if(j>=N-W)return true;                       // world floor
+    const k=KIND[t[j]];
+    if(k===P||k===L){j+=W;continue;}
+    return k===S&&vm[j]!==id;
+  }
+  return true;                                   // very deep pile
+}
 function anchorFlood(s,init){
-  const id=++ggen;let sp=0,tl=0;stk[sp++]=s;q[tl++]=s;vis2[s]=id;
+  const id=++ggen;let sp=0,tl=0,npc=0;stk[sp++]=s;q[tl++]=s;vis2[s]=id;
   while(sp>0){
     if(tl>GCAP)return; // the landscape itself
     const i=stk[--sp],y=(i/W)|0,x=i-y*W;
     if(y>=H-1||(y>=H-40&&gnd[i])||pin[i]===3)return;           // world floor / bedrock band / Iceman's fresh slide
-    const b=t[i+W];if(KIND[b]===P)return;                       // sitting on a debris pile
+    if(KIND[t[i+W]]===P){if(npc>=PCAP)return;pcand[npc++]=i+W;}   // maybe sitting on a debris pile: judged once the walk is done
     for(let d=0;d<4;d++){ // push down last so it is explored first
       let j;if(d===0){if(x===0)continue;j=i-1;}else if(d===1){if(x===W-1)continue;j=i+1;}else if(d===2){if(i<W)continue;j=i-W;}else j=i+W;
       if(KIND[t[j]]!==S)continue;
       if(vis2[j]>=gstart){if(vis2[j]!==id)return;continue;}       // touches something already proven anchored
       vis2[j]=id;q[tl++]=j;stk[sp++]=j;}
   }
+  for(let k=0;k<npc;k++)if(pileHolds(pcand[k],vis2,id))return;   // rests on a real pile
   // fully walked and never reached the ground: it is floating
   if(init){let lf=0;for(let k=0;k<tl;k++)if(t[q[k]]===LEAF)lf++; // generator leftovers (detached canopies, specks) are simply removed
     if(tl<200||lf*2>tl){for(let k=0;k<tl;k++){t[q[k]]=0;wake(q[k]);}return;}}
@@ -123,7 +137,7 @@ function dropBg(i,x,y){if(R()<.2&&ST.np<MP-500)spawn(x,y,(R()-.5)*1.5,-R(),shade
 function flood(s,init){
   // walk one connected structure (natural ground and built stuff are separate structures)
   // depth-first, diving down first: anything resting on the world floor is proven sound in a few hundred steps
-  const id=++ST.vgen; let sp=0,tl=0; stk[sp++]=s; q[tl++]=s; vis[s]=id; let sup=0, mass=0, My=0, Ty=H, smx=-1, smn=W, cmx=0, hook=false, r0=rid[s], mixed=false;
+  const id=++ST.vgen; let sp=0,tl=0,nfc=0; stk[sp++]=s; q[tl++]=s; vis[s]=id; let sup=0, mass=0, My=0, Ty=H, smx=-1, smn=W, cmx=0, hook=false, r0=rid[s], mixed=false;
   while(sp>0){
     if(tl>CAP)return; // part of the landscape itself: too big to fall
     if(sup>=1e9&&!init)return; // proven sound (cells walked so far count as sound for later floods)
@@ -140,9 +154,10 @@ function flood(s,init){
         else if(vis[j]<vstart){vis[j]=id;q[tl++]=j;stk[sp++]=j;}
         else if(vis[j]!==id)sup+=1e9; // touches a region already judged sound this pass
       }
-      else if(d===3&&kj===P){sup+=90;if(x<smn)smn=x;if(x>smx)smx=x;} // resting on loose debris: weak support
+      else if(d===3&&kj===P){if(nfc<PCAP)fcand[nfc++]=j;else{sup+=90;if(x<smn)smn=x;if(x>smx)smx=x;}} // resting on loose debris: weak support, judged after the walk
     }
   }
+  for(let k=0;k<nfc;k++){const j=fcand[k];if(pileHolds(j,vis,id)){const x=j%W;sup+=90;if(x<smn)smn=x;if(x>smx)smx=x;}}
   if(hook)sup+=1e9;
   if(init){ // generated as-is: tiny floaters vanish, bigger ones hang on hooks until damaged; the rest get a 1.5x safety margin
     if(sup===0)return; // floating bits are the anchor pass's job

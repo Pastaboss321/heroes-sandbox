@@ -1,19 +1,20 @@
 // Spider-Man: sprite, palette, rig entry, powers and roster entry.
 import { ray, solidCells, tramps, webCell, webEnemy, webLine } from './wave2.js';
 import { ST } from '../state.js';
-import { KIND, R, S, rgb } from '../world/materials.js';
-import { H, W, t } from '../world/grid.js';
+import { R, rgb } from '../world/materials.js';
+import { H, VH, W } from '../world/grid.js';
 import { q } from '../world/support.js';
 import { makeBody } from '../world/bodies.js';
 import { spawn } from '../world/particles.js';
 import { afters, beams, fxWord } from '../render/fx.js';
-import { explode } from '../world/destruction.js';
+import { explode, punchOut } from '../world/destruction.js';
 import { ANIM, rect } from '../render/rig.js';
 import { snd } from '../sfx.js';
 import { grabRegion, shots } from './powers.js';
 import { ACT } from './xmen.js';
-import { mouse } from '../player.js';
-import { damageEnemies, enemies, enemyAt, hitEnemy, nearestEnemy } from '../enemies/core.js';
+import { hurlBody } from './villains.js';
+import { SKY, boxHit, carve, mouse } from '../player.js';
+import { damageEnemies, damageLine, enemies, enemyAt, hitEnemy, nearestEnemy } from '../enemies/core.js';
 import { groundBelow } from '../ui/spawn.js';
 
 const SPR_SPIDEY=[
@@ -47,9 +48,12 @@ const SPIDEY_POWERS=[
  // sticky web pellets: a hit enemy is wrapped up, a wall gets a splat of web
  {n:'Web Shot',fn:(a,p,use)=>{if(!use(4))return;ST.cd=9;shots.push({x:a.h.x,y:a.h.y,vx:a.dx*7,vy:a.dy*7,type:'web',life:90,grav:.03,col:[236,236,242],
    onHit:sh=>{const e=enemyAt(sh.x,sh.y,3);if(e){webEnemy(e,150);fxWord(e.x,e.y-e.def.h/2-6,'THWIP!',.8,'#f3e9d2');}else for(let y=-2;y<=2;y++)for(let x=-2;x<=2;x++)if(x*x+y*y<6&&R()<.8)webCell(sh.x-sh.vx*.3+x|0,sh.y-sh.vy*.3+y|0);}});snd('whoosh',a.h.x,a.h.y,{v:.4,pitch:1.6});}},
- // a tightrope of silk strung between the walls on either side of the aim line (it holds weight)
- {n:'Web Line',fn:(a,p,use)=>{const f=ray(a.h.x,a.h.y,a.dx,a.dy,240),b=ray(a.h.x,a.h.y,-a.dx,-a.dy,240);if(!f.hit){fxWord(p.x,p.y-ST.PH-6,'NOTHING TO STICK TO',.6,'#f3e9d2',true);return;}if(!use(10))return;ST.cd=16;
-   const ax=b.hit?b.x:a.h.x,ay=b.hit?b.y:a.h.y;webLine(ax|0,ay|0,f.x|0,f.y|0);fxWord((ax+f.x)/2,(ay+f.y)/2-8,'THWIP!',.9,'#f3e9d2',true);snd('whoosh',p.x,p.y,{v:.5,pitch:1.8});}},
+ // web up every chunk of building around the cursor, then yank them all into each other
+ {n:'Web Wrecker',fn:(a,p,use)=>{const cx=mouse.wx,cy=mouse.wy,hits=[];for(let k=0;k<8;k++){const an=k/8*6.283+R()*.3,r=ray(cx,cy,Math.cos(an),Math.sin(an),110);if(r.hit)hits.push(r);}if(hits.length<2||!use(30))return;ST.cd=55;let k=0;
+   for(const h of hits)webLine(cx|0,cy|0,h.x|0,h.y|0);fxWord(cx,cy-20,'WEB WRECKER!',1.2,'#f3e9d2',true);snd('whoosh',cx,cy,{pitch:1.6});
+   ACT.push(()=>{k++;for(const h of hits)beams.push({x0:cx,y0:cy,x1:h.x,y1:h.y,life:1,w:0,c:[240,240,246],g:[160,160,170]});if(k<14)return true;
+     for(const h of hits){const n=solidCells(h.x,h.y,9,false);if(n<12)continue;const b=makeBody(q,n,false);if(b){hurlBody(b,cx,cy,9);b.safeP=ST.frame+20;}}
+     snd('rip',cx,cy);ST.shake+=8;fxWord(cx,cy-20,'HEAVE!',1.2,'#f3e9d2',true);return false;});}},
  // a net that bursts open on impact: a lattice of web that tangles everything inside it
  {n:'Web Net',fn:(a,p,use)=>{if(!use(18))return;ST.cd=30;shots.push({x:a.h.x,y:a.h.y,vx:a.dx*5.5,vy:a.dy*5.5,type:'web',life:80,grav:.05,col:[236,236,242],
    onHit:sh=>{const cx=sh.x-sh.vx*.4|0,cy=sh.y-sh.vy*.4|0;for(let y=-9;y<=9;y++)for(let x=-14;x<=14;x++)if((x%4===0||y%4===0)&&x*x/196+y*y/81<1)webCell(cx+x,cy+y);
@@ -61,10 +65,13 @@ const SPIDEY_POWERS=[
    const n=solidCells(r.x,r.y,5,false);if(n>=12){const b=makeBody(q,n,false);if(b){b.vx=dx/d*7;b.vy=dy/d*7-2;b.thrown=true;b.safeP=ST.frame+30;}}}},
  // a sticky grenade that bursts into a cloud of webbing
  {n:'Web Bomb',fn:(a,p,use)=>{if(!use(20))return;ST.cd=36;shots.push({x:a.h.x,y:a.h.y,vx:a.dx*4.5,vy:a.dy*4.5-1.5,type:'web',life:200,grav:.15,col:[236,236,242],
-   onHit:sh=>{const cx=sh.x|0,cy=sh.y-2|0;for(let k=0;k<260;k++){const an=R()*6.283,d=Math.sqrt(R())*18;webCell(cx+Math.cos(an)*d|0,cy+Math.sin(an)*d|0);}
+   onHit:sh=>{const cx=sh.x|0,cy=sh.y-2|0;explode(cx,cy,11,{col:[236,236,242]});damageEnemies(cx,cy,26,26,0,-3,true);for(let k=0;k<260;k++){const an=R()*6.283,d=Math.sqrt(R())*18;webCell(cx+Math.cos(an)*d|0,cy+Math.sin(an)*d|0);}
      for(const e of enemies)if(Math.hypot(e.x-cx,e.y-cy)<22+e.def.w/2)webEnemy(e,220);for(let k=0;k<30;k++)spawn(cx,cy,(R()-.5)*4,(R()-.5)*4,rgb(240,240,246),20,0,0,1);fxWord(cx,cy-16,'SPLORT!',1.1,'#f3e9d2',true);snd('pop',cx,cy);}});}},
- // danger sense: for seven seconds most hits are simply dodged
- {n:'Spider-Sense',fn:(a,p,use)=>{if(p.sense>0||!use(25))return;ST.cd=30;p.sense=420;fxWord(p.x,p.y-ST.PH-8,'MY SPIDER-SENSE!',1,'#f3e9d2',true);snd('charge',p.x,p.y,{pitch:1.8});}},
+ // slingshot himself off two web lines: a human cannonball that smashes through everything in the way
+ {n:'Human Cannonball',fn:(a,p,use)=>{if(!use(26))return;ST.cd=50;const dx=a.dx,dy=a.dy;let k=0;fxWord(p.x,p.y-ST.PH-8,'SLINGSHOT!',1.2,'#f3e9d2',true);snd('whoosh',p.x,p.y,{pitch:1.2});
+   ACT.push(()=>{k++;p.script=2;p.x=Math.max(5,Math.min(W-5,p.x+dx*8));p.y=Math.max(ST.PH+2-SKY+VH/2,Math.min(H-8,p.y+dy*8));p.face=dx<0?-1:1;
+     carve(p.x+dx*4,p.y-ST.PH/2+dy*4,7,dx*4,dy*4);damageEnemies(p.x,p.y-ST.PH/2,14,16,dx*7,dy*7-2);afters.push({x:p.x,y:p.y,ang:0,face:p.face,life:10});if(k%3===0)ST.shake=Math.max(ST.shake,4);
+     if(k>=22){p.script=0;p.vx=dx*3;p.vy=dy*3-1;explode(p.x+dx*6|0,p.y-ST.PH/2+dy*6|0,12,{self:true,col:[220,40,40],word:'THWA-KOOM!'});damageEnemies(p.x,p.y-ST.PH/2,30,40,dx*6,-4,true);if(boxHit(p.x,p.y))punchOut(p);return false;}return true;});}},
  // a springy web hammock: anything that lands on it is flung high
  {n:'Web Trampoline',fn:(a,p,use)=>{if(!use(15))return;ST.cd=24;const x=mouse.wx|0,gy=groundBelow(x,mouse.wy)-4;if(gy>=H-46)return;
    for(let k=-16;k<=16;k++)webCell(x+k,gy+Math.round(Math.abs(k)/16*2));for(const s of [-16,16])for(let y=gy;y<gy+4;y++)webCell(x+s,y+2);
@@ -72,14 +79,19 @@ const SPIDEY_POWERS=[
  // zip down a web line and dropkick whatever is at the end of it
  {n:'Swing Kick',fn:(a,p,use)=>{const r=ray(p.x,p.y-ST.PH/2,a.dx,a.dy,190,true);if(!use(16))return;ST.cd=30;const tx=r.x-a.dx*6,ty=r.y-a.dy*6+ST.PH/2,x0=p.x,y0=p.y;let k=0;
    ACT.push(()=>{p.script=2;k++;const u=k/9;p.x=x0+(tx-x0)*u;p.y=y0+(ty-y0)*u;p.grip={x:r.x,y:r.y};p.face=a.dx<0?-1:1;afters.push({x:p.x,y:p.y,ang:0,face:p.face,life:8});beams.push({x0:p.x,y0:p.y-ST.PH/2,x1:r.x,y1:r.y,life:1,w:0,c:[240,240,246],g:[160,160,170]});
-     if(k>=9){p.script=0;p.grip=null;p.vx=a.dx*3;p.vy=-2;damageEnemies(p.x+a.dx*6,p.y-ST.PH/2,16,30,a.dx*7,a.dy*7-2);explode(p.x+a.dx*8|0,p.y-ST.PH/2|0,4,{self:true,quiet:true});fxWord(p.x,p.y-ST.PH-6,'THWAK!',1.2,'#f3e9d2',true);snd('punch',p.x,p.y);ST.shake+=4;return false;}return true;});}},
+     if(k>=9){p.script=0;p.grip=null;p.vx=a.dx*3;p.vy=-2;damageEnemies(p.x+a.dx*6,p.y-ST.PH/2,16,30,a.dx*7,a.dy*7-2);explode(p.x+a.dx*8|0,p.y-ST.PH/2|0,11,{self:true,col:[220,40,40]});fxWord(p.x,p.y-ST.PH-6,'THWAK!',1.2,'#f3e9d2',true);snd('punch',p.x,p.y);ST.shake+=4;return false;}return true;});}},
  // web a whole building and haul it over
  {n:'Web Topple',fn:(a,p,use)=>{const r=ray(a.h.x,a.h.y,a.dx,a.dy,260);if(!r.hit)return;let n=grabRegion(r.x|0,r.y|0,6);if(!n)n=solidCells(r.x,r.y,6,false);if(n<12)return;if(!use(30))return;ST.cd=60;
    const b=makeBody(q,n,false);if(!b)return;const dir=p.x<b.x?-1:1;b.vx=dir*3.5;b.vy=-1.5;b.va=dir*.03;b.topple=dir;b.thrown=true;b.safeP=ST.frame+40;
    for(let k=0;k<3;k++)beams.push({x0:a.h.x,y0:a.h.y,x1:r.x+(R()-.5)*6,y1:r.y+(R()-.5)*6,life:10,w:0,c:[240,240,246],g:[160,160,170]});fxWord(r.x,r.y-12,'HEAVE!',1.2,'#f3e9d2',true);snd('rip',r.x,r.y);}},
- // cocoon a foe and string it up from the nearest ceiling
- {n:'Gotcha!',fn:(a,p,use)=>{const e=nearestEnemy(mouse.wx,mouse.wy,44);if(!e||e.def.title||e.hang)return;if(!use(22))return;ST.cd=36;let top=-1;for(let d=e.def.h/2+2;d<140;d++){const Y=e.y-d|0;if(Y<2)break;const m=t[Y*W+(e.x|0)];if(m&&KIND[m]===S){top=Y+1;break;}}
-   if(top<0)top=Math.max(4,(ST.camY|0)+4);e.hang={x:e.x,y:top,len:Math.min(40,Math.max(10,(e.y-top)*.5)),life:600};webEnemy(e,600);fxWord(e.x,e.y-14,'HANG AROUND!',.9,'#f3e9d2',true);snd('whoosh',e.x,e.y,{pitch:1.6});}},
+ // Maximum Spider: ricochet wall to wall to foe, every landing a blast
+ {n:'Maximum Spider',fn:(a,p,use)=>{if(!use(40))return;ST.cd=80;let n=0,dx=a.dx,dy=a.dy,seg=0;fxWord(p.x,p.y-ST.PH-10,'MAXIMUM SPIDER!',1.4,'#e23b2e',true);snd('whoosh',p.x,p.y,{pitch:1.4});
+   ACT.push(()=>{p.script=2;const nx=p.x+dx*9,ny=p.y+dy*9;afters.push({x:p.x,y:p.y,ang:0,face:p.face,life:10});damageLine(p.x,p.y-ST.PH/2,nx,ny-ST.PH/2,5,10);
+     if(boxHit(nx,ny)||nx<6||nx>W-6||ny<ST.PH+2-SKY+VH/2||ny>H-10||++seg>14){n++;seg=0;explode(p.x|0,p.y-ST.PH/2|0,9,{self:true,col:[220,40,40]});damageEnemies(p.x,p.y-ST.PH/2,22,24,0,-3,true);ST.shake=Math.max(ST.shake,6);
+       const e=nearestEnemy(p.x,p.y,220);let tx,ty;if(e&&R()<.6){tx=e.x;ty=e.y+ST.PH/2;}else{const an=R()*6.283;tx=p.x+Math.cos(an)*100;ty=p.y+Math.sin(an)*60;}const d=Math.hypot(tx-p.x,ty-p.y)||1;dx=(tx-p.x)/d;dy=(ty-p.y)/d;p.face=dx<0?-1:1;
+       fxWord(p.x,p.y-ST.PH-6,['THWAK!','KRAK!','WHAM!','SMASH!'][n%4],.9,'#f3e9d2',true);snd('punch',p.x,p.y);}
+     else{p.x=nx;p.y=ny;}
+     if(n>=8){p.script=0;p.vx=0;p.vy=-2;if(boxHit(p.x,p.y))punchOut(p);return false;}return true;});}},
 ];
 
 // roster entry (CHARS in heroes/index.js)

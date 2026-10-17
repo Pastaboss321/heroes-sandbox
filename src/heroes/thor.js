@@ -2,7 +2,7 @@
 import './hulk.js'; // evaluation order: runs after heroes/hulk.js
 import { ST } from '../state.js';
 import { R, rgb } from '../world/materials.js';
-import { H, W } from '../world/grid.js';
+import { H, VH, W } from '../world/grid.js';
 import { bodies } from '../world/support.js';
 import { pvx, pvy, px, py, spawn } from '../world/particles.js';
 import { afters, beams, flash, fxBurst, fxImpact, fxWord, rings } from '../render/fx.js';
@@ -11,7 +11,7 @@ import { ANIM, rect } from '../render/rig.js';
 import { snd, sndLoop } from '../sfx.js';
 import { BLUE, beamCore, lightning, lightningStrike, pickC, pins, shots, zap } from './powers.js';
 import { ACT, aimFrom } from './xmen.js';
-import { boxHit, carve, hand, mouse, toggleFly } from '../player.js';
+import { SKY, boxHit, carve, hand, mouse, toggleFly } from '../player.js';
 import { damageEnemies, enemies, hitEnemy, nearestEnemy } from '../enemies/core.js';
 
 const SPR_THOR=[
@@ -67,7 +67,7 @@ THOR_POWERS.push(
  {n:'Hammer Tow',fn:(a,p,use)=>{if(p.tow||!use(20))return;ST.cd=40;const dx=a.dx,dy=a.dy;let k=0;if(ST.CH.fly&&!p.fly)toggleFly(true);p.tow={dx,dy};fxWord(p.x,p.y-ST.PH-8,'HYAAAH!',1.1,'#bfe3ff',true);snd('whoosh',p.x,p.y);
    ACT.push(()=>{k++;p.script=2;p.fly=true;
      for(let s=0;s<3;s++){p.x+=dx*3;p.y+=dy*3;carve(p.x+dx*11,p.y-ST.PH/2+dy*11,6.5,dx*6,dy*6);if(s===1)carve(p.x,p.y-ST.PH/2,5,dx*4,dy*4);}
-     p.x=Math.max(5,Math.min(W-5,p.x));p.y=Math.max(ST.PH+2,Math.min(H-8,p.y));
+     p.x=Math.max(5,Math.min(W-5,p.x));p.y=Math.max(ST.PH+2-SKY+VH/2,Math.min(H-8,p.y));
      const hx=p.x+dx*11,hy=p.y-ST.PH/2+dy*11;damageEnemies(hx,hy,12,14,dx*6,dy*6);
      for(const b of bodies){if(!b.held&&Math.hypot(b.x-hx,b.y-hy)<b.rmax+8){b.vx+=dx*2;b.vy+=dy*2;b.thrown=true;}}
      if(k%3===0)zap(hx,hy,hx+(R()-.5)*40,hy+(R()-.5)*40,[230,240,255],[120,170,255]);spawn(hx,hy,(R()-.5)*2,(R()-.5)*2,pickC(BLUE),12,0,1,0,1);

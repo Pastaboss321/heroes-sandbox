@@ -2,8 +2,9 @@
 import './spiderman.js'; // evaluation order: runs after heroes/spiderman.js
 import { ST } from '../state.js';
 import { ACID, ASH, FIRE, GFIRE, GLASS, ICE, KIND, LAVA, NEON, OBSID, OIL, R, S, SAND, SMOKE, SNOW, STEAM, WATER, WOOD, rgb } from '../world/materials.js';
-import { H, N, VH, VW, W, bg, bgB, bgD, col, setc, t } from '../world/grid.js';
-import { rcount, rid, str } from '../world/support.js';
+import { H, N, VH, VW, W, col, setc, t } from '../world/grid.js';
+import { bodies, q } from '../world/support.js';
+import { makeBody } from '../world/bodies.js';
 import { mix3 } from '../render/look.js';
 import { spawn } from '../world/particles.js';
 import { beams, flash, fxImpact, fxWord, rings } from '../render/fx.js';
@@ -11,10 +12,11 @@ import { explode } from '../world/destruction.js';
 import { ANIM, rect } from '../render/rig.js';
 import { snd, sndLoop } from '../sfx.js';
 import { pickC, shockFx, shots } from './powers.js';
-import { freezeArea, iceAt } from './xmen.js';
-import { gzones } from './wave2.js';
-import { hand, mouse, pl_ } from '../player.js';
-import { damageEnemies, enemies, enemyAt, hitEnemy } from '../enemies/core.js';
+import { ACT, freezeArea, iceAt } from './xmen.js';
+import { gzones, ray, solidCells } from './wave2.js';
+import { hurlBody } from './villains.js';
+import { hand, mouse } from '../player.js';
+import { damageEnemies, enemies, hitEnemy } from '../enemies/core.js';
 import { OBJS, placeStruct } from '../ui/spawn.js';
 
 const SPR_WANDA=[
@@ -55,25 +57,22 @@ const WANDA_POWERS=[
  {n:'Transmute',fn:(a,p,use)=>{if(!use(26))return;ST.cd=40;const cx=mouse.wx|0,cy=mouse.wy|0,r=22;
    for(let y=-r;y<=r;y++)for(let x=-r;x<=r;x++){if(x*x+y*y>r*r)continue;const X=cx+x,Y=cy+y;if(X<0||X>=W||Y<0||Y>=H-44)continue;const i=Y*W+X,m=t[i];if(KIND[m]===S&&m!==OBSID){const c=col[i];setc(i,SAND);col[i]=mix3(c,[214,186,118],.35);}}
    rings.push({x:cx,y:cy,r:4,vr:3,life:10,c:[255,70,140]});flash(cx,cy,40,[255,60,130],6);fxWord(cx,cy-r-6,'TRANSMUTE',1.1,'#ff6fa8',true);snd('psi',cx,cy,{pitch:.6});}},
- // hold: a hex zone where enemy fire turns around and enemies fumble
- {n:'Chaos Field',fn:(a,p,use)=>{if(!use(.6))return;const cx=mouse.wx,cy=mouse.wy,r=42;
-   for(const e of enemies)if(Math.hypot(e.x-cx,e.y-cy)<r+e.def.w/2){e.hex=Math.max(e.hex||0,30);if(R()<.04){e.vx+=(R()-.5)*4;e.vy-=R()*2;}}
-   for(const s of shots)if(s.owner==='enemy'&&Math.hypot(s.x-cx,s.y-cy)<r){s.owner='player';s.vx*=-1.1;s.vy*=-1.1;s.col=[255,60,130];s.ecol=[255,60,130];}
-   for(let k=0;k<5;k++){const an=R()*6.283,rr=r*(.4+R()*.6);spawn(cx+Math.cos(an)*rr,cy+Math.sin(an)*rr,-Math.sin(an)*1.2,Math.cos(an)*1.2,rgb(255,60+R()*60|0,140),12,0,1,0,1);}
-   if(ST.frame%3===0)rings.push({x:cx,y:cy,r:r,vr:-1.5,life:6,c:[255,60,130]});const h=hand();beams.push({pts:[[h.x,h.y],[(h.x+cx)/2+(R()-.5)*14,(h.y+cy)/2+(R()-.5)*14],[cx,cy]],life:1,c:[255,140,190],g:[255,40,120]});sndLoop('hexf','arc',cx,cy,{v:.5});}},
+ // hold: a storm of hex lightning tears up everything around the cursor
+ {n:'Hex Storm',fn:(a,p,use)=>{if(!use(.9))return;const cx=mouse.wx,cy=mouse.wy;if(ST.frame%4===0){const x=cx+(R()-.5)*90,r=ray(x,cy-70,0,1,160,true),h=hand();
+     beams.push({pts:[[h.x,h.y],[(h.x+x)/2+(R()-.5)*20,(h.y+r.y)/2+(R()-.5)*20],[x,r.y]],life:3,c:[255,150,200],g:[255,40,120]});explode(x|0,r.y|0,5+(R()*4|0),{self:true,quiet:true,col:[255,60,130]});damageEnemies(x,r.y,12,8,0,-2,true);}
+   if(ST.frame%3===0)rings.push({x:cx,y:cy,r:50,vr:-2,life:6,c:[255,60,130]});ST.shake=Math.max(ST.shake,2);sndLoop('hexf','arc',cx,cy,{v:.6});}},
  // "No more." Every weak enemy on screen simply stops existing; the rest are badly hurt
  {n:'No More',fn:(a,p,use)=>{if(!use(60))return;ST.cd=180;let gone=0;fxWord(p.x,p.y-ST.PH-12,'NO MORE.',1.8,'#ff6fa8',true);ST.hitstop=Math.max(ST.hitstop,5);fxImpact(p.x,p.y-ST.PH/2,5);shockFx(p.x,p.y-ST.PH/2,1.2);snd('screech',p.x,p.y,{pitch:.6});
    for(const e of enemies){if(e.x<ST.camX-20||e.x>ST.camX+VW+20||e.y<ST.camY-20||e.y>ST.camY+VH+20)continue;if(!e.def.title&&e.hp<=90){for(let k=0;k<30;k++)spawn(e.x+(R()-.5)*e.def.w,e.y+(R()-.5)*e.def.h,(R()-.5)*1.5,-R()*2,rgb(255,40+R()*80|0,120),30,0,1,0,1);e.mem.noScore=false;e.hp=0;gone++;}else hitEnemy(e,e.def.hp*.25,0,0);}
    flash(p.x,p.y-ST.PH/2,200,[255,40,120],12);if(gone)fxWord(p.x,p.y-ST.PH-34,gone+' ERASED',1.1,'#ff6fa8',true);}},
- // a hex of bad luck: weapons jam and backfire, they trip, every hit lands harder
- {n:'Bad Luck',fn:(a,p,use)=>{if(!use(24))return;ST.cd=40;const cx=mouse.wx,cy=mouse.wy;let n=0;for(const e of enemies)if(Math.hypot(e.x-cx,e.y-cy)<70+e.def.w/2){e.hex=Math.max(e.hex||0,480);n++;}
-   rings.push({x:cx,y:cy,r:6,vr:5,life:14,c:[255,60,130]});fxWord(cx,cy-30,n?'JINXED':'...',1,'#ff6fa8',true);snd('psi',cx,cy,{pitch:1.3});}},
- // reweave reality: the city in the circle goes back to how it was before the fight
- {n:'Reweave',fn:(a,p,use)=>{if(!ST.T0||!use(30))return;ST.cd=50;const cx=mouse.wx|0,cy=mouse.wy|0,r=36,rr=rcount.length;let n=0;rcount.push(0);
-   for(let y=-r;y<=r;y++)for(let x=-r;x<=r;x++){if(x*x+y*y>r*r)continue;const X=cx+x,Y=cy+y;if(X<0||X>=W||Y<0||Y>=H-2)continue;const i=Y*W+X;
-     if(Math.abs(X-pl_.x)<=ST.PW/2+1&&Y>pl_.y-ST.PH-1&&Y<=pl_.y)continue;if(enemyAt(X,Y,0))continue;
-     if(t[i]!==ST.T0[i]||col[i]!==ST.C0[i]){setc(i,ST.T0[i]);col[i]=ST.C0[i];if(KIND[t[i]]===S){rid[i]=rr;str[i]=15;n++;}}if(bg[i]!==ST.B0[i]){bg[i]=ST.B0[i];bgB[i]=bg[i]!==bgD[i]?1:0;}}
-   rcount[rr]=n;for(let k=0;k<60;k++){const an=R()*6.283,d=R()*r;spawn(cx+Math.cos(an)*d,cy+Math.sin(an)*d,-Math.cos(an),-Math.sin(an),rgb(255,90,160),18,0,1,0,1);}fxWord(cx,cy-r-6,'REWOVEN',1.1,'#ff6fa8',true);snd('psi',cx,cy,{pitch:.8});}},
+ // a rupture in reality runs out from her hand, detonating everything along it
+ {n:'Reality Rupture',fn:(a,p,use)=>{if(!use(34))return;ST.cd=55;const dx=a.dx,dy=a.dy,x0=a.h.x,y0=a.h.y;let k=0,x=x0,y=y0;fxWord(x+dx*40,y+dy*40-12,'RUPTURE!',1.3,'#ff6fa8',true);snd('screech',x,y,{pitch:.7,v:.6});
+   ACT.push(()=>{k++;x+=dx*7;y+=dy*7;if(k%2===0){explode(x+(R()-.5)*6|0,y+(R()-.5)*6|0,8+(R()*4|0),{self:true,quiet:k%6!==0,col:[255,60,130]});damageEnemies(x,y,16,22,dx*3,-3,true);}
+     beams.push({x0,y0,x1:x,y1:y,life:2,w:0,c:[255,170,210],g:[255,40,120]});ST.shake=Math.max(ST.shake,5);return k<40&&x>0&&x<W&&y<H;});}},
+ // tear a ball of the city loose, hold it in a hex sphere over her head, then hurl it
+ {n:'Hex Sphere',fn:(a,p,use)=>{const cx=mouse.wx|0,cy=mouse.wy|0,n=solidCells(cx,cy,16,false);if(n<40||!use(40))return;ST.cd=70;const b=makeBody(q,n,true);if(!b)return;let k=0;fxWord(cx,cy-24,'HEX SPHERE',1.2,'#ff6fa8',true);snd('rip',cx,cy);ST.shake+=6;
+   ACT.push(()=>{k++;if(!bodies.includes(b))return false;b.tx=p.x;b.ty=p.y-ST.PH-b.rmax-10;if(k%2===0){const an=R()*6.283;spawn(b.x+Math.cos(an)*b.rmax,b.y+Math.sin(an)*b.rmax,0,0,rgb(255,60,130),10,0,1,0,1);}
+     if(k<40)return true;b.held=false;b.tx=b.ty=undefined;hurlBody(b,mouse.wx,mouse.wy,11);b.safeP=ST.frame+30;fxWord(b.x,b.y-b.rmax,'BEGONE!',1,'#ff6fa8',true);snd('throw',b.x,b.y);return false;});}},
  // gravity runs backwards inside the hex for five seconds
  {n:'Gravity Hex',fn:(a,p,use)=>{if(!use(30))return;ST.cd=50;gzones.push({x:mouse.wx,y:mouse.wy,r:62,life:300});fxWord(mouse.wx,mouse.wy-66,'UPSIDE DOWN',1.1,'#ff6fa8',true);snd('psi',mouse.wx,mouse.wy,{pitch:.5});}},
  // swap the elements: water to lava, lava to water, fire to ice, ice to fire, sand to glass and back

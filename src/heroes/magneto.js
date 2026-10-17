@@ -6,7 +6,7 @@ import { H, W, col, markDirty, setc, t, wake } from '../world/grid.js';
 import { bodies, gnd, q } from '../world/support.js';
 import { makeBody } from '../world/bodies.js';
 import { disc, tint } from '../maps/gen.js';
-import { spawn } from '../world/particles.js';
+import { pvx, pvy, px, py, spawn } from '../world/particles.js';
 import { beams, fxWord, rings } from '../render/fx.js';
 import { ANIM, rect } from '../render/rig.js';
 import { snd, sndLoop } from '../sfx.js';
@@ -67,10 +67,19 @@ const MAG_POWERS=[
  // a steel rod fired at magnetic speed: pierces everything in a straight line
  {n:'Rail Shot',fn:(a,p,use)=>{if(!use(26))return;ST.cd=40;let x=a.h.x,y=a.h.y;for(let s=0;s<520;s++){x+=a.dx;y+=a.dy;const X=x|0,Y=y|0;if(X<1||X>=W-1||Y<1||Y>=H-44)break;const i=Y*W+X,m=t[i];if(m&&KIND[m]!==G&&KIND[m]!==F){if(R()<.3)spawn(X,Y,a.dx*3+(R()-.5)*2,a.dy*3-R()*2,col[i],40,KIND[m]===S?RUBBLE:m,0);setc(i,EMPTY);}}
    damageLine(a.h.x,a.h.y,x,y,4,60);beams.push({x0:a.h.x,y0:a.h.y,x1:x,y1:y,life:5,w:1,c:[240,230,255],g:[170,90,255]});fxWord(a.h.x+a.dx*40,a.h.y-10,'SHHHRAK!',1,'#c88cff',true);snd('zap',a.h.x,a.h.y,{pitch:.5});ST.shake+=5;}},
- // hold: crush the metal in robots near the cursor
- {n:'Crush',fn:(a,p,use)=>{if(!use(.6))return;const cx=mouse.wx,cy=mouse.wy;for(const e of enemies)if(isMetal(e)&&Math.hypot(e.x-cx,e.y-cy)<40+e.def.w/2){hitEnemy(e,2.4,0,0);e.vx*=.6;e.vy*=.6;if(ST.frame%3===0)spawn(e.x+(R()-.5)*e.def.w,e.y+(R()-.5)*e.def.h,(R()-.5)*2,(R()-.5)*2,rgb(255,230,160),8,0,1,1);}
-   if(ST.frame%2===0)rings.push({x:cx,y:cy,r:30,vr:-2,life:5,c:[200,120,255]});sndLoop('crush','hum',cx,cy,{v:.7});}},
+ // hold: a magnetic implosion. Debris, wreckage, loose steel and robots are dragged into one crushing point
+ {n:'Magnetic Implosion',fn:(a,p,use)=>{if(!use(1))return;const cx=mouse.wx,cy=mouse.wy;
+   for(const b of bodies){if(b.held)continue;const dx=cx-b.x,dy=cy-b.y,d=Math.hypot(dx,dy)||1;if(d<160){b.vx+=dx/d*.9;b.vy+=dy/d*.9-.4;b.thrown=true;}}
+   for(let n=0;n<ST.np;n++){const dx=cx-px[n],dy=cy-py[n],d2=dx*dx+dy*dy;if(d2<25600){const d=Math.sqrt(d2)||1;pvx[n]+=dx/d*.5;pvy[n]+=dy/d*.5-.15;}}
+   if(ST.frame%2===0)for(let k=0;k<6;k++){const X=cx+(R()-.5)*180|0,Y=cy+(R()-.5)*120|0;if(X<1||X>=W-1||Y<1||Y>=H-44)continue;const i=Y*W+X;if(t[i]===STEEL||(KIND[t[i]]===S&&!gnd[i]&&R()<.3)){const c=col[i];setc(i,EMPTY);const dx=cx-X,dy=cy-Y,d=Math.hypot(dx,dy)||1;spawn(X,Y,dx/d*3,dy/d*3,c,80,RUBBLE,0,0);}}
+   for(const e of enemies){if(e.def.title)continue;const d=Math.hypot(e.x-cx,e.y-cy);if(d<90+e.def.w/2){e.vx+=(cx-e.x)*.02;e.vy+=(cy-e.y)*.02;if(isMetal(e))hitEnemy(e,1.6,0,0);}}
+   if(ST.frame%2===0)rings.push({x:cx,y:cy,r:60,vr:-4,life:6,c:[200,120,255]});ST.shake=Math.max(ST.shake,2);sndLoop('crush','hum',cx,cy,{v:.8});}},
  // Asteroid M: rip a mountain of ground out from under the cursor and drop it from the sky
+ // every girder and steel beam around him tears loose and flies at the cursor as a storm of spikes
+ {n:'Girder Storm',fn:(a,p,use)=>{const L=[];for(let k=0;k<4000&&L.length<70;k++){const X=p.x+(R()-.5)*220|0,Y=p.y-ST.PH/2+(R()-.5)*220|0;if(X<1||X>=W-1||Y<1||Y>=H-44)continue;const i=Y*W+X;if(t[i]===STEEL||(KIND[t[i]]===S&&!gnd[i]&&R()<.1))L.push(i);}
+   if(L.length<10){fxWord(p.x,p.y-ST.PH-8,'NO METAL',.8,'#c88cff',true);return;}if(!use(45))return;ST.cd=80;
+   L.forEach((i,n)=>{const X=i%W,Y=(i/W)|0;setc(i,EMPTY);const dx=mouse.wx-X,dy=mouse.wy-Y,d=Math.hypot(dx,dy)||1,v=6+R()*2;shots.push({x:X,y:Y,vx:dx/d*v,vy:dy/d*v,type:'spike',life:120,col:[170,176,190],boom:5,grav:.05,delay:n>>1});});
+   fxWord(p.x,p.y-ST.PH-12,'GIRDER STORM!',1.4,'#c88cff',true);snd('rip',p.x,p.y);ST.shake+=8;}},
  {n:'Asteroid M',fn:(a,p,use)=>{if(!use(55))return;ST.cd=140;const cx=mouse.wx|0,cy=groundBelow(cx,mouse.wy)+10,n=solidCells(cx,cy,18,true);if(n<60)return;const b=makeBody(q,n,true);if(!b)return;b.tx=cx;b.ty=Math.max(30,ST.camY+40);let k=0;
    fxWord(cx,cy-40,'ASTEROID M!',1.5,'#c88cff',true);snd('rip',cx,cy);ST.shake+=10;ACT.push(()=>{k++;if(!bodies.includes(b))return false;if(k<60){b.tx=mouse.wx;b.ty=Math.max(30,ST.camY+40);return true;}b.held=false;b.vx=0;b.vy=10;b.thrown=true;b.safeP=ST.frame+30;return false;});}},
 ];

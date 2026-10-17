@@ -3,11 +3,12 @@ import { presentGL } from '../gl.js';
 import { drawEnemy } from './drawEnemy.js';
 import { ST } from '../state.js';
 import { ACID, EMBER, F, FIRE, G, GFIRE, GLASS, ICE, KIND, LAVA, NEON, PROPANE, R, S, SMOKE, STEAM, rgb } from '../world/materials.js';
+import { PHYS } from '../world/physics.js';
 import { H, VH, VW, W, bg, col, life, t } from '../world/grid.js';
 import { bodies } from '../world/support.js';
 import { SET, bgL, fgL, htL, inkL, lumC, lut, rimL } from './look.js';
 import { PAR } from '../maps/gen.js';
-import { pc, pg, pvx, pvy, px, py } from '../world/particles.js';
+import { pc, pg, pl, pvx, pvy, px, py } from '../world/particles.js';
 import { afters, beams, flashes, rings } from './fx.js';
 import { shade } from '../world/destruction.js';
 import { PP, posePlayer } from './rig.js';
@@ -17,25 +18,34 @@ import { DECOY_PAL, SPR_ICE } from '../heroes/iceman.js';
 import { FANT_A, FANT_B, FANT_PAL, drawWave2 } from '../heroes/wave2.js';
 import { glowRGB, hand, mouse, pl_ } from '../player.js';
 import { ENEMY_TYPES, enemies } from '../enemies/core.js';
-import { bctx, blur, buf, circle, ctx, cv, gaddS, gbuf, gctx, gimg, glc, img, line, mbuf, mctx, mimg, mm, pix, sctx, sim } from './canvas.js';
+import { bctx, blur, buf, circle, ctx, cv, gaddS, gbuf, gctx, gimg, glc, img, line, mbuf, mctx, mimg, mm, pix, pixA, sctx, sim } from './canvas.js';
 import { drawComics } from './comic.js';
 import { drawAxe, drawHammer, drawSprite } from './sprites.js';
 import { groundBelow } from '../ui/spawn.js';
 
 const flick=new Float32Array(256);
+const SPACE_ROW=new Uint32Array(VH);
+for(let y=0;y<VH;y++){const k=Math.pow(y/VH,3);SPACE_ROW[y]=rgb(3+k*22|0,4+k*38|0,12+k*70|0);}
 const htm=new Uint8Array(VW*VH);
 for(let y=0;y<VH;y++)for(let x=0;x<VW;x++){const ox2=(y>>2)&1?2:0,dx=((x+ox2)&3)-1.5,dy=(y&3)-1.5;htm[y*VW+x]=dx*dx+dy*dy<1.8?1:0;}
 export function render(){
   ST.CX=ST.camX|0;ST.CY=ST.camY|0;
   gbuf.fill(0);const ink=SET.ink;let nFire=0,nLava=0;
-  const fl=ST.frame, fx0=(ST.CX*PAR)|0, fyo=(ST.CY*.5)|0;
+  const fl=ST.frame, fx0=(ST.CX*PAR)|0, fyo=(ST.CY*.5)|0, sa=ST.spaceA, sa1=1-sa;
   for(let i=0;i<256;i++)flick[i]=R();
   let fi=0;
+  // space: near-black with a thin blue limb toward the horizon, and a slow-parallax star field
+  const spc=SPACE_ROW, stX=(ST.CX*.04)|0, stY=(ST.CY*.04)|0;
+  const toSpace=(f,sx,sy)=>{const s=spc[sy];let r=(f&255)*sa1+(s&255)*sa,g=((f>>8)&255)*sa1+((s>>8)&255)*sa,b=((f>>16)&255)*sa1+((s>>16)&255)*sa;
+    const X=sx+stX,Y=sy+stY,h=Math.imul(X*73856093^Y*19349663,2654435761)>>>0;
+    if((h&1023)<3){const tw=(h>>>10&255)/255,v=(130+tw*125)*(.75+.25*Math.sin(fl*.05+h))*sa*sa;r+=v;g+=v;b+=v*1.05;}
+    return rgb(r>255?255:r,g>255?255:g,b>255?255:b);};
   for(let sy=0;sy<VH;sy++){
-    const wy=sy+ST.CY;let i=wy*W+ST.CX,o=sy*VW;const frow=(Math.min(H-1,sy+fyo))*ST.FW+fx0;
+    const wy=sy+ST.CY;let i=wy*W+ST.CX,o=sy*VW;const frow=(Math.max(0,Math.min(H-1,sy+fyo)))*ST.FW+fx0; // above the map the skyline sinks away at half speed
+    if(wy<0){for(let sx=0;sx<VW;sx++,o++){const f=ST.far[frow+sx];buf[o]=sa>0?toSpace(f,sx,sy):f;}continue;}
     for(let sx=0;sx<VW;sx++,i++,o++){
       const m=t[i];
-      if(m===0){const b=bg[i];if(b)buf[o]=lut(bgL,b);else{const f=ST.far[frow+sx];buf[o]=ink&&!htm[o]&&!ST.farKeep[frow+sx]?lut(htL,f):f;}continue;}
+      if(m===0){const b=bg[i];if(b)buf[o]=lut(bgL,b);else{let f=ST.far[frow+sx];if(sa>0)f=toSpace(f,sx,sy);buf[o]=ink&&!htm[o]&&!ST.farKeep[frow+sx]?lut(htL,f):f;}continue;}
       switch(m){
         case FIRE:{nFire++;const l=life[i];const c=rgb(255,90+Math.min(160,l*4)+(flick[fi++&255]*30|0),20+(flick[fi++&255]*30|0));buf[o]=c;gbuf[o]=c;break;}
         case GFIRE:{nFire++;const f=flick[fi++&255];const c=f<.3?rgb(200,255,210):f<.7?rgb(60,255,100):rgb(20,180,60);buf[o]=c;gbuf[o]=c;break;}
@@ -69,7 +79,7 @@ export function render(){
       const so=(Y-ST.CY)*VW+(X-ST.CX);buf[so]=lut(fgL,bc);if(b.held&&!b.overhead&&((lx+ly+ST.frame)&7)===0)gbuf[so]=rgb(40,160,70);
     }
   }
-  for(let n=0;n<ST.np;n++){const c=pc[n],gl=pg[n]&1;pix(px[n],py[n],c,gl?c:0);const vx=pvx[n],vy=pvy[n];
+  for(let n=0;n<ST.np;n++){const c=pc[n],gl=pg[n]&1;if(pg[n]&16){pixA(px[n],py[n],c,Math.min(1,pl[n]/PHYS.dust.fade)*.75);continue;}pix(px[n],py[n],c,gl?c:0);const vx=pvx[n],vy=pvy[n];
     if(vx*vx+vy*vy>4.5){const c2=shade(c,.62);pix(px[n]-vx*.45,py[n]-vy*.45,c2,gl?c2:0);}} // motion streaks on fast debris and sparks
   // projectiles
   for(const s of shots){
@@ -130,7 +140,10 @@ export function render(){
     else if(T.cat==='objects'){const gy=SPAWN.snap?groundBelow(x,y):y;for(let k=-8;k<=8;k++)pix(x+k,gy,c,c);for(let yy=y;yy<gy;yy+=3)pix(x,yy,c,0);}
     else circle(x,y,SPAWN.brush+.5,c,0);}
   sctx.putImageData(img,0,0);if(SET.bloom||ST.GL&&SET.light)gctx.putImageData(gimg,0,0);
-  const sk=SET.shake/100,sx=(R()-.5)*ST.shake*ST.scale*.5*sk,sy=(R()-.5)*ST.shake*ST.scale*.5*sk;ST.shake*=.88;if(ST.shake<.2)ST.shake=0;
+  // shake: trauma curve (small rumbles barely register, big hits still land) driven by smooth noise, not per-frame random jumps
+  const sk=SET.shake/100,tr=Math.min(1,ST.shake/22),amp=tr*Math.sqrt(tr)*22*ST.scale*.3*sk,sf=ST.frame;
+  let sx=amp*(Math.sin(sf*.93)*.6+Math.sin(sf*1.71+1.3)*.4),sy=amp*(Math.sin(sf*1.07+2.1)*.6+Math.sin(sf*1.93+.4)*.4);ST.shake*=.88;if(ST.shake<.2)ST.shake=0;
+  sx-=(ST.camX-ST.CX)*ST.scale;sy-=(ST.camY-ST.CY)*ST.scale; // sub-pixel camera: the frame glides instead of stepping a whole pixel at a time
   if(ST.GL){presentGL(ST.ox+sx,ST.oy+sy,VW*ST.scale,VH*ST.scale,ST.scale,{bloom:SET.bloom,light:SET.light,time:performance.now()/1000,ca:SET.fx?Math.min(4,ST.caPulse):0,haze:SET.fx?.6:0,
       waves:SET.fx?waves.map(w=>({x:w.x-ST.CX,y:w.y-ST.CY,r:w.r,s:w.s*Math.min(1,w.life/12)})):null,tint:ST.slowT>0?[.72,.88,1.3,.6]:SPAWN.pause?[.8,.86,1.05,.45]:null,
       heat:ST.heatZ&&SET.fx?[ST.heatZ.x-ST.CX,ST.heatZ.y-ST.CY,ST.heatZ.r*1.3,Math.min(1,ST.heatZ.life/40)*1.2]:null});ctx.clearRect(0,0,cv.width,cv.height);} // WebGL draws the frame + bloom under the 2D overlay

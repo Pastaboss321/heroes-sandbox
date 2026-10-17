@@ -2,6 +2,7 @@
 import { tickAudio, ambience } from './audio.js';
 import './ui/input.js'; // evaluation order: runs after ui/input.js
 import { ST } from './state.js';
+import { PHYS, TICK } from './world/physics.js';
 import { H, W } from './world/grid.js';
 import { step } from './world/sim.js';
 import { bodies, supportCheck } from './world/support.js';
@@ -48,7 +49,7 @@ export function tick(){
 export function loop(now){
   const dt=Math.min(100,now-last);last=now;acc+=dt;
   const a=performance.now();
-  let n=0;if(ST.GS==='play'){if(ST.hitstop>0&&acc>=1000/60){ST.hitstop--;acc=0;}else{while(acc>=1000/60&&n<2){if(!SPAWN.slow||(++ST.slowTk&1))tick();acc-=1000/60;n++;}if(n===2)acc=0;}}else acc=0;
+  let n=0;if(ST.GS==='play'){if(ST.hitstop>0&&acc>=TICK){ST.hitstop--;acc=0;}else{while(acc>=TICK&&n<PHYS.maxSteps){if(!SPAWN.slow||(++ST.slowTk&1))tick();acc-=TICK;n++;}if(n===PHYS.maxSteps)acc=0;}}else acc=0;
   render();
   tickAudio();
   if(SET.sound){const on=ST.GS==='play'||ST.GS==='menu',md=MAPDEFS[mapSel.value];

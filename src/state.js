@@ -72,6 +72,11 @@ export const ST={
   CH:null, // current hero, set by setChar()
   camX:0,
   camY:0,
+  camVX:0,
+  camVY:0,
+  focX:0,
+  focY:0,
+  spaceA:0,
   // enemies/core.js
   wave:0,
   kills:0,

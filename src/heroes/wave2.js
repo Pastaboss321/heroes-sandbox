@@ -1,8 +1,8 @@
 // Hero wave 2 shared state and helpers: ants, tramps, gravity zones, limbo, portals, Reweave snapshot (T0/C0/B0), web helpers; updWave2/updPortals/drawWave2.
 import './storm.js'; // evaluation order: runs after heroes/storm.js
 import { ST } from '../state.js';
-import { EMPTY, G, GRASS, KIND, LEAF, P, R, S, WEB, WOOD, rgb } from '../world/materials.js';
-import { H, N, W, col, life, markDirty, setc, t, wake } from '../world/grid.js';
+import { EMPTY, G, KIND, OBSID, P, R, S, STEEL, WEB, rgb } from '../world/materials.js';
+import { H, N, W, bg, bgB, bgD, col, life, markDirty, setc, t, wake } from '../world/grid.js';
 import { bodies, gnd, pin, q } from '../world/support.js';
 import { finishBody } from '../world/bodies.js';
 import { pvx, pvy, px, py, solidAt, spawn } from '../world/particles.js';
@@ -31,8 +31,8 @@ export function solidCells(cx,cy,r,ground){let n=0;for(let y=-r;y<=r;y++)for(let
 export function updWave2(){
   // ants crawl along surfaces toward the nearest enemy, biting and eating anything organic
   for(let n=ants.length-1;n>=0;n--){const a=ants[n];if(--a.life<=0){ants.splice(n,1);continue;}const e=nearestEnemy(a.x,a.y,160);const tx=e?e.x:pl_.x+(n%20-10)*3;
-    a.vx+=(Math.sign(tx-a.x)*1.4-a.vx)*.1;a.vy+=.25;let nx=a.x+a.vx,ny=a.y+a.vy;if(solidAt(nx,a.y)){if(!solidAt(nx,a.y-2)){a.y-=2;}else{a.vy=-1.2;nx=a.x;}}
-    if(solidAt(nx,ny)){a.vy=0;ny=a.y;const bi=(ny+1|0)*W+(nx|0);if(bi>0&&bi<N){const m=t[bi];if((m===LEAF||m===GRASS||m===WOOD||m===WEB)&&R()<.01)setc(bi,EMPTY);}}a.x=nx;a.y=ny;
+    a.vx+=(Math.sign(tx-a.x)*1.4-a.vx)*.1;a.vy+=.25;let nx=a.x+a.vx,ny=a.y+a.vy;if(solidAt(nx,a.y)){const wi=(a.y|0)*W+(nx|0);if(wi>0&&wi<N-W*44&&t[wi]!==STEEL&&t[wi]!==OBSID&&R()<.08){setc(wi,EMPTY);if(bgB[wi]){bg[wi]=bgD[wi];bgB[wi]=0;}}else if(!solidAt(nx,a.y-2)){a.y-=2;}else{a.vy=-1.2;nx=a.x;}}
+    if(solidAt(nx,ny)){a.vy=0;ny=a.y;const bi=(ny+1|0)*W+(nx|0);if(bi>0&&bi<N){const m=t[bi];if(m&&m!==STEEL&&m!==OBSID&&bi<N-W*44&&R()<.03)setc(bi,EMPTY);}}a.x=nx;a.y=ny;
     if(e&&Math.abs(e.x-a.x)<e.def.w/2+1&&Math.abs(e.y-a.y)<e.def.h/2+1){hitEnemy(e,.25,0,0);if(R()<.05)a.life=0;}}
   for(let n=tramps.length-1;n>=0;n--){const tr=tramps[n];if(--tr.life<=0||t[tr.y*W+((tr.x0+tr.x1)>>1)]!==WEB){tramps.splice(n,1);continue;}
     const p=pl_;if(p.x>=tr.x0&&p.x<=tr.x1&&Math.abs(p.y-tr.y)<=2&&p.vy>=0&&!p.fly){p.vy=-9.5;p.ground=false;p.y-=2;snd('jump',p.x,p.y,{pitch:1.6});fxWord(p.x,p.y-ST.PH-4,'BOING!',.7,'#f3e9d2');}

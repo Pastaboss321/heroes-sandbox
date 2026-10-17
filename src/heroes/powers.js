@@ -6,11 +6,11 @@ import { CHN, CW, H, N, VH, W, bg, bgB, bgD, booms, col, markDirty, setc, stamp,
 import { ignite } from '../world/sim.js';
 import { BLDS, NAT, bodies, gnd, q, vis } from '../world/support.js';
 import { bodyAt, makeBody } from '../world/bodies.js';
-import { MP, gcol, pvx, pvy, px, py, spawn } from '../world/particles.js';
+import { MP, gcol, pvx, pvy, px, py, solidAt, spawn } from '../world/particles.js';
 import { afters, beams, flash, flashes, fxBurst, fxImpact, fxWord, rings } from '../render/fx.js';
 import { bgHit, explode } from '../world/destruction.js';
 import { iceAt } from './xmen.js';
-import { carve, glowRGB, hand, hurt, mouse, pl_ } from '../player.js';
+import { SKY, carve, glowRGB, hand, hurt, mouse, pl_ } from '../player.js';
 import { damageCone, damageEnemies, damageLine, enemies, enemyAt, hitEnemy, nearestEnemy } from '../enemies/core.js';
 
 // ================= powers =================
@@ -336,7 +336,7 @@ export function updShots(world=true){
     else if(s.type==='bomb'&&ST.frame%3===0)spawn(s.x,s.y,0,0,rgb(255,120,60),6,0,1,0);
     let hit=false;const steps=Math.ceil(Math.hypot(s.vx,s.vy))||1;
     for(let k=0;k<steps;k++){s.x+=s.vx/steps;s.y+=s.vy/steps;
-      if(s.x<0||s.x>=W||s.y>=H||s.y<-60){hit='out';break;}
+      if(s.x<0||s.x>=W||s.y>=H||s.y<-SKY-60){hit='out';break;}
       if(s.y>=0){const m=t[(s.y|0)*W+(s.x|0)];if(m!==0&&KIND[m]!==G&&KIND[m]!==F){hit=true;break;}}
       if(s.owner==='enemy'){const p=pl_;if(Math.abs(s.x-p.x)<=ST.PW/2+1&&s.y>=p.y-ST.PH&&s.y<=p.y){hurt(s.dmg);hit='player';break;}
         if(ST.decoy&&Math.abs(s.x-ST.decoy.x)<=4&&s.y>=ST.decoy.y-ST.SH&&s.y<=ST.decoy.y){ST.decoy.hp-=s.dmg||7;hit='player';break;}}
@@ -359,15 +359,16 @@ export function updDrones(){
   for(let n=drones.length-1;n>=0;n--){
     const d=drones[n];d.ph+=.05;const tx=pl_.x+Math.cos(d.ph+n*2.1)*22,ty=pl_.y-28+Math.sin(d.ph*1.3+n)*7;
     d.x+=(tx-d.x)*.08;d.y+=(ty-d.y)*.08;
-    spawn(d.x+(R()-.5)*3,d.y+2,(R()-.5)*.3,.8+R(),R()<.5?rgb(255,200,90):gcol(),6,0,1,0);
+    spawn(d.x+(R()-.5)*3,d.y+2,(R()-.5)*.3,.8+R(),d.red?rgb(255,60+R()*90|0,40):R()<.5?rgb(255,200,90):gcol(),6,0,1,0);
+    if(d.red&&d.life<45){const dx=mouse.wx-d.x,dy=mouse.wy-d.y,dd=Math.hypot(dx,dy)||1;d.x+=dx/dd*6;d.y+=dy/dd*6;if(--d.life<=0||solidAt(d.x,d.y)||enemyAt(d.x,d.y,2)){explode(d.x|0,d.y|0,11,{fire:.25,col:[255,60,40]});damageEnemies(d.x,d.y,24,40,0,-3,true);drones.splice(n,1);}continue;}
     if(--d.cool<=0){ // laser ray: nearest enemy if any, else the cursor
       const e=nearestEnemy(d.x,d.y,240);const gx=e?e.x:mouse.wx,gy=e?e.y:mouse.wy;
       const dx=gx-d.x,dy=gy-d.y,dd=Math.hypot(dx,dy)||1;let x=d.x,y=d.y;
-      for(let s=0;s<300;s++){x+=dx/dd;y+=dy/dd;const X=x|0,Y=y|0;if(X<0||X>=W||Y<0||Y>=H)break;const hitE=enemyAt(x,y,1);if(hitE){hitEnemy(hitE,12,dx/dd*2,dy/dd*2);break;}const m=t[Y*W+X];if(m&&KIND[m]!==G&&KIND[m]!==F){explode(X,Y,4,{fire:.15,green:true});break;}}
+      for(let s=0;s<300;s++){x+=dx/dd;y+=dy/dd;const X=x|0,Y=y|0;if(X<0||X>=W||Y<0||Y>=H)break;const hitE=enemyAt(x,y,1);if(hitE){hitEnemy(hitE,12,dx/dd*2,dy/dd*2);break;}const m=t[Y*W+X];if(m&&KIND[m]!==G&&KIND[m]!==F){explode(X,Y,d.red?7:4,d.red?{fire:.15,col:[255,60,40]}:{fire:.15,green:true});break;}}
       beams.push({x0:d.x,y0:d.y,x1:x,y1:y,life:4,w:1,c:[255,120,90],g:[255,60,40]});
       d.cool=26+R()*12|0;
     }
-    if(--d.life<=0){explode(d.x,d.y,6,{fire:.2,green:true});drones.splice(n,1);}
+    if(--d.life<=0){explode(d.x,d.y,6,d.red?{fire:.2,col:[255,60,40]}:{fire:.2,green:true});drones.splice(n,1);}
   }
 }
 export function updVortex(){

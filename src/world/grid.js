@@ -1,6 +1,7 @@
 // World size and the cell grid: material/colour/life arrays, chunk activity, cell writes (setc/swap) and the dirty box.
-import { DENS, EMBER, F, FIRE, G, GFIRE, KIND, L, R, S, SMOKE, STEAM, mkcol } from './materials.js';
+import './physics.js'; // evaluation order: runs after world/physics.js
 import { ST } from '../state.js';
+import { DENS, EMBER, F, FIRE, G, GFIRE, KIND, L, R, S, SMOKE, STEAM, mkcol } from './materials.js';
 import { NAT, gnd, obAdd, pin, rid, unq } from './support.js';
 
 // ================= world size =================

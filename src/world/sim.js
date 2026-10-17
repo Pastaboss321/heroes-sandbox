@@ -2,6 +2,7 @@
 import { CS, CW, H, N, W, booms, canSink, life, markDirty, rn, setc, stamp, swap, t, vel, wake } from './grid.js';
 import { ST } from '../state.js';
 import { ACID, ASH, EMBER, EMPTY, F, FIRE, FLAM, G, GFIRE, GLASS, HARD, ICE, KIND, L, LAVA, OBSID, OIL, P, PROPANE, R, RUBBLE, S, SAND, SMOKE, SNOW, STEAM, STEEL, WATER, WOOD, rgb } from './materials.js';
+import { PHYS } from './physics.js';
 import { MP, spawn } from './particles.js';
 
 export function step(){
@@ -30,7 +31,7 @@ function updPowder(i,m,x,y){
   if(y>=H-1)return;
   const j=i+W, tj=t[j];
   if(canSink(m,tj)&&(KIND[tj]!==L||R()<.5)){
-    let v=vel[i]; if(v<5)v++;
+    let v=vel[i]; if(v<PHYS.powder.maxV)v++;
     let dest=j, yy=y+1;
     if(tj===0) for(let s=1;s<v&&yy<H-1;s++){const jj=dest+W;if(t[jj]===0){dest=jj;yy++;}else break;}
     swap(i,dest); vel[dest]=v; if(i>=W&&KIND[t[i-W]]===S)markDirty(i-W); return;
@@ -48,7 +49,7 @@ function updLiquid(i,m,x,y){
   if(y<H-1){
     const j=i+W, tj=t[j];
     if(canSink(m,tj)){
-      let v=vel[i]; if(v<4)v++; let dest=j,yy=y+1;
+      let v=vel[i]; if(v<PHYS.liquid.maxV)v++; let dest=j,yy=y+1;
       if(tj===0) for(let s=1;s<v&&yy<H-1;s++){const jj=dest+W;if(t[jj]===0){dest=jj;yy++;}else break;}
       swap(i,dest); vel[dest]=v; return;
     }

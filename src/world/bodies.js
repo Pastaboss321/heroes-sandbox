@@ -2,8 +2,9 @@
 import { NAT, bm, bodies, gnd, obAdd, pin, rcount, rid, str } from './support.js';
 import { ST } from '../state.js';
 import { ASH, DENS, EMPTY, F, G, GLASS, GRASS, HARD, ICE, KIND, L, LEAF, P, R, RUBBLE, S, SMOKE, STEEL, WATER, rgb } from './materials.js';
+import { PHYS } from './physics.js';
 import { BACK, H, W, bg, bgB, bgD, col, life, markDirty, setc, t, vel, wake } from './grid.js';
-import { MP, spawn } from './particles.js';
+import { MP, dustCol, spawn, spawnDust } from './particles.js';
 import { flash, fxWord, rings } from '../render/fx.js';
 import { explode, shade } from './destruction.js';
 import { snd } from '../sfx.js';
@@ -112,13 +113,15 @@ export function bodyAt(b,X,Y){ // local material under a world point
   return(lx<0||ly<0||lx>=b.lw||ly>=b.lh)?0:b.lm[ly*b.lw+lx];
 }
 export function updBodies(){
+  const PB=PHYS.body,CK=PHYS.chunk;
   for(let n=bodies.length-1;n>=0;n--){
-    const b=bodies[n]; b.age++;
-    if(ST.stasis&&inStasis(b.x,b.y))continue; // hangs in the air until the bubble pops
+    const b=bodies[n];
+    if(ST.stasis&&inStasis(b.x,b.y))continue; // hangs in the air until the bubble pops (and does not age, so it cannot freeze up there)
+    b.age++;
     if(b.held){ if(!b.overhead){b.vx=(b.vx+((b.tx??mouse.wx)-b.x)*.18)*.72; b.vy=(b.vy+((b.ty??mouse.wy)-b.y)*.18)*.72; b.va*=.9;} }
-    else { b.vy+=.3; b.vx*=.996; b.va*=.997; if(b.topple&&b.age<90)b.va+=b.topple*.0015; }
-    const sp=Math.hypot(b.vx,b.vy); if(sp>12){b.vx*=12/sp;b.vy*=12/sp;}
-    if(Math.abs(b.va)>.12)b.va=Math.sign(b.va)*.12;
+    else { b.vy+=PB.grav; b.vx*=PB.drag; b.va*=PB.spinDrag; if(b.topple&&b.age<90)b.va+=b.topple*.0015; }
+    const sp=Math.hypot(b.vx,b.vy); if(sp>PB.maxV){b.vx*=PB.maxV/sp;b.vy*=PB.maxV/sp;}
+    if(Math.abs(b.va)>PB.maxSpin)b.va=Math.sign(b.va)*PB.maxSpin;
     const ns=Math.min(14,Math.max(1,Math.ceil(Math.max(Math.abs(b.vx),Math.abs(b.vy),Math.abs(b.va)*b.rmax))));
     let landed=false, impact=0, grounded=false;
     for(let s=0;s<ns&&!landed;s++){
@@ -126,7 +129,12 @@ export function updBodies(){
       const ny=b.y+b.vy/ns;
       let dv=0;
       if(!bodyHitPose(b,b.x,ny,b.a))b.y=ny;
-      else if(b.vy>3&&!b.held&&b.n>=30&&(dv=crush(b,b.x,ny,b.a,b.vy,0,1))){b.vy-=dv;b.y=ny;}
+      else if(b.vy>3&&!b.held&&!b.chunk&&b.n>=30&&(dv=crush(b,b.x,ny,b.a,b.vy,0,1))){b.vy-=dv;b.y=ny;}
+      else if(b.chunk&&b.vy>0&&!b.held){ // small chunk: bounce, skid and tumble, then rest
+        grounded=true;
+        if(b.vy>CK.minBounceV){b.vy*=-CK.bounce;b.vx*=1-CK.friction;b.va=b.va*.5+b.vx*CK.roll;if(b.vy<-.8)debrisBurst(b,1.2,2);}
+        else{b.vy=0;b.vx*=1-CK.friction;b.va*=.6;}
+      }
       else if(b.vy>0&&!b.held){
         grounded=true;
         const hit=b.vy+Math.abs(b.va)*b.rmax*.6, c=contacts(b);
@@ -136,21 +144,21 @@ export function updBodies(){
           b.va+=Math.sign(off)*Math.min(.014,Math.abs(off)*.0009+.002); b.vx+=Math.sign(off)*.04;
         }
         if(hit>2.5)debrisBurst(b,hit*.5,4);
-        b.vy*=-.08;
+        b.vy*=-PB.landBounce;
       } else b.vy=0;
       // horizontal
       const nx=b.x+b.vx/ns;
       if(!bodyHitPose(b,nx,b.y,b.a))b.x=nx;
-      else if(Math.abs(b.vx)>3&&!b.held&&b.n>=30&&(dv=crush(b,nx,b.y,b.a,Math.abs(b.vx),Math.sign(b.vx),0))){b.vx-=Math.sign(b.vx)*dv;b.x=nx;}
-      else{ if(Math.abs(b.vx)>4.5&&!b.held){landed=true;impact=Math.abs(b.vx);break;} b.vx*=-.25; }
+      else if(Math.abs(b.vx)>3&&!b.held&&!b.chunk&&b.n>=30&&(dv=crush(b,nx,b.y,b.a,Math.abs(b.vx),Math.sign(b.vx),0))){b.vx-=Math.sign(b.vx)*dv;b.x=nx;}
+      else{ if(Math.abs(b.vx)>4.5&&!b.held&&!b.chunk){landed=true;impact=Math.abs(b.vx);break;} b.vx*=b.chunk?-CK.bounce:-PB.wallBounce; }
       // rotation
       const na=b.a+b.va/ns;
       if(!bodyHitPose(b,b.x,b.y,na))b.a=na;
-      else{ if(Math.abs(b.va)*b.rmax>5&&!b.held){landed=true;impact=Math.abs(b.va)*b.rmax;break;} b.va*=-.3; }
+      else{ if(Math.abs(b.va)*b.rmax>5&&!b.held&&!b.chunk){landed=true;impact=Math.abs(b.va)*b.rmax;break;} b.va*=-PB.spinBounce; }
     }
     if(!landed&&!b.held){
       if(grounded&&Math.abs(b.vx)<.4&&Math.abs(b.vy)<.6&&Math.abs(b.va)<.006)b.rest++;else b.rest=Math.max(0,b.rest-1);
-      if(b.rest>10||b.age>1200){landed=true;impact=Math.max(1,Math.abs(b.vy));}
+      if(b.rest>PB.restTicks||(b.age>PB.maxAge&&grounded)){landed=true;impact=Math.max(1,Math.abs(b.vy));} // only ever freezes while on support
     }
     // splash liquids / sweep gas the chunk overlaps, tear through back walls; shed dust while moving fast
     const c=Math.cos(b.a),s=Math.sin(b.a),spd=Math.hypot(b.vx,b.vy)+Math.abs(b.va)*b.rmax;let wet=0,wl=WATER;
@@ -159,17 +167,17 @@ export function updBodies(){
       const kd=KIND[m];if(kd===S||kd===P)continue;
       if(kd===L){wet++;wl=m;if(spd>1.5){if(ST.np<MP-200)spawn(X,Y,(R()-.5)*2+b.vx*.4,-.6-R()*1.5-Math.abs(b.vy)*.4,col[j],70,m,0);setc(j,EMPTY);if(spd>3&&!b.splashed){b.splashed=1;snd('splash',X,Y,{v:Math.min(1,spd/6)});}}}
       else setc(j,EMPTY);}
-    if(wet&&!b.held){const f=wet/b.ex.length;b.vy-=f*.7*DENS[wl]/b.dens;b.vx*=1-f*.12;b.vy*=1-f*.12;b.va*=1-f*.1;if(f>.15)b.rest=0;}
-    if(!b.held&&!(b.safeP>ST.frame)&&spd>3&&b.age>4&&ST.frame-b.hitP>20&&Math.abs(pl_.x-b.x)<b.rmax+4&&Math.abs(pl_.y-ST.PH/2-b.y)<b.rmax+8&&bodyAt(b,pl_.x,pl_.y-ST.PH/2)){
+    if(wet&&!b.held){const f=wet/b.ex.length;b.vy-=f*PB.buoy*DENS[wl]/b.dens;b.vx*=1-f*.12;b.vy*=1-f*.12;b.va*=1-f*.1;if(f>.15&&b.dens<DENS[wl])b.rest=0;}
+    if(!b.held&&!b.chunk&&!(b.safeP>ST.frame)&&spd>3&&b.age>4&&ST.frame-b.hitP>20&&Math.abs(pl_.x-b.x)<b.rmax+4&&Math.abs(pl_.y-ST.PH/2-b.y)<b.rmax+8&&bodyAt(b,pl_.x,pl_.y-ST.PH/2)){
       b.hitP=ST.frame;hurt(Math.min(30,spd*Math.sqrt(b.n)/12));pl_.vx+=b.vx*.7;pl_.vy+=b.vy*.7;ST.shake=Math.max(ST.shake,6);}
-    if(spd>1.5&&!b.held){const cnt=Math.min(8,(b.ex.length/120)*spd|0);for(let k=0;k<cnt;k++){const e=R()*b.ex.length|0;const X=b.x+b.ex[e]*c-b.ey[e]*s,Y=b.y+b.ex[e]*s+b.ey[e]*c;spawn(X,Y,b.vx*.6+(R()-.5)*1.5,b.vy*.4-R(),R()<.5?rgb(150,140,125):rgb(110,105,98),40+R()*40,0,0,1);}}
+    if(spd>1.5&&!b.held){const cnt=Math.min(8,(b.ex.length/120)*spd|0);for(let k=0;k<cnt;k++){const e=R()*b.ex.length|0;const X=b.x+b.ex[e]*c-b.ey[e]*s,Y=b.y+b.ex[e]*s+b.ey[e]*c;spawnDust(X,Y,b.vx*.6+(R()-.5)*1.5,b.vy*.4-R(),R()<.5?rgb(150,140,125):rgb(110,105,98));}}
     if(landed){ landBody(b,impact); bodies.splice(n,1); }
     else if(b.y>H+80){ bodies.splice(n,1); }
   }
 }
 function debrisBurst(b,power,cnt){
   const c=Math.cos(b.a),s=Math.sin(b.a);
-  for(let k=0;k<cnt;k++){const e=R()*b.ex.length|0;const X=b.x+b.ex[e]*c-b.ey[e]*s,Y=b.y+b.ex[e]*s+b.ey[e]*c;spawn(X,Y-1,(R()-.5)*power,-R()*power,rgb(160,150,135),50,0,0,1);}
+  for(let k=0;k<cnt;k++){const e=R()*b.ex.length|0;const X=b.x+b.ex[e]*c-b.ey[e]*s,Y=b.y+b.ex[e]*s+b.ey[e]*c;spawnDust(X,Y-1,(R()-.5)*power,-R()*power,rgb(160,150,135));}
 }
 function landBody(b,impact){
   impact*=1+Math.min(2.5,b.h/80); // heavy, tall chunks hit harder
@@ -207,7 +215,8 @@ function landBody(b,impact){
     if(bottom&&impact>2.5&&R()<.12)dust(X,Y-2);
   }
   {const r=rcount.length;let c=0;for(const j of list)if(KIND[t[j]]===S){rid[j]=r;c++;}rcount.push(c);} // settled debris counts as an intact piece
-  if(impact>1.8){snd(b.glassy?'glass':'crumble',b.x,b.y,{size:Math.min(2,Math.sqrt(b.n)/40),v:Math.min(1,impact/4),gap:.06});ST.shake=Math.min(22,ST.shake+Math.min(12,impact*Math.sqrt(b.n)/35)); rings.push({x:b.x,y:b.y+b.lh/2,r:3,vr:2+impact*.35,life:18,c:[190,180,160]});}
+  if(b.chunk){if(impact>1.5){for(let k=0;k<4;k++)spawnDust(b.x+(R()-.5)*b.lw,b.y+b.lh/2,(R()-.5)*1.5,-R()*.8,dustCol(b.lc[0]));if(R()<.3)snd('crumble',b.x,b.y,{size:.4,v:.3,gap:.12});}}
+  else if(impact>1.8){snd(b.glassy?'glass':'crumble',b.x,b.y,{size:Math.min(2,Math.sqrt(b.n)/40),v:Math.min(1,impact/4),gap:.06});ST.shake=Math.min(22,ST.shake+Math.min(12,impact*Math.sqrt(b.n)/35)); rings.push({x:b.x,y:b.y+b.lh/2,r:3,vr:2+impact*.35,life:18,c:[190,180,160]});}
   if(thrown)explode(b.x,b.y,Math.min(12,impact*1.3|0),{fire:.1});
 }
 export function dust(X,Y){if(X<0||X>=W||Y<0||Y>=H)return;const i=Y*W+X;if(t[i]!==0)return;setc(i,SMOKE);const v=(R()*20)|0;col[i]=rgb(150+v,135+v,115+v);life[i]=70+R()*80;}
