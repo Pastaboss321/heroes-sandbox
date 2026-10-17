@@ -59,17 +59,24 @@ const PHYS={
     spinBounce:.3,        // share of spin kept when rotating into something
     restTicks:10,         // ticks a chunk must sit still on support before it freezes into the grid
     maxAge:1200,         // a chunk that is on support but never quite settles freezes after this many ticks
-    buoy:.45},            // liquid lift, scaled by liquid density / chunk density: chunks denser than buoy/grav (1.5x) the liquid sink and settle, lighter ones float
+    buoy:.45,
+    grace:15,             // ticks after breaking free during which a chunk cannot shatter/smash (it is still touching what it broke off from)
+    landV:9,              // impact speed (cells/tick) above which a chunk hitting the ground stops dead and may fracture; below it, it settles
+    wallV:9,              // same for slamming sideways into a wall
+    spinV:9,              // same for spinning into something (spin x radius)
+    crushV:6,             // a heavy chunk faster than this smashes through what it hits
+    fractureV:9,          // landing impact needed to split a big chunk into smaller ones
+    crumbleV:5},          // landing impact below which no cells crumble off a chunk            // liquid lift, scaled by liquid density / chunk density: chunks denser than buoy/grav (1.5x) the liquid sink and settle, lighter ones float
   chunk:{                 // small solid chunks blown out by explosions
     bounce:.35,           // share of impact speed returned on each bounce
     friction:.25,         // share of sideways speed lost per ground contact
     minBounceV:1.2,       // below this downward speed a chunk stops bouncing and slides to rest
     roll:.04,             // how strongly ground speed turns into spin (tumbling)
-    max:60,               // live explosion chunks allowed at once; past it blasts make dust only
-    minR:6,               // explosions smaller than this radius make no chunks (dust only)
-    perR:.45,             // chunks per unit of blast radius above minR
-    perBoom:10,           // most chunks one explosion can make
-    size:[2,5],           // chunk blob radius range, cells
+    max:90,               // live explosion chunks allowed at once; past it blasts make dust only
+    minR:4,               // explosions smaller than this radius make no chunks (dust only)
+    perR:.9,              // chunks per unit of blast radius above minR
+    perBoom:16,           // most chunks one explosion can make
+    size:[4,8],           // chunk blob radius range, cells
     speed:.3},            // launch speed per unit of blast radius
   dust:{                  // light dust motes: no grid collision, cheap
     grav:.035, drag:.94,
@@ -79,6 +86,13 @@ const PHYS={
     max:900,              // most motes one explosion can make
     budget:.7},           // no new dust once the particle pool is this full (leaves room for debris grains)
   part:{grav:.15, drag:.99, dragHeavy:.9}, // debris grains and sparks
+  flake:{grav:.012, drag:.985, sway:.006},  // snow and ash: settles to ~0.8 cells/tick with a little side-to-side sway
+  mix:{                   // how destruction splits between intact chunks, loose rubble and dust
+    rubble:.03,           // share of rubble (flying grains and cells broken in place) that stays as loose sand; the rest vanishes into dust
+    rimRubble:.06,        // share of cracked crater-rim cells that stay as loose rubble (rest blow away)
+    landCrumble:.12,       // scales how much of a landing chunk crumbles to rubble (1 = old behaviour)
+    ringChunks:.5,        // big chunks broken off the crater wall per unit of blast radius
+    grey:.6},             // how far rubble colour is pulled toward grey concrete, so walls do not turn into neon sand
   powder:{maxV:5}, liquid:{maxV:4},        // fastest fall, cells per tick
 };
 
@@ -374,14 +388,14 @@ function flood(s,init){
     collapses++;snd('crumble',cmx/mass,My,{size:Math.min(2.2,Math.sqrt(tl)/30)});
     const cut=My-Math.min(12,4+tl/900|0); let k2=0;
     for(let k=0;k<tl;k++){const i=q[k],y=(i/W)|0;
-      if(y>=cut){ if(R()<.5){const x=i%W;spawn(x,y,(R()-.5)*4,-R()*2.5,col[i],90,RUBBLE,t[i]===GLASS?1:0);t[i]=0;}else{t[i]=RUBBLE;vel[i]=3;} wake(i); if(R()<.05)dust(i%W,y-1); }
+      if(y>=cut){ if(R()<.5){const x=i%W;spawn(x,y,(R()-.5)*4,-R()*2.5,col[i],90,RUBBLE,t[i]===GLASS?1:0);t[i]=0;}else{crumble(i);vel[i]=3;} wake(i); if(R()<.05)dust(i%W,y-1); }
       else q[k2++]=i; }
     shake=Math.min(22,shake+3+Math.sqrt(tl)/20);
     const b=makeBody(q,k2,false); if(b)b.vy=.8;
   }
 }
 function makeBody(list,n,held){
-  if(n<10||bodies.length>=150){ for(let k=0;k<n;k++){const i=list[k];t[i]=RUBBLE;pin[i]=0;wake(i);} return null; }
+  if(n<10||bodies.length>=150){ for(let k=0;k<n;k++){const i=list[k];crumble(i);pin[i]=0;wake(i);} return null; }
   if(n>1200&&MODE&&MODE.onCollapse&&!genMode)MODE.onCollapse(n,MS);
   let mx=W,my=H,Mx=0,My=0,sx=0,sy=0;
   for(let k=0;k<n;k++){const i=list[k],x=i%W,y=(i/W)|0;if(x<mx)mx=x;if(y<my)my=y;if(x>Mx)Mx=x;if(y>My)My=y;sx+=x;sy+=y;}
@@ -498,7 +512,7 @@ function updBodies(){
       const ny=b.y+b.vy/ns;
       let dv=0;
       if(!bodyHitPose(b,b.x,ny,b.a))b.y=ny;
-      else if(b.vy>3&&!b.held&&!b.chunk&&b.n>=30&&(dv=crush(b,b.x,ny,b.a,b.vy,0,1))){b.vy-=dv;b.y=ny;}
+      else if(b.vy>PB.crushV&&b.age>PB.grace&&!b.held&&!b.chunk&&b.n>=30&&(dv=crush(b,b.x,ny,b.a,b.vy,0,1))){b.vy-=dv;b.y=ny;}
       else if(b.chunk&&b.vy>0&&!b.held){ // small chunk: bounce, skid and tumble, then rest
         grounded=true;
         if(b.vy>CK.minBounceV){b.vy*=-CK.bounce;b.vx*=1-CK.friction;b.va=b.va*.5+b.vx*CK.roll;if(b.vy<-.8)debrisBurst(b,1.2,2);}
@@ -508,7 +522,7 @@ function updBodies(){
         grounded=true;
         const hit=b.vy+Math.abs(b.va)*b.rmax*.6, c=contacts(b);
         const off=b.x-c.avg, stable=c.n===0||(b.x>=c.min-1&&b.x<=c.max+1);
-        if(hit>5||(stable&&Math.abs(b.va)<.01)){landed=true;impact=hit;break;}
+        if((hit>PB.landV&&b.age>PB.grace)||(stable&&Math.abs(b.va)<.01)){landed=true;impact=hit;break;}
         if(!stable){ // tip over the edge: torque from the overhanging centre of mass
           b.va+=Math.sign(off)*Math.min(.014,Math.abs(off)*.0009+.002); b.vx+=Math.sign(off)*.04;
         }
@@ -518,12 +532,12 @@ function updBodies(){
       // horizontal
       const nx=b.x+b.vx/ns;
       if(!bodyHitPose(b,nx,b.y,b.a))b.x=nx;
-      else if(Math.abs(b.vx)>3&&!b.held&&!b.chunk&&b.n>=30&&(dv=crush(b,nx,b.y,b.a,Math.abs(b.vx),Math.sign(b.vx),0))){b.vx-=Math.sign(b.vx)*dv;b.x=nx;}
-      else{ if(Math.abs(b.vx)>4.5&&!b.held&&!b.chunk){landed=true;impact=Math.abs(b.vx);break;} b.vx*=b.chunk?-CK.bounce:-PB.wallBounce; }
+      else if(Math.abs(b.vx)>PB.crushV&&b.age>PB.grace&&!b.held&&!b.chunk&&b.n>=30&&(dv=crush(b,nx,b.y,b.a,Math.abs(b.vx),Math.sign(b.vx),0))){b.vx-=Math.sign(b.vx)*dv;b.x=nx;}
+      else{ if(Math.abs(b.vx)>PB.wallV&&b.age>PB.grace&&!b.held&&!b.chunk){landed=true;impact=Math.abs(b.vx);break;} b.vx*=b.chunk?-CK.bounce:-PB.wallBounce; }
       // rotation
       const na=b.a+b.va/ns;
       if(!bodyHitPose(b,b.x,b.y,na))b.a=na;
-      else{ if(Math.abs(b.va)*b.rmax>5&&!b.held&&!b.chunk){landed=true;impact=Math.abs(b.va)*b.rmax;break;} b.va*=-PB.spinBounce; }
+      else{ if(Math.abs(b.va)*b.rmax>PB.spinV&&b.age>PB.grace&&!b.held&&!b.chunk){landed=true;impact=Math.abs(b.va)*b.rmax;break;} b.va*=-PB.spinBounce; }
     }
     if(!landed&&!b.held){
       if(grounded&&Math.abs(b.vx)<.4&&Math.abs(b.vy)<.6&&Math.abs(b.va)<.006)b.rest++;else b.rest=Math.max(0,b.rest-1);
@@ -549,8 +563,8 @@ function debrisBurst(b,power,cnt){
   for(let k=0;k<cnt;k++){const e=R()*b.ex.length|0;const X=b.x+b.ex[e]*c-b.ey[e]*s,Y=b.y+b.ex[e]*s+b.ey[e]*c;spawnDust(X,Y-1,(R()-.5)*power,-R()*power,rgb(160,150,135));}
 }
 function landBody(b,impact){
-  impact*=1+Math.min(2.5,b.h/80); // heavy, tall chunks hit harder
-  if(impact>4.5&&b.n>=100&&b.gen<2&&!b.held&&bodies.length<140){fracture(b,impact);return;}
+  impact*=1+Math.min(1,b.h/120); // heavy, tall chunks hit harder (was up to 3.5x, which shattered slow landings)
+  if(impact>PHYS.body.fractureV&&b.n>=100&&b.gen<2&&!b.held&&bodies.length<140){fracture(b,impact);return;}
   bgen++;
   const c=Math.cos(b.a),s=Math.sin(b.a),hw=b.lw/2+2,hh=b.lh/2+2;
   const ext=Math.ceil(Math.abs(hw*c)+Math.abs(hh*s))+2, eyt=Math.ceil(Math.abs(hw*s)+Math.abs(hh*c))+2;
@@ -560,25 +574,25 @@ function landBody(b,impact){
     const dx=X-b.x,dy=Y-b.y,lx=Math.round(dx*c+dy*s+b.cx),ly=Math.round(-dx*s+dy*c+b.cy);
     if(lx<0||ly<0||lx>=b.lw||ly>=b.lh)continue;const o=ly*b.lw+lx,m=b.lm[o];if(!m)continue;
     const j=Y*W+X;if(t[j]!==0&&KIND[t[j]]!==G&&KIND[t[j]]!==F)continue;
-    if(m===BACK){ // backdrop wall smashes into a heap of wreckage
-      if(R()<.5){if(impact>2&&R()<.4){spawn(X,Y,(R()-.5)*impact*.8,-R()*impact*.6,b.lc[o],90,RUBBLE,0);}else{t[j]=RUBBLE;col[j]=b.lc[o];life[j]=0;vel[j]=2;wake(j);}}
-      else if(R()<.05)dust(X,Y);
+    if(m===BACK){ // backdrop wall stays with the wreck as back wall (only a hard landing breaks some of it up)
+      if(impact>PHYS.body.crumbleV&&R()<.25){if(R()<.3)spawnDust(X,Y,(R()-.5)*1.5,-R(),dustCol(b.lc[o]));}
+      else if(!bgB[j]){bg[j]=b.lc[o];bgB[j]=1;}
       continue;}
     t[j]=m;col[j]=b.lc[o];life[j]=0;vel[j]=0;pin[j]=0;gnd[j]=NAT[m];str[j]=12;bm[j]=bgen;wake(j);markDirty(j);list.push(j);
   }
   const thrown=b.thrown&&impact>4;
   // crack lines across tall chunks so they keep breaking apart
-  const cracks=[]; if(b.h>24&&impact>2.5)for(let k=0;k<Math.min(6,b.h/18|0);k++)cracks.push(R()*b.h|0);
+  const cracks=[]; if(b.h>24&&impact>PHYS.body.crumbleV)for(let k=0;k<Math.min(6,b.h/18|0);k++)cracks.push(R()*b.h|0);
   let burst=0;
   for(const j of list){
     const X=j%W,Y=(j/W)|0;if(Y>=H-1)continue;const m=t[j], bottom=bm[j+W]!==bgen;
     const ly=Math.round(-(X-b.x)*s+(Y-b.y)*c+b.cy);
-    let p=m===GLASS||m===ICE&&b.icicle?(impact>1.2?1:.4):Math.max(0,(impact-1.4)*.16)*(bottom?2.4:1)/(1+HARD[m]*.08);
-    if(cracks.includes(ly))p=Math.max(p,.9);
+    let p=m===GLASS||m===ICE&&b.icicle?(impact>1.2?1:.4):b.chunk?0:Math.max(0,(impact-PHYS.body.crumbleV)*.16)*(bottom?2.4:1)/(1+HARD[m]*.08)*PHYS.mix.landCrumble;
+    if(cracks.includes(ly)&&!b.chunk)p=Math.max(p,.9*PHYS.mix.landCrumble*2);
     if(R()<p){
       if(R()<.45&&impact>2.2&&burst<2500){burst++;const up=bottom?1.4:1;
         spawn(X,Y,(R()-.5)*impact*.9+b.vx*.4,-R()*impact*.7*up+b.vy*.2,col[j],90+R()*60,KIND[m]===S?RUBBLE:m,m===GLASS?1:0);t[j]=0;}
-      else t[j]=m===LEAF||m===GRASS?(R()<.5?ASH:RUBBLE):RUBBLE;
+      else{t[j]=m===LEAF||m===GRASS?(R()<.5?ASH:RUBBLE):RUBBLE;if(t[j]===RUBBLE)col[j]=rubbleCol(col[j]);}
       wake(j);
     }
     if(bottom&&impact>2.5&&R()<.12)dust(X,Y-2);
@@ -1256,17 +1270,23 @@ function genArctic(){
   SPAWNX=140;
 }
 function ambArctic(){ // steady snowfall; a little of it settles
-  for(let k=0;k<3;k++){const x=camX+R()*(VW+40)-20;spawn(x,camY-2,(R()-.5)*.4-.25,.5+R()*.5,R()<.5?rgb(240,244,252):rgb(214,224,240),400,R()<.08?SNOW:0,0,0,1);}
+  for(let k=0;k<3;k++){const x=camX+R()*(VW+40)-20;spawnFlake(x,camY-2,(R()-.5)*.4-.25,.5+R()*.5,R()<.5?rgb(240,244,252):rgb(214,224,240),400,R()<.08?SNOW:0);}
 }
 
 // ================= particles =================
 const MP=40000, px=new Float32Array(MP),py=new Float32Array(MP),pvx=new Float32Array(MP),pvy=new Float32Array(MP),pc=new Uint32Array(MP),pl=new Int16Array(MP),pm=new Uint8Array(MP),pg=new Uint8Array(MP);
 let np=0;
-// flags: 1 glow, 2 gravity, 4 drag
+// flags: 1 glow, 2 gravity, 4 drag, 16 dust mote, 32 drifting precipitation (snow, ash)
 function spawn(x,y,vx,vy,c,l,m,glow,grav=1,drag=0){if(np>=MP)return;px[np]=x;py[np]=y;pvx[np]=vx;pvy[np]=vy;pc[np]=c;pl[np]=l;pm[np]=m;pg[np]=(glow?1:0)|(grav?2:0)|(drag?4:0);np++;}
 // light tier: dust motes (flag 16). Never touch the grid, drift on low gravity + heavy drag, fade out at the end
+function spawnFlake(x,y,vx,vy,c,l,m){const n0=np;spawn(x,y,vx,vy,c,l,m,0,0,0);if(np>n0)pg[np-1]|=32;}
 function spawnDust(x,y,vx,vy,c){const D=PHYS.dust;if(np>=MP*D.budget)return;spawn(x,y,vx,vy,c,D.life[0]+R()*(D.life[1]-D.life[0])|0,0,0,0,0);pg[np-1]|=16;}
-const dustCol=c=>rgb(((c&255)+170)>>1,(((c>>8)&255)+160)>>1,(((c>>16)&255)+145)>>1);
+const rubbleCol=c=>{const g=PHYS.mix.grey,h=1-g;return rgb((c&255)*h+118*g,((c>>8)&255)*h+114*g,((c>>16)&255)*h+108*g);};
+// a flying grain lands: liquids/powders keep their cell, rubble only sometimes (otherwise it is gone as dust)
+// a solid cell breaks in place: rarely loose rubble, usually just gone in a puff
+function crumble(i){if(R()<PHYS.mix.rubble){t[i]=RUBBLE;col[i]=rubbleCol(col[i]);}else{if(R()<.35)spawnDust(i%W,i/W|0,(R()-.5)*.8,-R()*.6,dustCol(col[i]));t[i]=0;}}
+function depo(j,n){const m=pm[n];if(m===RUBBLE){if(R()>=PHYS.mix.rubble){if(R()<.3)spawnDust(j%W,(j/W|0)-1,(R()-.5)*.6,-R()*.4,dustCol(pc[n]));return;}t[j]=m;col[j]=rubbleCol(pc[n]);life[j]=0;return;}t[j]=m;col[j]=pc[n];life[j]=lifeOf(m);}
+const dustCol=c=>rgb(((c&255)+2*112)/3,(((c>>8)&255)+2*104)/3,(((c>>16)&255)+2*94)/3); // mostly dull grey-brown, a hint of the source colour
 function solidAt(x,y){if(x<0||x>=W||y>=H)return true;if(y<0)return false;const m=t[(y|0)*W+(x|0)],k=KIND[m];return(k===S&&m!==LEAF)||k===P;}
 function updParticles(){
   const ss=stasis,PP=PHYS.part,PD=PHYS.dust;
@@ -1277,12 +1297,13 @@ function updParticles(){
       pvy[n]+=PD.grav;pvx[n]*=PD.drag;pvy[n]*=PD.drag;px[n]+=pvx[n];py[n]+=pvy[n];
       if(--pl[n]<=0||px[n]<0||px[n]>=W||py[n]>=H){np--;px[n]=px[np];py[n]=py[np];pvx[n]=pvx[np];pvy[n]=pvy[np];pc[n]=pc[np];pl[n]=pl[np];pm[n]=pm[np];pg[n]=pg[np];n--;}
       continue;}
+    if(f&32){pvy[n]=(pvy[n]+PHYS.flake.grav)*PHYS.flake.drag;pvx[n]+=Math.sin(py[n]*.06+n)*PHYS.flake.sway;} // falls at a steady drifting speed, never stalls
     if(f&2)pvy[n]+=PP.grav;
     if(f&4){pvx[n]*=PP.dragHeavy;pvy[n]*=PP.dragHeavy;} else pvx[n]*=PP.drag;
     const ox=px[n],oy=py[n],nx=ox+pvx[n],ny=oy+pvy[n];
     let dead=--pl[n]<=0;
     if(!(f&4)&&ox>=0&&ox<W&&oy>=0&&oy<H){const oi=(oy|0)*W+(ox|0),om=t[oi];if(om!==0&&(KIND[om]===S||KIND[om]===P)){
-      if(pm[n]&&pm[n]!==GFIRE)for(let u=1;u<5;u++){const j=oi-u*W;if(j>=0&&t[j]===0){t[j]=pm[n];col[j]=pc[n];life[j]=lifeOf(pm[n]);wake(j);break;}}
+      if(pm[n]&&pm[n]!==GFIRE)for(let u=1;u<5;u++){const j=oi-u*W;if(j>=0&&t[j]===0){depo(j,n);wake(j);break;}}
       np--;px[n]=px[np];py[n]=py[np];pvx[n]=pvx[np];pvy[n]=pvy[np];pc[n]=pc[np];pl[n]=pl[np];pm[n]=pm[np];pg[n]=pg[np];n--;continue;}}
     if(nx<0||nx>=W||ny>=H||ny<-SKY-60)dead=true;
     else if(ny>=0){
@@ -1291,12 +1312,12 @@ function updParticles(){
         if(pm[n]&&pm[n]!==GFIRE&&!(f&8)&&Math.abs(pvx[n])+Math.abs(pvy[n])>2.4&&!dead){
           pg[n]|=8; if(solidAt(ox,ny)){pvy[n]*=-.3;pvx[n]*=.7;}else pvx[n]*=-.45; continue; }
         if(pm[n]===GFIRE){if(tm!==STEEL&&(FLAM[tm]>0||R()<.3))setc(j,GFIRE);}
-        else if(pm[n]){const oi=(oy|0)*W+(ox|0);if(oy>=0&&t[oi]===0){t[oi]=pm[n];col[oi]=pc[n];life[oi]=lifeOf(pm[n]);vel[oi]=2;wake(oi);}}
+        else if(pm[n]){const oi=(oy|0)*W+(ox|0);if(oy>=0&&t[oi]===0){depo(oi,n);vel[oi]=2;wake(oi);}}
         dead=true;pm[n]=0;
       }
     }
     if(dead){
-      if(pm[n]&&pm[n]!==GFIRE&&ny>=0&&ny<H&&nx>=0&&nx<W){const j=(ny|0)*W+(nx|0);if(t[j]===0){t[j]=pm[n];col[j]=pc[n];life[j]=lifeOf(pm[n]);wake(j);}}
+      if(pm[n]&&pm[n]!==GFIRE&&ny>=0&&ny<H&&nx>=0&&nx<W){const j=(ny|0)*W+(nx|0);if(t[j]===0){depo(j,n);wake(j);}}
       np--;px[n]=px[np];py[n]=py[np];pvx[n]=pvx[np];pvy[n]=pvy[np];pc[n]=pc[np];pl[n]=pl[np];pm[n]=pm[np];pg[n]=pg[np];n--;continue;
     }
     px[n]=nx;py[n]=ny;
@@ -1357,14 +1378,14 @@ function explode(cx,cy,r,opt={}){
     if(m===OIL){setc(i,FIRE);continue;}
     setc(i,fire&&R()<fire?(green?GFIRE:FIRE):EMPTY);
   }
-  if(!opt.quiet||r>=6)blastDebris(cx,cy,r);
+  if(!opt.quiet||r>=4)blastDebris(cx,cy,r);
   bgHit(cx,cy,r*1.2|0);
   if(glassN>5)snd('glass',cx,cy,{v:Math.min(1,glassN/30)});if(steelN>3)snd('clang',cx,cy,{v:Math.min(1,steelN/12),gap:.12});
   // shockwave: the crater rim cracks into loose rubble, loose stuff gets thrown
   const r2=r*1.7;
   for(let n=0;n<r*r*3;n++){const a=R()*6.283,d=r+R()*(r2-r),X=cx+Math.cos(a)*d|0,Y=cy+Math.sin(a)*d|0;if(X<0||X>=W||Y<0||Y>=H)continue;const i=Y*W+X,m=t[i];if(!m)continue;
     const f=1-(d-r)/(r2-r);
-    if(KIND[m]===S){if(m!==STEEL&&m!==OBSID&&R()<f*.4/(1+HARD[m]*.25)){if(R()<.4){spawn(X,Y,Math.cos(a)*2.5*f,Math.sin(a)*2.5*f-1.5,col[i],90,RUBBLE,0);t[i]=0;}else{t[i]=RUBBLE;vel[i]=3;}markDirty(i);wake(i);}}
+    if(KIND[m]===S){if(m!==STEEL&&m!==OBSID&&R()<f*.4/(1+HARD[m]*.25)){if(R()<.4){spawn(X,Y,Math.cos(a)*2.5*f,Math.sin(a)*2.5*f-1.5,col[i],90,RUBBLE,0);t[i]=0;}else if(R()<PHYS.mix.rimRubble){t[i]=RUBBLE;col[i]=rubbleCol(col[i]);vel[i]=3;}else{spawnDust(X,Y,Math.cos(a)*f,Math.sin(a)*f-.5,dustCol(col[i]));t[i]=0;}markDirty(i);wake(i);}}
     else if((KIND[m]===P||KIND[m]===L)&&R()<.6){spawn(X,Y,Math.cos(a)*3*f,Math.sin(a)*3*f-1.8,col[i],70,m,0);t[i]=0;wake(i);}}
   // flung embers spread fire; dust + smoke cloud
   if(fire&&!green)for(let n=0;n<r;n++){const a=R()*6.283,sp=1+R()*3;spawn(cx,cy,Math.cos(a)*sp,Math.sin(a)*sp-2,rgb(255,150,40),80,EMBER,1);}
@@ -1387,13 +1408,13 @@ function explode(cx,cy,r,opt={}){
 const EXCAP=1<<16, exI=new Int32Array(EXCAP), exM=new Uint8Array(EXCAP), exC=new Uint32Array(EXCAP); let exN=0;
 function blastDebris(cx,cy,r){
   const CK=PHYS.chunk,D=PHYS.dust;
-  if(r>=CK.minR&&exN>=12&&bodies.length<130){
+  if(r>=CK.minR&&exN>=12&&bodies.length<140){
     let live=0;for(const b of bodies)if(b.chunk)live++;
-    const want=Math.min(CK.perBoom,CK.max-live,130-bodies.length,Math.round((r-CK.minR+1)*CK.perR*(.7+R()*.6)));
+    const want=Math.min(CK.perBoom,CK.max-live,140-bodies.length,Math.round((r-CK.minR+1)*CK.perR*(.7+R()*.6)));
     const used=new Uint8Array(exN);
     for(let c=0;c<want;c++){
       const s0=R()*exN|0;if(used[s0])continue;
-      const sx=exI[s0]%W,sy=exI[s0]/W|0,rc=CK.size[0]+R()*Math.min(CK.size[1]-CK.size[0],r/8),rr=rc*rc;
+      const sx=exI[s0]%W,sy=exI[s0]/W|0,rc=CK.size[0]+R()*Math.min(CK.size[1]-CK.size[0],r/4),rr=rc*rc;
       const ids=[];let mx=W,my=H,Mx=0,My=0,gx=0,gy=0;
       for(let k=0;k<exN;k++){if(used[k])continue;const x=exI[k]%W,y=exI[k]/W|0,dx=x-sx,dy=y-sy;if(dx*dx+dy*dy>rr+R()*2)continue;
         ids.push(k);if(x<mx)mx=x;if(y<my)my=y;if(x>Mx)Mx=x;if(y>My)My=y;gx+=x;gy+=y;}
@@ -1407,6 +1428,12 @@ function blastDebris(cx,cy,r){
       b.vx=dx/d*v;b.vy=dy/d*v-1-R()*1.5;b.va=(R()-.5)*.2;
     }
   }
+  if(r>=6&&bodies.length<140){const K=Math.min(10,Math.round(r*PHYS.mix.ringChunks*(.7+R()*.6)));
+    for(let k=0;k<K&&bodies.length<140;k++){const a=R()*6.283,d=r*(1.1+R()*.4),rc=6+R()*Math.min(8,r/2);
+      const n0=solidCells(cx+Math.cos(a)*d,cy+Math.sin(a)*d,rc|0,false);let n=0;
+      for(let j=0;j<n0;j++)if(KIND[t[q[j]]]===S)q[n++]=q[j]; // solid cells only, no loose powder
+      if(n<14)continue;
+      const b=makeBody(q,n,false);if(b){b.chunk=true;b.vx+=Math.cos(a)*(.8+R());b.vy+=Math.sin(a)*(.8+R())-1;}}}
   const nd=Math.min(D.max,r*r*D.perR2|0);
   for(let k=0;k<nd;k++){const a=R()*6.283,d=R()*r*1.1,sp=.4+R()*(1+r*.12);
     spawnDust(cx+Math.cos(a)*d,cy+Math.sin(a)*d,Math.cos(a)*sp,Math.sin(a)*sp-.6-R()*.8,dustCol(exN?exC[R()*exN|0]:rgb(150,140,125)));}
@@ -1816,6 +1843,107 @@ const SPR_JUGG=[
 ".rRRRRr.rRRRRr.",
 ".hhhhhh.hhhhhh."];
 const PAL_JUGG={h:rgb(70,8,14),H:rgb(196,26,32),j:rgb(250,120,104),k:rgb(20,10,10),e:rgb(255,236,200),f:rgb(214,152,110),F:rgb(150,96,66),r:rgb(110,12,20),R:rgb(200,30,38)};
+// ---- Fantastic Four (Earth-828): pale-blue retro suits with the white 4; Johnny is all flame; Ben is orange rock in blue trunks
+const SPR_REED=[
+"....hhhhh....",
+"...hhhhhhh...",
+"...gffffFg...",
+"...ffkfkFF...",
+"...fffFFFF...",
+"....ffFFF....",
+"..bBBNNNBBb..",
+".bBBBNWNBBBb.",
+".bBBNWNWNBBb.",
+".bBBBNWNBBBb.",
+".bBBBBNBBBBb.",
+".bBBBBBBBBBb.",
+".ffNNNNNNNff.",
+".FF.BBBBB.FF.",
+"....Bb.Bb....",
+"....Bb.Bb....",
+"...Bb...Bb...",
+"...Bb...Bb...",
+"...Bb...Bb...",
+"..NNN...NNN..",
+"..NNN...NNN..",
+"..NNN...NNN.."];
+const SPR_SUE=[
+"....YYYYY....",
+"...YYYYYYY...",
+"..YYffffFYy..",
+"..YffkfkFFy..",
+"..YfffFFFFy..",
+"..yYffFFFYy..",
+"..yBBNNNBBy..",
+".bBBBNWNBBBb.",
+".bBBNWNWNBBb.",
+".bBBBNWNBBBb.",
+".bBBBBNBBBBb.",
+".fBBBNNNBBBf.",
+".F..BBBBB..F.",
+"....BBBBB....",
+"....Bb.Bb....",
+"....Bb.Bb....",
+"...Bb...Bb...",
+"...Bb...Bb...",
+"...Bb...Bb...",
+"...Bb...Bb...",
+"..NNN...NNN..",
+"..NNN...NNN.."];
+const SPR_TORCH=[
+".....*.o.....",
+"...o.**O.o...",
+"...O*YY*Oo...",
+"...OYeYeYo...",
+"...OYYYYYo...",
+"....OYYYO....",
+"..oOO*Y*OOo..",
+".oOYO*Y*OYOo.",
+".oOYO*Y*OYOo.",
+".oOYOO*OOYOo.",
+".oOYOOYOOYOo.",
+".oOYOOOOOYOo.",
+".**.OOOOO.**.",
+".oo.OYYYO.oo.",
+"....OY.YO....",
+"....OY.YO....",
+"...OY...YO...",
+"...OY...YO...",
+"...oO...Oo...",
+"..oOO...OOo..",
+"...o*...*o...",
+"....o...o...."];
+const SPR_THING=[
+"......kkkkk......",
+"....kkLLlLLkk....",
+"...kLlRRdRRlRk...",
+"...kRRdRRRdRrk...",
+"..kddddddddddrk..",
+"..kRkcckRkcckRk..",
+"..kRRRRdRdRRRrk..",
+"..krRdkkkkkdRrk..",
+"...krRRdRRRRrk...",
+".kkkRRdRRRdRRkkk.",
+"kLlRdRRlRRdRRlLRk",
+"kRRrdRRRdRRRdRRrk",
+"klRddRlRRdRlRddRk",
+"kRrdRRRdRRRRdRrrk",
+"klRdkRRRdRRRkdRrk",
+"kRrk.BBBBBBB.kRrk",
+"klRk.NNNWNNN.kRrk",
+"kRRk.BBBBBBB.kRRk",
+"LlRRkBBBbBBBkRRlL",
+"lRRrkBBB.BBBkrRRl",
+"kddk.bBB.BBb.kddk",
+"...kRlRk.kRlRk...",
+"...kRRdk.kdRRk...",
+"...klRrk.kRlrk...",
+"..kRRdRk.kRdRRk..",
+"..kkkkkk.kkkkkk.."];
+const PAL_REED={h:rgb(84,58,40),g:rgb(176,176,182),f:rgb(232,190,156),F:rgb(186,140,110),k:rgb(30,26,30),B:rgb(118,168,206),b:rgb(72,112,156),N:rgb(34,48,82),W:rgb(240,242,248)};
+const PAL_SUE={Y:rgb(238,208,124),y:rgb(196,160,82),f:rgb(236,196,166),F:rgb(190,146,118),k:rgb(30,26,34),B:rgb(118,168,206),b:rgb(72,112,156),N:rgb(34,48,82),W:rgb(240,242,248)};
+const PAL_TORCH={'*':rgb(255,250,220),e:rgb(255,255,255),Y:rgb(255,214,90),O:rgb(255,140,40),o:rgb(214,70,20)};
+const PAL_THING={k:rgb(48,20,10),d:rgb(128,56,22),r:rgb(172,82,34),R:rgb(218,118,50),l:rgb(244,162,88),L:rgb(255,204,136),c:rgb(130,205,255),B:rgb(62,108,172),b:rgb(38,68,122),N:rgb(24,36,66),W:rgb(240,244,250)};
 const GLOWCH={e:1,'*':1,'@':1,V:1,'+':1};
 // ---- procedural animation rig. The hero sprite is re-posed every frame before drawing:
 //   leg   first leg row (rows below swing for walking / tuck for jumps / trail in flight)
@@ -1844,10 +1972,14 @@ const ANIM={
   juggernaut:{leg:17,mid:7,armC:'fRF',tipC:'fFf',aw:3,al:8,fs:4,sh:[12,10],hide:rect(11,14,10,16),blink:null},
   antman:{leg:13,mid:6,armC:'RRr',tipC:'kkk',aw:2,al:5,fs:2,sh:[10,7],hide:rect(10,11,7,12),blink:null},
   storm:{leg:13,mid:6,armC:'GKk',tipC:'ssS',aw:2,al:5,fs:2,sh:[10,7],hide:rect(10,11,7,12),blink:'e',lid:'s',cape:'Cc'},
+  reed:{leg:14,mid:6,armC:'BBb',tipC:'fFF',aw:2,al:7,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null},
+  sue:{leg:14,mid:6,armC:'BBb',tipC:'fFF',aw:2,al:5,fs:2,sh:[10,7],hide:rect(10,11,7,12),blink:null},
+  torch:{leg:14,mid:6,armC:'YOo',tipC:'**O',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null},
+  thing:{leg:21,mid:8,armC:'lRr',tipC:'lRd',aw:3,al:9,fs:4,sh:[14,10],hide:rect(13,16,10,20),blink:null},
 };
 const PP=8; // padding around the posed sprite for limbs that reach out
-const ARM_UP=new Set(['Conjure Chaos','Chaos Unleashed','Gravity Hex','Ward of Vishanti','No More','Giant-Man','Downburst','Heat Wave','Icicle Drop','Mjolnir Pin','Ice Golem','Telekinetic Rip','Blizzard','Phoenix Wings','Storm Call','Lightning Call','Thunderbolt','Tornado','Hailstorm','Phoenix Force','Ice Wall','Ball Lightning','Conductor Strike','Flash Flood','Eye of the Storm','Bifrost','God Blast']);
-const ARM_BOTH=new Set(['Hex Sphere','Crimson Crush','Mirror Shatter','Magnetic Implosion','Hex Storm','Transmute','Elemental Inversion','Reweave','Crimson Bands','Mirror Fold','Banish','Pym Burst','Chaos Field','EMP Burst','Not Today','Stealth Mode','Adamantium Skeleton','Mystic Shield','Thunderclap','Gale Force','Psychic Wave','Frost Nova','Mind Shield','Levitate Crowd','Debris Storm','Gamma Roar','Energy Shield','Avalanche']);
+const ARM_UP=new Set(['Fire Rain','Comet Strike','Pile Driver','Force Geyser','Lift & Slam','Conjure Chaos','Chaos Unleashed','Gravity Hex','Ward of Vishanti','No More','Giant-Man','Downburst','Heat Wave','Icicle Drop','Mjolnir Pin','Ice Golem','Telekinetic Rip','Blizzard','Phoenix Wings','Storm Call','Lightning Call','Thunderbolt','Tornado','Hailstorm','Phoenix Force','Ice Wall','Ball Lightning','Conductor Strike','Flash Flood','Eye of the Storm','Bifrost','God Blast']);
+const ARM_BOTH=new Set(['Force Burst','Force Nova','Crushing Bubble','Hammer Fist','Rock Slam','Supernova','Negative Zone Rift','Thunder Clap','Hex Sphere','Crimson Crush','Mirror Shatter','Magnetic Implosion','Hex Storm','Transmute','Elemental Inversion','Reweave','Crimson Bands','Mirror Fold','Banish','Pym Burst','Chaos Field','EMP Burst','Not Today','Stealth Mode','Adamantium Skeleton','Mystic Shield','Thunderclap','Gale Force','Psychic Wave','Frost Nova','Mind Shield','Levitate Crowd','Debris Storm','Gamma Roar','Energy Shield','Avalanche']);
 const ARM_VISOR=new Set(['Annihilation Sweep','Bad Luck','Time Loop','Spider-Sense','Tactical Focus','Blackbird Strafe','Puppet Master','Optic Cage','Uncontrolled Blast','Optic Blast','Concussive Burst','Ricochet Shot','Full Power','Optic Sweep','Optic Barrage','Leg Sweep','Visor Overload']);
 function armMode(p){
   if(p.ball)return'clap';
@@ -2233,6 +2365,7 @@ const shots=[],drones=[],strikes=[]; let vortex=null, held=null, heldE=null, tkP
 function aim(){const h=hand();const dx=mouse.wx-h.x,dy=mouse.wy-h.y,d=Math.hypot(dx,dy)||1;return{h,dx:dx/d,dy:dy/d,d};}
 const CYAN=[150,235,255], BLUE=[160,205,255], GAMMA=[130,255,90];
 const pickC=c=>rgb(c[0]*(.7+R()*.3),c[1]*(.7+R()*.3),c[2]*(.7+R()*.3));
+const TSL=[]; // the hero's last five seconds (300 ticks) of position and health, for Doom's Timeslip
 const DOOM_POWERS=[
  {n:'Eldritch Bolt',fn:(a,p,use)=>{if(!use(5))return;shots.push({x:a.h.x,y:a.h.y,vx:a.dx*6.5,vy:a.dy*6.5,type:'bolt',life:140,boom:11,fire:.25,green:true});cd=8;shake+=1.2;flash(a.h.x,a.h.y,10,[80,255,120],4);}},
  {n:'Mystic Fire',fn:(a,p,use)=>{if(!use(.4))return;for(let k=0;k<8;k++){const s=2.6+R()*3,sp=(R()-.5)*.4;spawn(a.h.x,a.h.y,(a.dx-sp*a.dy)*s+(R()-.5)*.4,(a.dy+sp*a.dx)*s+(R()-.5)*.4,gcol(),35+R()*30,GFIRE,1,1);}
@@ -2248,6 +2381,17 @@ const DOOM_POWERS=[
  {n:'Orbital Strike',fn:(a,p,use)=>{if(!use(40))return;strikes.push({x:mouse.wx|0,t:45,dig:0,beam:0});cd=60;}},
  {n:'Telekinesis',tk:{r:12,range:0,tether:true,throwMul:1.6}},
  {n:'Mystic Nova',fn:(a,p,use)=>{if(!use(30))return;nova();cd=50;}},
+ // Timeslip (Loki's time-slipping): Doom's body stretches out into threads of himself, snaps away, and the threads
+ // knit back together where he stood five seconds ago, with the health he had then
+ {n:'Timeslip',fn:(a,p,use)=>{if(TSL.length<30||p.slip||!use(30))return;cd=90;const o=TSL[0];let k=0;
+   p.slip={rows:posePlayer(p).slice(),face:p.face,x:p.x,y:p.y,t:0,dir:o.x<p.x?-1:1};
+   fxWord(p.x,p.y-PH-10,'TIMESLIP',1.2,'#ffb050',true);snd('psi',p.x,p.y,{pitch:.6});
+   ACT.push(()=>{k++;const S=p.slip;if(!S)return false;p.script=3;p.vx=0;p.vy=0;caPulse=Math.max(caPulse,3);
+     if(k<=18){S.t=k/18;p.x=S.x;p.y=S.y;if(k%4===0)shake=Math.max(shake,2);}
+     else if(k===19){p.x=o.x;p.y=o.y;S.x=o.x;S.y=o.y;S.dir=-S.dir;p.hp=Math.max(p.hp,o.hp);TSL.length=0;flash(o.x,o.y-PH/2,30,[255,150,40],6);snd('zap',o.x,o.y,{pitch:.5,v:.6});}
+     else{S.t=Math.max(0,1-(k-19)/16);p.x=S.x;p.y=S.y;}
+     if(k>=35){p.slip=null;rings.push({x:o.x,y:o.y-PH/2,r:4,vr:3,life:12,c:[255,170,60]});if(boxHit(p.x,p.y))punchOut(p);return false;}
+     return true;});}},
 ];
 const HULK_POWERS=[
  {n:'Smash',fn:(a,p,use)=>{if(!use(4))return;p.punchF=10;const x=a.h.x+a.dx*7,y=a.h.y+a.dy*7;explode(x,y,p.rage>0?16:10,{self:true,col:[210,200,170],word:'SMASH!'});damageEnemies(x,y,16,35,a.dx*6,a.dy*6-2);
@@ -2329,7 +2473,7 @@ const CYC_POWERS=[
 ];
 const ICE_POWERS=[
  {n:'Ice Beam',fn:(a,p,use)=>{if(!use(.6))return;let x=a.h.x,y=a.h.y;
-   for(let s2=0;s2<300;s2++){x+=a.dx;y+=a.dy;const X=x|0,Y=y|0;if(X<0||X>=W||Y<0||Y>=H)break;const i=Y*W+X,m=t[i];
+   for(let s2=0;s2<300;s2++){x+=a.dx;y+=a.dy;const X=x|0,Y=y|0;if(X<0||X>=W||Y>=H||Y<-SKY)break;const i=Y*W+X,m=t[i];
      if(m===WATER||m===ACID){setc(i,ICE);continue;}if(m===LAVA){setc(i,OBSID);break;}if(KIND[m]===F){setc(i,EMPTY);continue;}
      const e=enemyAt(x,y,1);if(e){e.frozen=Math.max(e.frozen||0,60);hitEnemy(e,1.5,0,0);break;}
      if(m&&KIND[m]!==G){for(let k=0;k<3;k++)iceAt(X-a.dx*(1+R()*3)+(R()-.5)*3,Y-a.dy*(1+R()*3)+(R()-.5)*3);break;}}
@@ -2393,7 +2537,7 @@ const JEAN_POWERS=[
  {n:'Mind Crush',fn:(a,p,use)=>{if(!use(.7))return;const cx=mouse.wx,cy=mouse.wy,r=34;
    for(const e of enemies){const dx=cx-e.x,dy=cy-e.y,d=Math.hypot(dx,dy);if(d<r+e.def.w){e.vx+=dx/(d||1)*.6;e.vy+=dy/(d||1)*.6-.2;hitEnemy(e,1.4,0,0);}}
    for(let n=0;n<500;n++){const an=R()*6.283,d=Math.sqrt(R())*r,X=cx+Math.cos(an)*d|0,Y=cy+Math.sin(an)*d|0;if(X<1||X>=W-1||Y<1||Y>=H-1)continue;const i=Y*W+X,m=t[i];if(!m)continue;
-     if(KIND[m]===S&&d<12&&m!==STEEL&&R()<.05){t[i]=RUBBLE;markDirty(i);wake(i);}else if(KIND[m]===P&&R()<.3){spawn(X,Y,(cx-X)*.06,(cy-Y)*.06,col[i],40,m,0,0,1);t[i]=0;wake(i);}}
+     if(KIND[m]===S&&d<12&&m!==STEEL&&R()<.05){crumble(i);markDirty(i);wake(i);}else if(KIND[m]===P&&R()<.3){spawn(X,Y,(cx-X)*.06,(cy-Y)*.06,col[i],40,m,0,0,1);t[i]=0;wake(i);}}
    for(let k=0;k<4;k++){const an=R()*6.283,rr=r*(.6+R()*.4);spawn(cx+Math.cos(an)*rr,cy+Math.sin(an)*rr,-Math.cos(an)*1.5,-Math.sin(an)*1.5,rgb(255,120,210),14,0,1,0,1);}
    if(frame%2===0)rings.push({x:cx,y:cy,r:r*.9,vr:-2,life:6,c:[255,110,200]});if(frame%30===0)fxWord(cx,cy-r,'GRRKK!',.9,'#ff9ad8',true);const h=hand();beams.push({pts:[[h.x,h.y],[(h.x+cx)/2+(R()-.5)*10,(h.y+cy)/2+(R()-.5)*10],[cx,cy]],life:1,c:[255,170,230],g:[255,80,190]});}},
  {n:'Phoenix Force',fn:(a,p,use)=>{if(!use(60))return;cd=120;const cx=p.x,cy=p.y-PH/2;let k=0;fxWord(cx,cy-40,'SKREEEEE!',1.7,'#ffb340',true);hitstop=Math.max(hitstop,4);fxImpact(cx,cy,5);
@@ -2443,7 +2587,7 @@ function opticThrust(p,on,ax){
   let dx=-ax*.35,dy=1;const d=Math.hypot(dx,dy);dx/=d;dy/=d;
   p.vy=Math.max(-3.2,p.vy-.78);p.vx-=dx*.18;p.ground=false;
   const o=eyes();let x=o.x,y=o.y,hit=false;
-  for(let k=0;k<140;k++){x+=dx;y+=dy;const X=x|0,Y=y|0;if(X<0||X>=W||Y<0||Y>=H)break;const m=t[Y*W+X];if(m&&KIND[m]!==G&&KIND[m]!==F){hit=true;
+  for(let k=0;k<140;k++){x+=dx;y+=dy;const X=x|0,Y=y|0;if(X<0||X>=W||Y>=H||Y<-SKY)break;const m=t[Y*W+X];if(m&&KIND[m]!==G&&KIND[m]!==F){hit=true;
     if(R()<.08&&KIND[m]!==L&&m!==STEEL&&m!==OBSID){spawn(X,Y,(R()-.5)*2,-R()*2,col[Y*W+X],50,KIND[m]===S?RUBBLE:m,0);setc(Y*W+X,EMPTY);} break;}}
   beams.push({x0:o.x,y0:o.y,x1:x,y1:y,life:1,w:1+((frame>>1)&1),c:[255,215,205],g:[255,40,30]});
   if(hit){for(let k=0;k<4;k++)spawn(x,y-1,(R()-.5)*3,-R()*2.5,R()<.5?rgb(255,120,80):rgb(255,220,160),10+R()*8,0,1,1);flash(x,y,16,[255,60,40],2);if(frame%5===0)for(let k=0;k<3;k++)dust(x+(R()-.5)*8|0,y-2);}
@@ -2853,7 +2997,7 @@ const FANT_A=["..w...w..",".wwwkwww.","..kRRRk..","kk.kkk.kk"],FANT_B=["w.......
 function webEnemy(e,t){e.frozen=Math.max(e.frozen||0,t);e.webbed=Math.max(e.webbed||0,t);hitEnemy(e,4,0,0);}
 function webCell(X,Y){if(X<0||X>=W||Y<0||Y>=H-44)return;const i=Y*W+X;if(t[i]===0||KIND[t[i]]===G){setc(i,WEB);const v=R()*14|0;col[i]=rgb(222+v,222+v,228+v);}}
 function webLine(x0,y0,x1,y1){const n=Math.max(1,Math.hypot(x1-x0,y1-y0)|0);for(let k=0;k<=n;k++)webCell(x0+(x1-x0)*k/n|0,y0+(y1-y0)*k/n|0);}
-function ray(x0,y0,dx,dy,max,enemiesToo){let x=x0,y=y0;for(let s=0;s<max;s++){x+=dx;y+=dy;const X=x|0,Y=y|0;if(X<0||X>=W||Y<0||Y>=H)return{x,y,hit:false};if(enemiesToo){const e=enemyAt(x,y,1);if(e)return{x,y,e,hit:true};}const m=t[Y*W+X];if(m&&(KIND[m]===S||KIND[m]===P))return{x,y,hit:true,i:Y*W+X};}return{x,y,hit:false};}
+function ray(x0,y0,dx,dy,max,enemiesToo){let x=x0,y=y0;for(let s=0;s<max;s++){x+=dx;y+=dy;const X=x|0,Y=y|0;if(X<0||X>=W||Y>=H||Y<-SKY)return{x,y,hit:false};if(enemiesToo){const e=enemyAt(x,y,1);if(e)return{x,y,e,hit:true};}const m=t[Y*W+X];if(m&&(KIND[m]===S||KIND[m]===P))return{x,y,hit:true,i:Y*W+X};}return{x,y,hit:false};}
 function scaleChunk(list,n,f){let mx=W,my=H,Mx=0,My=0;for(let k=0;k<n;k++){const i=list[k],x=i%W,y=(i/W)|0;if(x<mx)mx=x;if(y<my)my=y;if(x>Mx)Mx=x;if(y>My)My=y;}
   const lw=Mx-mx+1,lh=My-my+1,src=new Uint8Array(lw*lh),sc=new Uint32Array(lw*lh);
   for(let k=0;k<n;k++){const i=list[k],x=i%W-mx,y=((i/W)|0)-my;src[y*lw+x]=t[i];sc[y*lw+x]=col[i];t[i]=0;pin[i]=0;wake(i);markDirty(i);}
@@ -3178,6 +3322,142 @@ const MAG_POWERS=[
  {n:'Asteroid M',fn:(a,p,use)=>{if(!use(55))return;cd=140;const cx=mouse.wx|0,cy=groundBelow(cx,mouse.wy)+10,n=solidCells(cx,cy,18,true);if(n<60)return;const b=makeBody(q,n,true);if(!b)return;b.tx=cx;b.ty=Math.max(30,camY+40);let k=0;
    fxWord(cx,cy-40,'ASTEROID M!',1.5,'#c88cff',true);snd('rip',cx,cy);shake+=10;ACT.push(()=>{k++;if(!bodies.includes(b))return false;if(k<60){b.tx=mouse.wx;b.ty=Math.max(30,camY+40);return true;}b.held=false;b.vx=0;b.vy=10;b.thrown=true;b.safeP=frame+30;return false;});}},
 ];
+// ================= Fantastic Four =================
+const F4C=[150,196,232], SUEC=[170,225,255], FC=[255,150,40], TC=[230,140,70];
+// Reed's arm drawn as a stretched band of suit blue
+function stretchFx(x0,y0,x1,y1,life=4){beams.push({x0,y0,x1,y1,life,w:2,c:[150,196,232],g:[40,70,120]});}
+const REED_POWERS=[
+ // a fist on a forty-foot arm: everything along the reach is punched out and the end explodes
+ {n:'Long Arm Punch',fn:(a,p,use)=>{if(!use(8))return;cd=18;p.punchF=10;const L=Math.min(150,Math.max(40,a.d)),x=a.h.x+a.dx*L,y=a.h.y+a.dy*L;
+   for(let k=20;k<L;k+=6)carve(a.h.x+a.dx*k,a.h.y+a.dy*k,3,a.dx*4,a.dy*4);stretchFx(a.h.x,a.h.y,x,y,6);
+   explode(x|0,y|0,10,{self:true,col:F4C,word:'WHAPP!'});damageLine(a.h.x,a.h.y,x,y,6,18);damageEnemies(x,y,16,30,a.dx*8,a.dy*8-2);snd('punch',x,y);}},
+ // both hands swell into one giant mallet and come down on the cursor
+ {n:'Hammer Fist',fn:(a,p,use)=>{if(!use(22))return;cd=40;const L=Math.min(160,a.d),x=a.h.x+a.dx*L,y=a.h.y+a.dy*L;stretchFx(a.h.x,a.h.y,x,y,10);
+   explode(x|0,y|0,16,{self:true,col:F4C,word:'KA-THWOMP!'});for(let k=1;k<8;k++)crackCell(x+(R()-.5)*40|0,y+R()*20|0,R()<.5?-1:1);shockFx(x,y,1);damageEnemies(x,y,34,45,a.dx*6,-4);hitstop=Math.max(hitstop,3);}},
+ // an arm whipped through a wide arc, scything through walls
+ {n:'Stretch Sweep',fn:(a,p,use)=>{if(!use(18))return;cd=34;const base=Math.atan2(a.dy,a.dx);let k=0;fxWord(p.x,p.y-PH-8,'SWOOSH-KRAK!',1,'#9fd0f0',true);snd('whoosh',p.x,p.y);
+   ACT.push(()=>{const h=hand(),an=base-1.1+k/16*2.2,L=85,x=h.x+Math.cos(an)*L,y=h.y+Math.sin(an)*L,tx=Math.cos(an+1.57),ty=Math.sin(an+1.57);stretchFx(h.x,h.y,x,y,2);
+     for(let r=30;r<=L;r+=11)carve(h.x+Math.cos(an)*r,h.y+Math.sin(an)*r,5,tx*4,ty*4);
+     damageEnemies(x,y,14,8,tx*6,-3);for(const b of bodies)if(!b.held&&Math.hypot(b.x-x,b.y-y)<b.rmax+10){b.vx+=tx*5;b.vy-=2;b.thrown=true;}
+     shake=Math.max(shake,4);return++k<=16;});}},
+ // anchor, stretch back, let go: Reed fires himself through anything in the way
+ {n:'Elastic Slingshot',fn:(a,p,use)=>{if(!use(20))return;cd=40;let k=0;const dx=a.dx,dy=a.dy;p.ground=false;fxWord(p.x,p.y-PH-8,'BOINNNG!',1.1,'#9fd0f0',true);snd('leap',p.x,p.y);
+   ACT.push(()=>{k++;p.vx=dx*8;p.vy=dy*8;p.script=2;carve(p.x+dx*6,p.y-PH/2+dy*6,8,dx*5,dy*5);damageEnemies(p.x,p.y-PH/2,14,10,dx*7,dy*7-2);if(k%3===0)afters.push({x:p.x,y:p.y,ang:0,face:dx<0?-1:1,life:10});
+     if(k>=22){explode(p.x|0,p.y-PH/2|0,12,{self:true,col:F4C});p.vx*=.3;p.vy*=.3;return false;}return true;});}},
+ // reach out, tear a piece of building off and throw it at the nearest enemy
+ {n:'Giant Hands',fn:(a,p,use)=>{const cx=mouse.wx|0,cy=mouse.wy|0;if(Math.hypot(cx-p.x,cy-p.y)>220)return;const n0=solidCells(cx,cy,14,false);if(n0<30||!use(24))return;cd=40;const b=makeBody(q,n0,false);if(!b)return;
+   stretchFx(a.h.x,a.h.y,cx,cy,12);b.vy=-6;b.va=(R()-.5)*.2;b.safeP=frame+60;let k=0;fxWord(cx,cy-20,'GOT IT!',1,'#9fd0f0',true);snd('rip',cx,cy);
+   ACT.push(()=>{if(!bodies.includes(b))return false;if(++k===14){const e=nearestEnemy(b.x,b.y,400),tx=e?e.x:mouse.wx,ty=e?e.y:mouse.wy;hurlBody(b,tx,ty,10);b.safeP=frame+40;return false;}const h=hand();stretchFx(h.x,h.y,b.x,b.y,1);return true;});}},
+ // bounce sky-high and come down flat as a pancake, cratering the street
+ {n:'Rubber Crash',fn:(a,p,use)=>{if(!use(22))return;cd=45;p.vy=-8;p.vx=Math.sign(mouse.wx-p.x)*Math.min(5,Math.abs(mouse.wx-p.x)/40);p.ground=false;p.slam=true;p.slamOpt={col:F4C,dive:true};p.diveY=p.y-70;fxWord(p.x,p.y-PH-8,'BOING-SPLAT!',1,'#9fd0f0',true);snd('leap',p.x,p.y);}},
+ // lasso the top of a building and pull it over
+ {n:'Lasso Topple',fn:(a,p,use)=>{const cx=mouse.wx|0,cy=mouse.wy|0;if(Math.hypot(cx-p.x,cy-p.y)>260)return;const n0=solidCells(cx,cy,22,false);if(n0<60||!use(30))return;cd=55;const b=makeBody(q,n0,false);if(!b)return;
+   const dir=p.x<b.x?-1:1;b.vx=dir*4;b.vy=-2;b.va=dir*.06;b.thrown=true;b.safeP=frame+60;stretchFx(a.h.x,a.h.y,cx,cy,14);fxWord(cx,cy-30,'TIMBERRR!',1.2,'#9fd0f0',true);snd('rip',cx,cy);shake+=6;}},
+ // a stretched fist hammers straight down, again and again, drilling a shaft
+ {n:'Pile Driver',fn:(a,p,use)=>{if(!use(28))return;cd=50;const x=mouse.wx|0;let y=Math.max(0,mouse.wy|0)-30,k=0;fxWord(x,y-20,'PILE DRIVER!',1.2,'#9fd0f0',true);
+   ACT.push(()=>{if(k%3===0){explode(x+(R()-.5)*4|0,y|0,9,{self:true,quiet:k%9!==0,col:F4C});damageEnemies(x,y,14,14,0,5);const h=hand();stretchFx(h.x,h.y,x,y,3);y+=10;}shake=Math.max(shake,5);return++k<36&&y<H-46;});}},
+ // a rift to the Negative Zone drinks in wreckage and enemies, then blows
+ {n:'Negative Zone Rift',fn:(a,p,use)=>{if(!use(40))return;cd=90;const cx=mouse.wx,cy=mouse.wy;let k=0;fxWord(cx,cy-30,'NEGATIVE ZONE!',1.3,'#c8a0ff',true);snd('psi',cx,cy);
+   ACT.push(()=>{k++;for(const b of bodies){if(b.held)continue;const dx=cx-b.x,dy=cy-b.y,d=Math.hypot(dx,dy)||1;if(d<170){b.vx+=dx/d*.7;b.vy+=dy/d*.7-.3;b.rest=0;}}
+     for(let n=0;n<np;n++){const dx=cx-px[n],dy=cy-py[n],d2=dx*dx+dy*dy;if(d2<28900){const d=Math.sqrt(d2)||1;pvx[n]+=dx/d*.4;pvy[n]+=dy/d*.4-.15;}}
+     for(const e of enemies){if(e.def.title)continue;const d=Math.hypot(e.x-cx,e.y-cy);if(d<120){e.vx+=(cx-e.x)*.015;e.vy+=(cy-e.y)*.015;hitEnemy(e,.8,0,0);}}
+     if(k%2===0){carve(cx+(R()-.5)*30,cy+(R()-.5)*30,5,0,0);rings.push({x:cx,y:cy,r:40,vr:-3,life:8,c:[170,120,255]});}
+     flash(cx,cy,26,[120,60,255],2);if(k>=100){explode(cx|0,cy|0,24,{self:true,col:[170,120,255],word:'KRA-VOOM!'});shockFx(cx,cy,1.2);return false;}return true;});}},
+ // the Fantasti-Car makes a bombing run across the cursor
+ {n:'Fantasti-Car Run',fn:(a,p,use)=>{if(!use(45))return;cd=120;const dir=mouse.wx>p.x?1:-1;let x=mouse.wx-dir*200,k=0;const y=Math.max(camY+16,mouse.wy-90);fxWord(mouse.wx,y-10,'FANTASTI-CAR!',1.3,'#9fd0f0',true);snd('jet',x,y);
+   ACT.push(()=>{k++;x+=dir*7;for(let j=0;j<4;j++)spawn(x-dir*(4+j*3),y+(R()-.5)*3,-dir*2,(R()-.5)*.5,R()<.5?rgb(150,200,240):rgb(255,255,255),12,0,1,0,1);
+     beams.push({x0:x-dir*8,y0:y,x1:x+dir*8,y1:y,life:1,w:3,c:[230,236,244],g:[120,180,230]});
+     if(k%5===0)shots.push({x,y:y+4,vx:dir*1.5,vy:3,type:'bomb',life:200,boom:12,fire:.2,grav:.2,col:[150,200,240],ecol:[150,200,240]});return k<58;});}},
+];
+const SUE_POWERS=[
+ {n:'Force Blast',fn:(a,p,use)=>{if(!use(6))return;cd=10;shots.push({x:a.h.x,y:a.h.y,vx:a.dx*7,vy:a.dy*7,type:'force',life:100,boom:10,col:SUEC,ecol:SUEC});flash(a.h.x,a.h.y,10,SUEC,3);}},
+ // an invisible wall shoves forward, bulldozing everything in its path
+ {n:'Force Ram',fn:(a,p,use)=>{if(!use(20))return;cd=40;const dir=a.dx<0?-1:1;let x=p.x+dir*10,k=0;const y0=p.y-PH/2;fxWord(p.x,p.y-PH-8,'SHOVE!',1,'#aee0ff',true);snd('wave',p.x,p.y);
+   ACT.push(()=>{k++;x+=dir*6;for(let yy=-26;yy<=26;yy+=8)carve(x,y0+yy,5,dir*6,-1);beams.push({x0:x,y0:y0-28,x1:x,y1:y0+28,life:1,w:2,c:[220,245,255],g:SUEC});
+     for(const e of enemies)if(Math.abs(e.x-x)<10&&Math.abs(e.y-y0)<34)hitEnemy(e,5,dir*7,-2);for(const b of bodies)if(!b.held&&Math.abs(b.x-x)<b.rmax+6&&Math.abs(b.y-y0)<40){b.vx+=dir*3;b.thrown=true;}shake=Math.max(shake,3);return k<26;});}},
+ // a force bubble closes on the cursor, crushing what is inside, then implodes
+ {n:'Crushing Bubble',fn:(a,p,use)=>{if(!use(28))return;cd=55;const cx=mouse.wx,cy=mouse.wy;let k=0;fxWord(cx,cy-36,'CRUSH!',1.1,'#aee0ff',true);
+   ACT.push(()=>{k++;const r=34-k;rings.push({x:cx,y:cy,r,vr:0,life:2,c:SUEC});if(k%2===0)for(let j=0;j<10;j++){const an=R()*6.283;carve(cx+Math.cos(an)*r,cy+Math.sin(an)*r,3,-Math.cos(an)*2,-Math.sin(an)*2);}
+     for(const e of enemies){const d=Math.hypot(e.x-cx,e.y-cy);if(d<r+6){e.vx+=(cx-e.x)*.05;e.vy+=(cy-e.y)*.05;hitEnemy(e,1.5,0,0);}}
+     if(k>=28){explode(cx|0,cy|0,18,{self:true,col:SUEC,word:'IMPLODE!'});return false;}return true;});}},
+ // a ring of force detonates all around her
+ {n:'Force Burst',fn:(a,p,use)=>{if(!use(24))return;cd=40;const cx=p.x,cy=p.y-PH/2;for(let j=0;j<10;j++){const an=j/10*6.283;explode(cx+Math.cos(an)*30|0,cy+Math.sin(an)*30|0,8,{self:true,quiet:j>0,col:SUEC});}
+   for(const e of enemies){const dx=e.x-cx,dy=e.y-cy,d=Math.hypot(dx,dy)||1;if(d<110){e.vx+=dx/d*7;e.vy+=dy/d*7-2;hitEnemy(e,16,0,0);}}rings.push({x:cx,y:cy,r:8,vr:5,life:16,c:SUEC});shockFx(cx,cy,1);fxWord(cx,cy-30,'FWOOMPH!',1.2,'#aee0ff',true);}},
+ {n:'Force Spikes',fn:(a,p,use)=>{if(!use(14))return;cd=24;const base=Math.atan2(a.dy,a.dx);for(let j=-3;j<=3;j++){const an=base+j*.09;shots.push({x:a.h.x,y:a.h.y,vx:Math.cos(an)*8,vy:Math.sin(an)*8,type:'force',life:90,boom:6,col:SUEC,ecol:SUEC});}fxWord(a.h.x,a.h.y-14,'SHNK-SHNK!',.9,'#aee0ff',true);}},
+ // lift a whole block of building into the air... and drop it
+ {n:'Lift & Slam',fn:(a,p,use)=>{const cx=mouse.wx|0,cy=mouse.wy|0,n0=solidCells(cx,cy,18,false);if(n0<50||!use(32))return;cd=60;const b=makeBody(q,n0,true);if(!b)return;b.tx=cx;b.ty=cy-70;let k=0;fxWord(cx,cy-30,'UP...',1,'#aee0ff',true);snd('psi',cx,cy);
+   ACT.push(()=>{k++;if(!bodies.includes(b))return false;if(k<45){b.tx=cx;b.ty=cy-70;if(k%3===0)rings.push({x:b.x,y:b.y,r:b.rmax+4,vr:0,life:3,c:SUEC});return true;}b.held=false;b.vx=0;b.vy=11;b.thrown=true;b.safeP=frame+40;fxWord(b.x,b.y-20,'...AND DOWN!',1.1,'#aee0ff',true);return false;});}},
+ // a force wedge punches up from under the street, throwing slabs of it skyward
+ {n:'Force Geyser',fn:(a,p,use)=>{if(!use(26))return;cd=45;const cx=mouse.wx|0,gy=groundBelow(cx,mouse.wy);fxWord(cx,gy-30,'ERUPT!',1.2,'#aee0ff',true);snd('boom',cx,gy,{size:.8});
+   for(let j=0;j<3;j++){const n0=solidCells(cx+(j-1)*16,gy+6,8,true);let n=0;for(let i=0;i<n0;i++)if(KIND[t[q[i]]]===S)q[n++]=q[i];const b=n>=14?makeBody(q,n,false):null;if(b){b.vy=-8-R()*3;b.vx=(j-1)*1.5;b.va=(R()-.5)*.2;b.thrown=true;b.safeP=frame+40;}}
+   explode(cx,gy|0,10,{self:true,col:SUEC});for(const e of enemies)if(Math.abs(e.x-cx)<40&&Math.abs(e.y-gy)<50){e.vy=-8;hitEnemy(e,20,0,-4);}beams.push({x0:cx,y0:gy,x1:cx,y1:gy-90,life:6,w:6,c:[220,245,255],g:SUEC});}},
+ // six invisible force charges, set off one after another
+ {n:'Invisible Mines',fn:(a,p,use)=>{if(!use(30))return;cd=60;const cx=mouse.wx,cy=mouse.wy,ms=[];for(let j=0;j<6;j++)ms.push([cx+(R()-.5)*90,cy+(R()-.5)*50,30+j*8]);let k=0;fxWord(cx,cy-30,'NOW YOU SEE IT...',1,'#aee0ff',true);
+   ACT.push(()=>{k++;for(const m of ms){if(m[2]===k)explode(m[0]|0,m[1]|0,11,{self:true,col:SUEC});else if(m[2]>k&&k%6===0)spawn(m[0],m[1],0,0,rgb(200,235,255),4,0,1,0,1);}return k<80;});}},
+ // hold: a thin, unbreakable lance of force that bores through the city
+ {n:'Force Lance',fn:(a,p,use)=>{if(!use(.8))return;beamCore(a,{pow:220,rad:2,len:420,w:2,c:[230,248,255],g:SUEC,spark:()=>rgb(200,235,255),dmg:4,noAsh:true});}},
+ // everything she has: a force sphere that swells out and levels the block
+ {n:'Force Nova',fn:(a,p,use)=>{if(!use(55))return;cd=140;const cx=p.x,cy=p.y-PH/2;let k=0;fxWord(cx,cy-40,'ENOUGH!',1.5,'#aee0ff',true);snd('charge',cx,cy);
+   ACT.push(()=>{k++;if(k<20){p.vx*=.5;p.vy*=.5;rings.push({x:cx,y:cy,r:50-k*2,vr:0,life:2,c:SUEC});return true;}
+     const r=(k-19)*7;for(let j=0;j<8;j++){const an=R()*6.283;explode(cx+Math.cos(an)*r|0,cy+Math.sin(an)*r|0,9,{self:true,quiet:true,col:SUEC});}
+     if(k===20){shockFx(cx,cy,1.6);flash(cx,cy,160,SUEC,12);hitstop=Math.max(hitstop,5);}damageEnemies(cx,cy,r+10,6,0,0,true);shake=Math.max(shake,10);return k<34;});}},
+];
+const TORCH_POWERS=[
+ {n:'Fireball',fn:(a,p,use)=>{if(!use(5))return;cd=8;shots.push({x:a.h.x,y:a.h.y,vx:a.dx*7,vy:a.dy*7,type:'fire',life:100,boom:8,fire:.5,col:FC,ecol:[255,140,40]});flash(a.h.x,a.h.y,8,FC,3);}},
+ // hold: a jet of flame that cuts through walls and sets the block alight
+ {n:'Flame Stream',fn:(a,p,use)=>{if(!use(.9))return;beamCore(a,{pow:140,rad:2,len:260,w:2+(frame&1),c:[255,230,150],g:[255,110,20],spark:()=>rgb(255,120+R()*120,30),dmg:4});
+   const L=Math.min(260,a.d);for(let j=0;j<4;j++){const d=R()*L,X=a.h.x+a.dx*d+(R()-.5)*8|0,Y=a.h.y+a.dy*d+(R()-.5)*8|0;if(X>=0&&X<W&&Y>=0&&Y<H){const i=Y*W+X;if(t[i]===0&&R()<.3)setc(i,FIRE);else if(FLAM[t[i]]>0)ignite(i);}}}},
+ {n:'Nova Flare',fn:(a,p,use)=>{if(!use(22))return;cd=40;const cx=p.x,cy=p.y-PH/2;explode(cx|0,cy|0,16,{self:true,fire:.5,word:'FWOOOM!'});shockFx(cx,cy,1);for(const e of enemies){const dx=e.x-cx,dy=e.y-cy,d=Math.hypot(dx,dy)||1;if(d<90){e.vx+=dx/d*6;e.vy+=dy/d*6-2;hitEnemy(e,14,0,0);}}}},
+ // a burning dive: he becomes a missile and punches through buildings
+ {n:'Blazing Dive',fn:(a,p,use)=>{if(!use(18))return;cd=36;const dx=a.dx,dy=a.dy;let k=0;fxWord(p.x,p.y-PH-8,'FWOOOSH!',1.1,'#ffb347',true);snd('fireburst',p.x,p.y);
+   ACT.push(()=>{k++;p.vx=dx*8;p.vy=dy*8;p.script=2;const X=p.x+dx*6,Y=p.y-PH/2+dy*6;carve(X,Y,7,dx*5,dy*5);for(let j=0;j<3;j++){const ix=X+(R()-.5)*14|0,iy=Y+(R()-.5)*14|0;if(ix>=0&&ix<W&&iy>=0&&iy<H&&t[iy*W+ix]===0)setc(iy*W+ix,FIRE);}
+     damageEnemies(p.x,p.y-PH/2,14,9,dx*6,dy*6-2);if(k>=20){explode(p.x|0,p.y-PH/2|0,12,{self:true,fire:.5});p.vx*=.3;p.vy*=.3;return false;}return true;});}},
+ // a spinning column of fire that follows the cursor and lifts wreckage
+ {n:'Fire Tornado',fn:(a,p,use)=>{if(!use(30))return;cd=60;let x=mouse.wx;const gy=groundBelow(x|0,mouse.wy);let k=0;fxWord(x,gy-60,'FIRESTORM!',1.2,'#ffb347',true);
+   ACT.push(()=>{k++;x+=(mouse.wx-x)*.02;for(let j=0;j<6;j++){const h=R()*90,an=k*.5+h*.15,X=x+Math.cos(an)*(4+h*.18),Y=gy-h;spawn(X,Y,-Math.sin(an)*2,-1.5-R(),rgb(255,100+R()*130|0,30),14,0,1,0,1);}
+     if(k%3===0)carve(x+(R()-.5)*16,gy-R()*80,5,(R()-.5)*3,-3);if(k%5===0){const X=x+(R()-.5)*20|0,Y=gy-R()*60|0;if(X>=0&&X<W&&Y>=0&&Y<H&&t[Y*W+X]===0)setc(Y*W+X,FIRE);}
+     damageEnemies(x,gy-45,22,1.2,(R()-.5)*2,-2);for(const b of bodies)if(!b.held&&Math.abs(b.x-x)<30&&b.y>gy-100){b.vy-=.6;b.va+=.01;b.rest=0;}shake=Math.max(shake,2);return k<120;});}},
+ {n:'Fire Rain',fn:(a,p,use)=>{if(!use(30))return;cd=55;const cx=mouse.wx;let k=0;fxWord(cx,camY+24,'FIRE RAIN!',1.1,'#ffb347',true);
+   ACT.push(()=>{if(k%3===0)shots.push({x:cx+(R()-.5)*130,y:camY-6,vx:(R()-.5)*.6,vy:5,type:'fire',life:140,boom:7,fire:.5,col:FC,ecol:[255,130,40],grav:.08});return++k<75;});}},
+ // a comet of his own fire, dropped from the sky onto the cursor
+ {n:'Comet Strike',fn:(a,p,use)=>{if(!use(40))return;cd=90;const tx=mouse.wx,ty=mouse.wy,sx=tx-120,sy=camY-10,d=Math.hypot(tx-sx,ty-sy)||1;fxWord(tx,ty-40,'INCOMING!',1.2,'#ffb347',true);
+   shots.push({x:sx,y:sy,vx:(tx-sx)/d*7,vy:(ty-sy)/d*7,type:'fire',life:300,boom:20,fire:.6,col:[255,200,80],ecol:[255,120,30],onHit:s=>{explode(s.x|0,s.y|0,20,{fire:.6,word:'KRA-THOOM!'});shockFx(s.x,s.y,1.3);hitstop=Math.max(hitstop,4);}});}},
+ // hold: white-hot heat turns walls into running lava
+ {n:'Melt Down',fn:(a,p,use)=>{if(!use(.9))return;const cx=mouse.wx|0,cy=mouse.wy|0;for(let j=0;j<26;j++){const an=R()*6.283,d=R()*14,X=cx+Math.cos(an)*d|0,Y=cy+Math.sin(an)*d|0;if(X<0||X>=W||Y<0||Y>=H-44)continue;const i=Y*W+X,m=t[i];
+     if(KIND[m]===S&&m!==OBSID&&R()<.25/(1+HARD[m]*.15))setc(i,FLAM[m]>0?FIRE:LAVA);else if(m===WATER||m===ICE||m===SNOW)setc(i,STEAM);}
+   beams.push({x0:a.h.x,y0:a.h.y,x1:cx,y1:cy,life:1,w:1,c:[255,220,140],g:[255,100,20]});flash(cx,cy,16,[255,120,30],2);damageEnemies(cx,cy,16,1.5,0,0);sndLoop('melt','beam',cx,cy,{pitch:.6,v:.5});}},
+ {n:'Flame Ring',fn:(a,p,use)=>{if(!use(26))return;cd=45;const cx=p.x,cy=p.y-PH/2;for(let j=0;j<14;j++){const an=j/14*6.283;shots.push({x:cx+Math.cos(an)*6,y:cy+Math.sin(an)*6,vx:Math.cos(an)*6,vy:Math.sin(an)*6,type:'fire',life:70,boom:7,fire:.5,col:FC,ecol:[255,140,40]});}fxWord(cx,cy-30,'RING OF FIRE!',1.1,'#ffb347',true);snd('fireburst',cx,cy);}},
+ // he goes nova: a charge-up, then a wave of fire that rolls out over the block
+ {n:'Supernova',fn:(a,p,use)=>{if(!use(60))return;cd=160;const cx=p.x,cy=p.y-PH/2;let k=0;fxWord(cx,cy-40,'FLAME ON!',1.6,'#ffb347',true);snd('charge',cx,cy,{pitch:.7});
+   ACT.push(()=>{k++;if(k<24){for(let j=0;j<6;j++){const an=R()*6.283;spawn(cx+Math.cos(an)*40,cy+Math.sin(an)*40,-Math.cos(an)*2,-Math.sin(an)*2,rgb(255,200,80),18,0,1,0,1);}flash(cx,cy,k*2,[255,150,40],2);return true;}
+     const r=(k-23)*8;for(let j=0;j<7;j++){const an=R()*6.283;explode(cx+Math.cos(an)*r|0,cy+Math.sin(an)*r|0,10,{self:true,quiet:true,fire:.5});}
+     if(k===24){explode(cx|0,cy|0,22,{self:true,fire:.6,word:'SUPERNOVA!'});shockFx(cx,cy,1.8);hitstop=Math.max(hitstop,6);}damageEnemies(cx,cy,r+12,8,0,0,true);shake=Math.max(shake,12);return k<38;});}},
+];
+const THING_POWERS=[
+ {n:'Clobber Punch',fn:(a,p,use)=>{if(!use(5))return;cd=16;p.punchF=10;const x=a.h.x+a.dx*8,y=a.h.y+a.dy*8;explode(x|0,y|0,11,{self:true,col:TC,word:'KLOBBER!'});damageEnemies(x,y,18,40,a.dx*9,a.dy*9-3);
+   for(const b of bodies)if(Math.hypot(b.x-x,b.y-y)<b.rmax+18){b.vx+=a.dx*9;b.vy+=a.dy*9-2;b.thrown=true;}shake+=6;}},
+ {n:'Rock Slam',fn:(a,p,use)=>{if(!p.ground||!use(24))return;cd=45;p.throwF=10;quake(p.x,p.y,{col:TC,r:34});for(const e of enemies)if(Math.abs(e.x-p.x)<110&&Math.abs(e.y-p.y)<40&&!e.def.fly){e.vy=-6;hitEnemy(e,18,Math.sign(e.x-p.x)*3,0);}}},
+ // tear up a slab of street and throw it
+ {n:'Slab Toss',fn:(a,p,use)=>{const dir=p.face,gx=p.x+dir*16|0,gy=groundBelow(gx,p.y-4),n0=solidCells(gx,gy+5,10,true);let n=0;for(let i=0;i<n0;i++)if(KIND[t[q[i]]]===S)q[n++]=q[i];if(n<30||!use(22))return;cd=38;const b=makeBody(q,n,false);if(!b)return;
+   b.x=p.x;b.y=p.y-PH-b.rmax-2;hurlBody(b,mouse.wx,mouse.wy,10);b.safeP=frame+40;p.throwF=10;fxWord(p.x,p.y-PH-8,'HEADS UP!',1,'#ffb070',true);snd('rip',p.x,p.y);shake+=5;}},
+ {n:'Shoulder Charge',fn:(a,p,use)=>{if(p.jcharge>0||!use(20))return;cd=40;const dir=a.dx<0?-1:1;p.face=dir;p.jcharge=45;fxWord(p.x,p.y-PH-10,'OUTTA MY WAY!',1.1,'#ffb070',true);snd('roar',p.x,p.y,{pitch:.9});
+   ACT.push(()=>{if(--p.jcharge<=0)return false;p.vx=dir*5.2;p.face=dir;crushAhead(p.x+dir*PW/2,p.y-PH/2,dir,PH+4,6);damageEnemies(p.x+dir*8,p.y-PH/2,14,9,dir*7,-3);if(frame%3===0){shake=Math.max(shake,4);afters.push({x:p.x,y:p.y,ang:0,face:dir,life:10});}return true;});}},
+ // an uppercut that launches everything overhead
+ {n:'Rock Uppercut',fn:(a,p,use)=>{if(!use(16))return;cd=30;p.throwF=10;const x=p.x+p.face*8,y=p.y-PH;explode(x|0,y|0,11,{self:true,col:TC,word:'UPPERCUT!'});for(let k=1;k<6;k++)carve(x,y-k*10,6,0,-5);
+   for(const e of enemies)if(Math.abs(e.x-x)<30&&Math.abs(e.y-y)<50){e.vy=-9;hitEnemy(e,30,p.face*2,-6);}for(const b of bodies)if(!b.held&&Math.abs(b.x-x)<b.rmax+20&&Math.abs(b.y-y)<60){b.vy-=8;b.va+=(R()-.5)*.2;b.thrown=true;}}},
+ // a clap of rock hands: a cone of blasts rolls out ahead
+ {n:'Thunder Clap',fn:(a,p,use)=>{if(!use(24))return;cd=45;p.throwF=10;let k=0;const dx=a.dx,dy=a.dy,x0=a.h.x,y0=a.h.y;fxWord(x0,y0-20,'KLAPP!',1.3,'#ffb070',true);snd('thud',x0,y0);shockFx(x0,y0,1);
+   ACT.push(()=>{k++;const d=k*12,w=6+k*1.5;for(let j=-1;j<=1;j++)explode(x0+dx*d-dy*j*w|0,y0+dy*d+dx*j*w|0,6+k*.5|0,{self:true,quiet:true,col:TC});damageCone(x0,y0,dx,dy,d+10,6,5);return k<9;});}},
+ // leap onto the cursor and land like a falling statue
+ {n:'Rock Drop',fn:(a,p,use)=>{if(!p.ground||!use(22))return;cd=45;const dx=mouse.wx-p.x,s2=Math.min(1,Math.abs(dx)/200);p.vx=Math.sign(dx)*(3+4*s2);p.vy=-7.5;p.ground=false;p.slam=true;p.slamOpt={col:TC,dive:true};p.diveY=p.y-70;snd('leap',p.x,p.y,{size:.8});}},
+ {n:'Pummel Barrage',fn:(a,p,use)=>{if(!use(16))return;cd=30;let k=0;ACT.push(()=>{if(k%4===0){p.punchF=8;const A2=aim(),x=A2.h.x+A2.dx*8,y=A2.h.y+A2.dy*8;explode(x|0,y|0,7,{self:true,quiet:true,col:TC});damageEnemies(x,y,12,14,A2.dx*4,A2.dy*4-1);snd('punch',x,y);}return++k<24;});fxWord(p.x,p.y-PH-8,'WHAM-WHAM-WHAM!',1,'#ffb070',true);}},
+ // punch a whole section of wall clean off and send it flying
+ {n:'Wall Wrecker',fn:(a,p,use)=>{const dir=a.dx<0?-1:1,b=wallChunk(p.x,p.y-PH/2,dir,11);if(!b)return;if(!use(18)){b.vx=0;return;}cd=32;p.punchF=10;b.vx=dir*9;b.vy=-1.5;b.va=dir*.08;b.thrown=true;b.safeP=frame+40;fxWord(p.x,p.y-PH-8,'KRAKK!',1.1,'#ffb070',true);snd('punch',p.x,p.y);shake+=5;}},
+ // four escalating haymakers walking forward, then one that flattens the block
+ {n:"It's Clobberin' Time!",fn:(a,p,use)=>{if(!use(45))return;cd=110;const dir=p.face;let k=0;fxWord(p.x,p.y-PH-12,"IT'S CLOBBERIN' TIME!",1.4,'#ffb070',true);snd('roar',p.x,p.y,{pitch:.75});
+   ACT.push(()=>{k++;p.vx=dir*2;if(k%10===0&&k<=40){p.punchF=10;const st=k/10,x=p.x+dir*(10+st*4),y=p.y-PH/2;explode(x|0,y|0,8+st*2,{self:true,col:TC});damageEnemies(x,y,20,20,dir*6,-3);crushAhead(p.x+dir*PW/2,p.y-PH/2,dir,PH+6,8);}
+     if(k===52){p.throwF=12;const x=p.x+dir*16,y=p.y-4;explode(x|0,y|0,20,{self:true,col:TC,word:'KA-KLOBBER!'});quake(x,p.y,{col:TC,r:30});shockFx(x,y,1.3);damageEnemies(x,y,50,60,dir*8,-6);hitstop=Math.max(hitstop,6);return false;}return true;});}},
+];
 const CHARS=[
  {id:'doom',name:'Doom',spr:SPR_DOOM,pal:PAL_DOOM,pw:7,ph:19,fly:true,fs:2.9,boost:2.1,run:1.8,jump:4.3,hp:300,armor:1,glow:[80,255,130],cape:null,thrust:()=>R()<.6?gcol():rgb(255,210,120),powers:DOOM_POWERS},
  {id:'hulk',name:'Hulk',spr:SPR_HULK,pal:PAL_HULK,pw:9,ph:23,fly:false,fs:2.6,boost:1,run:2.3,jump:6.2,hp:500,armor:.45,glow:GAMMA,cape:null,thrust:()=>pickC(GAMMA),powers:HULK_POWERS},
@@ -3195,17 +3475,21 @@ const CHARS=[
  {id:'ultron',name:'Ultron',spr:SPR_ULTRON,pal:PAL_ULTRON,pw:7,ph:19,fly:true,fs:3.1,boost:2.2,run:1.9,jump:4.4,hp:360,armor:.6,glow:[255,50,40],cape:null,thrust:()=>R()<.6?rgb(255,80,60):rgb(255,200,180),powers:ULTRON_POWERS},
  {id:'magneto',name:'Magneto',spr:SPR_MAGNETO,pal:PAL_MAGNETO,pw:7,ph:19,fly:true,fs:3.0,boost:2.0,run:1.8,jump:4.4,hp:330,armor:.75,glow:[200,120,255],cape:null,thrust:()=>pickC([210,140,255]),powers:MAG_POWERS},
  {id:'storm',name:'Storm',spr:SPR_STORM,pal:PAL_STORM,pw:7,ph:19,fly:true,fs:3.2,boost:2.2,run:1.9,jump:4.6,hp:330,armor:.75,glow:[210,230,255],cape:null,thrust:()=>R()<.6?rgb(225,235,255):rgb(160,190,255),powers:STORM_POWERS},
+ {id:'reed',name:'Mr. Fantastic',spr:SPR_REED,pal:PAL_REED,pw:7,ph:19,fly:false,fs:2.6,boost:1,run:2.1,jump:5.2,hp:320,armor:.75,glow:F4C,cape:null,thrust:()=>pickC(F4C),powers:REED_POWERS},
+ {id:'sue',name:'Invisible Woman',spr:SPR_SUE,pal:PAL_SUE,pw:7,ph:19,fly:false,fs:2.6,boost:1,run:2.0,jump:5.0,hp:310,armor:.75,glow:SUEC,cape:null,thrust:()=>pickC(SUEC),powers:SUE_POWERS},
+ {id:'torch',name:'Human Torch',spr:SPR_TORCH,pal:PAL_TORCH,pw:7,ph:19,fly:true,fs:3.4,boost:2.4,run:1.9,jump:4.6,hp:300,armor:.8,glow:FC,cape:null,thrust:()=>R()<.6?rgb(255,150+R()*90|0,40):rgb(255,240,180),powers:TORCH_POWERS},
+ {id:'thing',name:'The Thing',spr:SPR_THING,pal:PAL_THING,pw:9,ph:23,fly:false,fs:2.4,boost:1,run:2.0,jump:4.8,hp:620,armor:.35,glow:TC,cape:null,thrust:()=>pickC(TC),powers:THING_POWERS},
 ];
 CH=CHARS[0];
-const HERO_UI={juggernaut:'#7a2a1e',ultron:'#8a909e',magneto:'#5a2470',spidey:'#c8282f',wanda:'#a8183a',strange:'#2a52a0',antman:'#8a1c1c',doom:'#2f8f4e',hulk:'#6aa84f',thor:'#3a6fd8',iron:'#c23a2b',wolverine:'#e8b21f',cyclops:'#1f3c8a',iceman:'#7cc8f0',jean:'#c42a3a',storm:'#2a2a33'};
-const HERO_DARK=new Set(['hulk','wolverine','iceman']);
-const MOVE_TAG={juggernaut:'UNSTOPPABLE',spidey:'WEB-SWINGS',antman:'SHRINKS & GROWS',hulk:'GAMMA LEAPS',wolverine:'CLIMBS WALLS',cyclops:'OPTIC THRUST',iceman:'ICE SLIDES'};
+const HERO_UI={juggernaut:'#7a2a1e',ultron:'#8a909e',magneto:'#5a2470',spidey:'#c8282f',wanda:'#a8183a',strange:'#2a52a0',antman:'#8a1c1c',doom:'#2f8f4e',hulk:'#6aa84f',thor:'#3a6fd8',iron:'#c23a2b',wolverine:'#e8b21f',cyclops:'#1f3c8a',iceman:'#7cc8f0',jean:'#c42a3a',storm:'#2a2a33',reed:'#4f86b8',sue:'#7fb2d8',torch:'#e8731f',thing:'#d0702c'};
+const HERO_DARK=new Set(['hulk','wolverine','iceman','sue']);
+const MOVE_TAG={juggernaut:'UNSTOPPABLE',spidey:'WEB-SWINGS',antman:'SHRINKS & GROWS',hulk:'GAMMA LEAPS',wolverine:'CLIMBS WALLS',cyclops:'OPTIC THRUST',iceman:'ICE SLIDES',reed:'STRETCHES',sue:'FORCE FIELDS',torch:'FLAME ON',thing:'ROCK SOLID'};
 function setChar(i){
   const p=pl_, prevH=PH, hpF=p.hp/CH.hp;
   CH=CHARS[(i+CHARS.length)%CHARS.length];p.hp=hpF*CH.hp;SZ=1;RW.length=0;SPR=CH.spr;SPC=CH.pal;SW=SPR[0].length;SH=SPR.length;PW=CH.pw;PH=CH.ph;
   if(!CH.fly)p.fly=false;
   if(held){held.held=false;held=null;}
-  Object.assign(p,{size:1,sizeT:1,ant:0,web:null,sense:0,ceil:0,shell:0,surge:0,jcharge:0,script:0,ball:0,tow:null,grip:null,cling:0,crouch:0,stealth:0,grit:0,sprint:0,ang:0});
+  TSL.length=0;Object.assign(p,{slip:null,size:1,sizeT:1,ant:0,web:null,sense:0,ceil:0,shell:0,surge:0,jcharge:0,script:0,ball:0,tow:null,grip:null,cling:0,crouch:0,stealth:0,grit:0,sprint:0,ang:0});
   cur=0;cd=0;buildPowerBar();
   if(boxHit(p.x,p.y))punchOut(p);
   rings.push({x:p.x,y:p.y-PH/2,r:2,vr:2.5,life:16,c:CH.glow},{x:p.x,y:p.y-PH/2,r:12,vr:-.6,life:16,c:CH.glow});flash(p.x,p.y-PH/2,40,CH.glow,10);
@@ -3226,7 +3510,7 @@ function beamCore(a,o){
   if(frame%26===0)fxWord(a.h.x+a.dx*34,a.h.y+a.dy*34-6,R()<.5?'ZZZAP!':'FZZZT!',.8,`rgb(${o.g[0]},${o.g[1]},${o.g[2]})`,true);
   let x=a.h.x,y=a.h.y,pow=o.pow;const x0=x,y0=y,rad=o.rad;
   for(let s=0;s<o.len&&pow>0;s++){
-    x+=a.dx;y+=a.dy;if(x<0||x>=W||y<0||y>=H)break;
+    x+=a.dx;y+=a.dy;if(x<0||x>=W||y>=H||y<-SKY)break; // beams keep going through the open sky above the map
     for(let oy=-rad;oy<=rad;oy++)for(let ox=-rad;ox<=rad;ox++){
       const X=x+ox|0,Y=y+oy|0;if(X<0||X>=W||Y<0||Y>=H)continue;const i=Y*W+X,m=t[i];if(m===0||KIND[m]===G)continue;
       pow-=.4+HARD[m]*.35;
@@ -3258,7 +3542,7 @@ function quake(x,y,o={}){
   fxWord(x,y-18,'WHUDOOM!',1.5,'#ffc93c',true);snd('slam',x,y,{size:(o.r||36)/30});fxBurst(x,y,60,o.col?`rgb(${o.col[0]},${o.col[1]},${o.col[2]})`:'#8dffb0');hitstop=Math.max(hitstop,4);fxImpact(x,y,4);
   const r=o.r||36, gc=o.col||[120,255,160], green=!o.col;shake=22;
   for(let yy=-r;yy<=r;yy++)for(let xx=-r;xx<=r;xx++){const d=Math.hypot(xx,yy);if(d>r)continue;const X=x+xx|0,Y=y+yy|0;if(X<0||X>=W||Y<0||Y>=H)continue;const i=Y*W+X,m=t[i];
-    if(KIND[m]===S&&m!==STEEL&&R()<(1-d/r)*.9/(1+HARD[m]*.15)){if(R()<.25&&Y<=y+3){spawn(X,Y,xx*.07+(R()-.5),-2-R()*3.5*(1-d/r),col[i],90,RUBBLE,0);t[i]=0;}else t[i]=RUBBLE;markDirty(i);wake(i);}
+    if(KIND[m]===S&&m!==STEEL&&R()<(1-d/r)*.9/(1+HARD[m]*.15)){if(R()<.25&&Y<=y+3){spawn(X,Y,xx*.07+(R()-.5),-2-R()*3.5*(1-d/r),col[i],90,RUBBLE,0);t[i]=0;}else crumble(i);markDirty(i);wake(i);}
     else if((KIND[m]===P||KIND[m]===L)&&R()<.35*(1-d/r)){spawn(X,Y,(R()-.5)*2,-2-R()*3.5,col[i],80,m,0);t[i]=0;wake(i);}
   }
   explode(x,y+2,7,{fire:.15,green,col:o.col,self:true});
@@ -3275,7 +3559,7 @@ function lightning(a,o={}){
   const pts=[[a.h.x,a.h.y]];let x=a.h.x,y=a.h.y;const len=Math.min(260,a.d);let hitX=-1,hitY=-1;
   for(let s=0;s<len;s+=6){
     x+=a.dx*6+(R()-.5)*6;y+=a.dy*6+(R()-.5)*6;pts.push([x,y]);
-    const X=x|0,Y=y|0;if(X<0||X>=W||Y<0||Y>=H)break;const m=t[Y*W+X];if(m&&KIND[m]!==G&&KIND[m]!==F){hitX=X;hitY=Y;break;}
+    const X=x|0,Y=y|0;if(X<0||X>=W||Y>=H||Y<-SKY)break;const m=t[Y*W+X];if(m&&KIND[m]!==G&&KIND[m]!==F){hitX=X;hitY=Y;break;}
     if(enemyAt(x,y,3)){hitX=X;hitY=Y;break;}
   }
   beams.push({pts,life:2,c:C,g:Gc});sndLoop('arc','arc',a.h.x,a.h.y);
@@ -3308,7 +3592,7 @@ function thunderclap(a){
   const cx=a.h.x,cy=a.h.y,R0=85,ang=Math.atan2(a.dy,a.dx);
   for(let n=0;n<6000;n++){const d=Math.sqrt(R())*R0,t2=ang+(R()-.5)*1.15,X=cx+Math.cos(t2)*d|0,Y=cy+Math.sin(t2)*d|0;if(X<0||X>=W||Y<0||Y>=H)continue;const i=Y*W+X,m=t[i];if(!m)continue;const f=1-d/R0;
     const vx=Math.cos(t2)*6*f,vy=Math.sin(t2)*6*f-1;
-    if(KIND[m]===S){if(m!==STEEL&&R()<f*.6/(1+HARD[m]*.3)){if(R()<.5){spawn(X,Y,vx,vy,col[i],90,RUBBLE,0);t[i]=0;}else t[i]=RUBBLE;markDirty(i);wake(i);}}
+    if(KIND[m]===S){if(m!==STEEL&&R()<f*.6/(1+HARD[m]*.3)){if(R()<.5){spawn(X,Y,vx,vy,col[i],90,RUBBLE,0);t[i]=0;}else crumble(i);markDirty(i);wake(i);}}
     else if(KIND[m]===P||KIND[m]===L){if(R()<f+.2){spawn(X,Y,vx*1.2,vy*1.2,col[i],80,m,0);t[i]=0;wake(i);}}
     else{t[i]=0;wake(i);}}
   for(let k=0;k<4;k++)bgHit(cx+a.dx*k*18,cy+a.dy*k*18,10);
@@ -3331,7 +3615,7 @@ function nova(){
   const cx=p.x,cy=p.y-8,r=44; bgHit(cx,cy,30);
   for(let yy=-r;yy<=r;yy++)for(let xx=-r;xx<=r;xx++){const d=Math.hypot(xx,yy);if(d>r||d<10)continue;const X=cx+xx|0,Y=cy+yy|0;if(X<0||X>=W||Y<0||Y>=H)continue;const i=Y*W+X,m=t[i];if(!m)continue;
     const f=1-d/r;
-    if(KIND[m]===S){if(m!==STEEL&&R()<f*.8/(1+HARD[m]*.3)){if(R()<.5){spawn(X,Y,xx/d*5*f+R()-.5,yy/d*5*f-1,col[i],90,RUBBLE,0);t[i]=0;}else t[i]=RUBBLE;markDirty(i);wake(i);}}
+    if(KIND[m]===S){if(m!==STEEL&&R()<f*.8/(1+HARD[m]*.3)){if(R()<.5){spawn(X,Y,xx/d*5*f+R()-.5,yy/d*5*f-1,col[i],90,RUBBLE,0);t[i]=0;}else crumble(i);markDirty(i);wake(i);}}
     else if(KIND[m]===P||KIND[m]===L){if(R()<f+.2){spawn(X,Y,xx/d*6*f,yy/d*6*f-1,col[i],80,m,0);t[i]=0;wake(i);}}
     else{t[i]=0;wake(i);}
   }
@@ -3437,7 +3721,7 @@ function updShots(world=true){
       continue;}
     if(s.type==='axe'){ // Stormbreaker: a razor-thin cut through everything on its line
       s.spin+=.6;const st=Math.ceil(Math.hypot(s.vx,s.vy)),sp=Math.hypot(s.vx,s.vy)||1,nx=-s.vy/sp,ny=s.vx/sp;
-      for(let k=0;k<st;k++){s.x+=s.vx/st;s.y+=s.vy/st;if(s.x<1||s.x>=W-1||s.y<1||s.y>=H-1){s.life=0;break;}
+      for(let k=0;k<st;k++){s.x+=s.vx/st;s.y+=s.vy/st;if(s.x<1||s.x>=W-1||s.y<-SKY||s.y>=H-1){s.life=0;break;}
         for(let w=-1;w<=1;w++){const X=s.x+nx*w|0,Y=s.y+ny*w|0;if(X<0||X>=W||Y<0||Y>=H-42)continue;const i=Y*W+X,m=t[i];if(!m||KIND[m]===G||KIND[m]===F)continue;if(m===OBSID&&R()<.7)continue;
           if(np<MP-300&&R()<.25)spawn(X,Y,s.vx*.2+(R()-.5)*2,s.vy*.2-R()*2,KIND[m]===S&&R()<.5?rgb(200,220,255):col[i],40,KIND[m]===S?RUBBLE:KIND[m]===L?m:0,KIND[m]===S?1:0);if(bgB[i]){bg[i]=bgD[i];bgB[i]=0;}setc(i,EMPTY);}}
       for(const e of enemies){if(!s.hitSet.has(e)&&Math.abs(e.x-s.x)<e.def.w/2+4&&Math.abs(e.y-s.y)<e.def.h/2+4){s.hitSet.add(e);hitEnemy(e,45,s.vx*.6,s.vy*.6);flash(s.x,s.y,16,BLUE,4);snd('slash',s.x,s.y);}}
@@ -3477,7 +3761,7 @@ function updShots(world=true){
         if(decoy&&Math.abs(s.x-decoy.x)<=4&&s.y>=decoy.y-SH&&s.y<=decoy.y){decoy.hp-=s.dmg||7;hit='player';break;}}
       else{
         if(s.type!=='missile')for(const b of bodies){if(b.held)continue;if(Math.abs(s.x-b.x)<b.rmax+1&&Math.abs(s.y-b.y)<b.rmax+1&&bodyAt(b,s.x,s.y)){hit=true;break;}}
-        const he=enemyAt(s.x,s.y,1);if(he&&he!==s.src)hit=true;
+        const he=enemyAt(s.x,s.y,1);if(he&&he!==s.src&&!(s.team&&he.team===s.team))hit=true;
       }
       if(hit)break;
     }
@@ -3499,7 +3783,7 @@ function updDrones(){
     if(--d.cool<=0){ // laser ray: nearest enemy if any, else the cursor
       const e=nearestEnemy(d.x,d.y,240);const gx=e?e.x:mouse.wx,gy=e?e.y:mouse.wy;
       const dx=gx-d.x,dy=gy-d.y,dd=Math.hypot(dx,dy)||1;let x=d.x,y=d.y;
-      for(let s=0;s<300;s++){x+=dx/dd;y+=dy/dd;const X=x|0,Y=y|0;if(X<0||X>=W||Y<0||Y>=H)break;const hitE=enemyAt(x,y,1);if(hitE){hitEnemy(hitE,12,dx/dd*2,dy/dd*2);break;}const m=t[Y*W+X];if(m&&KIND[m]!==G&&KIND[m]!==F){explode(X,Y,d.red?7:4,d.red?{fire:.15,col:[255,60,40]}:{fire:.15,green:true});break;}}
+      for(let s=0;s<300;s++){x+=dx/dd;y+=dy/dd;const X=x|0,Y=y|0;if(X<0||X>=W||Y>=H||Y<-SKY)break;const hitE=enemyAt(x,y,1);if(hitE){hitEnemy(hitE,12,dx/dd*2,dy/dd*2);break;}const m=t[Y*W+X];if(m&&KIND[m]!==G&&KIND[m]!==F){explode(X,Y,d.red?7:4,d.red?{fire:.15,col:[255,60,40]}:{fire:.15,green:true});break;}}
       beams.push({x0:d.x,y0:d.y,x1:x,y1:y,life:4,w:1,c:[255,120,90],g:[255,60,40]});
       d.cool=26+R()*12|0;
     }
@@ -3513,7 +3797,7 @@ function updVortex(){
     const a=R()*6.283,d=Math.sqrt(R())*r,X=v.x+Math.cos(a)*d|0,Y=v.y+Math.sin(a)*d|0;
     if(X<1||X>=W-1||Y<1||Y>=H-1)continue;const i=Y*W+X,m=t[i];if(m===0)continue;
     if(d<4){if(R()<.5)spawn(X,Y,(R()-.5)*2,(R()-.5)*2,col[i],12,0,1,0);setc(i,EMPTY);continue;}
-    if(KIND[m]===S){if(m!==STEEL&&R()<.05*(1-d/r)*(6/(1+HARD[m]))){if(R()<.4){spawn(X,Y,(v.x-X)*.05,(v.y-Y)*.05,col[i],90,RUBBLE,0,1);t[i]=0;}else t[i]=RUBBLE;markDirty(i);wake(i);}continue;}
+    if(KIND[m]===S){if(m!==STEEL&&R()<.05*(1-d/r)*(6/(1+HARD[m]))){if(R()<.4){spawn(X,Y,(v.x-X)*.05,(v.y-Y)*.05,col[i],90,RUBBLE,0,1);t[i]=0;}else crumble(i);markDirty(i);wake(i);}continue;}
     const ux=(v.x-X)/d,uy=(v.y-Y)/d,sx=ux-uy*.8,sy=uy+ux*.8;
     const nx=X+Math.round(sx),ny=Y+Math.round(sy),j=ny*W+nx;
     if(t[j]===0)swap(i,j);
@@ -3573,33 +3857,39 @@ let wave=0, kills=0, score=0;
 function defineEnemy(name,def){ENEMY_TYPES[name]=Object.assign({name,hp:30,w:7,h:7,fly:true,score:10,boom:5,glow:'*',think:null,onDeath:null},def);}
 function spawnEnemy(name,x,y){
   const d=ENEMY_TYPES[name];if(!d||enemies.length>=48)return null;
-  const e={def:d,x,y,vx:0,vy:0,hp:d.hp,face:-1,t:0,cd:30+R()*60|0,flash:0,ground:false,mem:{}};
+  const e={def:d,x,y,vx:0,vy:0,hp:d.hp,face:-1,t:0,cd:30+R()*60|0,flash:0,ground:false,mem:{},team:d.team||null};
   enemies.push(e);for(let k=0;k<12;k++)spawn(x,y,(R()-.5)*2,(R()-.5)*2,rgb(255,90,70),12,0,1,0,1);return e;
 }
 // what enemy AI aims at: a puppet's chosen victim, Iceman's decoy, where a cloaked Iron Man was last seen, or the hero
 const player=()=>AI_T||(decoy?{x:decoy.x,y:decoy.y-PH/2}:pl_.stealth>0&&pl_.lastSeen?pl_.lastSeen:{x:pl_.x,y:pl_.y-PH/2});
 function pdist(e){const p=player();return Math.hypot(p.x-e.x,p.y-e.y);}
 function seek(e,x,y,sp,acc=.1){const dx=x-e.x,dy=y-e.y,d=Math.hypot(dx,dy)||1;e.vx+=(dx/d*sp-e.vx)*acc;e.vy+=(dy/d*sp-e.vy)*acc;}
-function los(e,x,y){const dx=x-e.x,dy=y-e.y,d=Math.hypot(dx,dy)||1;for(let s=e.def.w/2+1;s<d;s+=2){const X=e.x+dx/d*s|0,Y=e.y+dy/d*s|0;if(X<0||X>=W||Y<0||Y>=H)return false;const k=KIND[t[Y*W+X]];if(k===S||k===P)return false;}return true;}
+function los(e,x,y){const dx=x-e.x,dy=y-e.y,d=Math.hypot(dx,dy)||1;for(let s=e.def.w/2+1;s<d;s+=2){const X=e.x+dx/d*s|0,Y=e.y+dy/d*s|0;if(X<0||X>=W||Y>=H||Y<-SKY)return false;const k=KIND[t[Y*W+X]];if(k===S||k===P)return false;}return true;}
 function enemyShoot(e,o={}){
   if(SPAWN.peace&&AI_ALLY!==e)return;
   if(e.hex>0&&R()<.45){explode(e.x|0,e.y|0,3,{quiet:true,self:true,col:[255,60,130]});hitEnemy(e,6,0,0);if(R()<.3)fxWord(e.x,e.y-10,'*JAM*',.6,'#ff6fa8');return;} // Bad Luck: the gun backfires
   const ex=e.x+(o.ox||0),ey=e.y+(o.oy||0),p=player(),lead=o.lead||0,tx=p.x+pl_.vx*lead,ty=p.y+pl_.vy*lead,dx=tx-ex,dy=ty-ey,d=Math.hypot(dx,dy)||1,sp=o.speed||3.5,spr=o.spread||.06;
   const a=Math.atan2(dy,dx)+(R()-.5)*spr*2,off=o.ox!==undefined||o.oy!==undefined?3:null;
-  shots.push({x:off?ex+Math.cos(a)*3:e.x+Math.cos(a)*(e.def.w/2+2),y:off?ey+Math.sin(a)*3:e.y+Math.sin(a)*(e.def.h/2+2),vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,type:'eshot',owner:AI_ALLY===e?'ally':'enemy',src:e,life:o.life||200,dmg:o.dmg||7,col:o.col||[255,80,60],boom:o.boom||3,fire:o.fire||0});
+  shots.push({x:off?ex+Math.cos(a)*3:e.x+Math.cos(a)*(e.def.w/2+2),y:off?ey+Math.sin(a)*3:e.y+Math.sin(a)*(e.def.h/2+2),vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,type:'eshot',owner:AI_ALLY===e?'ally':'enemy',src:e,team:e.team,life:o.life||200,dmg:o.dmg||7,col:o.col||[255,80,60],boom:o.boom||3,fire:o.fire||0});
   flash(e.x,e.y,8,o.col||[255,80,60],3);snd('eshot',e.x,e.y,{v:.55,gap:.03});
 }
 function enemyBeam(e,o={}){
   if(SPAWN.peace&&AI_ALLY!==e)return false;
   const ox=e.x+(o.ox||0),oy=e.y+(o.oy||0),p=player(),dx=p.x-ox,dy=p.y-oy,a=o.ang??Math.atan2(dy,dx)+(R()-.5)*(o.spread||.08),c=o.col||[255,60,50];
   let x=ox,y=oy,hit=false;
-  for(let s=0;s<(o.len||320);s++){x+=Math.cos(a);y+=Math.sin(a);const X=x|0,Y=y|0;if(X<0||X>=W||Y<0||Y>=H)break;
-    if(AI_ALLY===e){const he=enemyAt(x,y,1);if(he&&he!==e){hitEnemy(he,(o.dmg||10)*1.5,Math.cos(a),Math.sin(a));hit=true;break;}}
+  for(let s=0;s<(o.len||320);s++){x+=Math.cos(a);y+=Math.sin(a);const X=x|0,Y=y|0;if(X<0||X>=W||Y>=H||Y<-SKY)break;
+    if(AI_ALLY===e){const he=enemyAt(x,y,1);if(he&&he!==e&&!(e.team&&he.team===e.team)){hitEnemy(he,(o.dmg||10)*1.5,Math.cos(a),Math.sin(a));hit=true;break;}}
     else{if(Math.abs(x-pl_.x)<=PW/2+1&&y>=pl_.y-PH&&y<=pl_.y){hurt(o.dmg||10);hit=true;break;}
       if(decoy&&Math.abs(x-decoy.x)<=4&&y>=decoy.y-SH&&y<=decoy.y){decoy.hp-=o.dmg||10;hit=true;break;}}
     const m=t[Y*W+X];if(m&&KIND[m]!==G&&KIND[m]!==F){explode(X,Y,o.boom||3,{enemy:AI_ALLY!==e,self:true,col:c,dmg:0,quiet:o.quiet});break;}}
   beams.push({x0:ox,y0:oy,x1:x,y1:y,life:5,w:o.w||1,c:[255,200,190],g:c});flash(x,y,10,c,3);snd('elaser',ox,oy,{v:.6,gap:.05});
   return hit;
+}
+// a teamed enemy's current enemy-of-choice: the nearest member of another team, when it is closer than the hero
+function rivalOf(e){
+  if(e.t%20===0||(e.mem.rv&&e.mem.rv.hp<=0)){e.mem.rv=null;let bd=240,b=null;for(const o of enemies){if(!o.team||o.team===e.team||o.hp<=0||o.grabbed)continue;const d=Math.hypot(o.x-e.x,o.y-e.y);if(d<bd){bd=d;b=o;}}
+    if(b&&(bd<pdist(e)*.85||R()<.3))e.mem.rv=b;}
+  return e.mem.rv&&e.mem.rv.hp>0?e.mem.rv:null;
 }
 function enemyAt(x,y,pad){for(const e of enemies){if(Math.abs(x-e.x)<=e.def.w/2+pad&&Math.abs(y-e.y)<=e.def.h/2+pad)return e;}return null;}
 function nearestEnemy(x,y,r){let b=null,bd=r;for(const e of enemies){const d=Math.hypot(e.x-x,e.y-y);if(d<bd){bd=d;b=e;}}return b;}
@@ -3636,6 +3926,8 @@ function updEnemies(){
         AI_ALLY=e;AI_TE=tg;AI_T=tg?{x:tg.x,y:tg.y}:{x:pl_.x-pl_.face*24,y:pl_.y-PH/2-12};try{d.think(e);}finally{AI_T=AI_TE=AI_ALLY=null;}
         if(frame%4===0)spawn(e.x+(R()-.5)*e.def.w,e.y+(R()-.5)*e.def.h,0,-.4,rgb(255,120,210),12,0,1,0,1);
         if(e.ally===0){hitEnemy(e,e.def.hp*.3,0,0);fxWord(e.x,e.y-e.def.h/2-6,'SNAP!',1,'#ff9ad8',true);}}
+      else if(e.team){const rv=rivalOf(e); // faction war: TVA and Doombots attack each other as readily as the hero
+        if(rv){AI_ALLY=e;AI_TE=rv;AI_T={x:rv.x,y:rv.y};try{d.think(e);}finally{AI_T=AI_TE=AI_ALLY=null;}}else d.think(e);}
       else d.think(e);}
     // physics
     if(d.fly){e.vx*=.97;e.vy*=.97;}else{e.vy=Math.min(6,e.vy+.35);e.vx*=e.ground?.8:.98;
@@ -3722,6 +4014,64 @@ defineEnemy('chitauri_glider',{hp:30,w:13,h:7,fly:true,score:20,boom:6,
     if(frame%2===0)spawn(e.x-e.face*6,e.y+3,-e.vx*.3,.5,rgb(120,220,255),8,0,1,0);
   }});
 
+// ---- Doomsday: the TVA and Doom's legions, both stepping into a dying New York
+// a TVA time door: a tall glowing orange frame that grows open, holds, and closes
+function tvaDoor(x,y,life=40){let k=0;ACT.push(()=>{k++;const a=Math.max(0,Math.min(1,k/6,(life-k)/6)),hw=8*a+1,h=34*a+2,x0=x-hw,x1=x+hw,y0=y-h;
+  beams.push({pts:[[x0,y],[x0,y0+3],[x0+3,y0],[x1-3,y0],[x1,y0+3],[x1,y]],life:1,c:[255,224,160],g:[255,120,30]});
+  if(k%2===0)spawn(x+(R()-.5)*hw*2,y-R()*h,(R()-.5)*.4,-.3,rgb(255,180,80),14,0,1,0,1);flash(x,y-h/2,18,[255,140,40],1);return k<life;});}
+// a Doombot portal: a spinning ring of green sorcery
+function doomPortal(x,y,life=40){let k=0;ACT.push(()=>{k++;const a=Math.max(0,Math.min(1,k/8,(life-k)/8)),rx=10*a+1,ry=16*a+1,pts=[];for(let j=0;j<=16;j++){const an=j/16*6.283+k*.1;pts.push([x+Math.cos(an)*rx,y+Math.sin(an)*ry]);}
+  beams.push({pts,life:1,c:[200,255,210],g:[40,220,90]});for(let j=0;j<2;j++){const an=R()*6.283;spawn(x+Math.cos(an)*rx,y+Math.sin(an)*ry,-Math.cos(an)*.8,-Math.sin(an)*.8,gcol(),12,0,1,0,1);}flash(x,y,16,[60,255,110],1);return k<life;});}
+const PAL_TVA={h:rgb(84,66,48),H:rgb(150,122,84),'*':rgb(255,150,50),U:rgb(178,148,98),u:rgb(118,94,60),b:rgb(60,44,30),f:rgb(70,56,44),k:rgb(40,32,26),j:rgb(128,132,140)};
+const SPR_TVA=["..hhh..",".hHHHh.",".h***h.",".hHHHh.","..uUu..","uUUbUUu","uUUbUUu","uUbbbUu","f.UUU.f","..U.U..","..U.U..",".uu.uu.",".kk.kk."];
+const SPR_TVAJ=["...hhh...","..hHHHh..","..h***h..","..hHHHh..","...uUu...","jjuUbUujj","jjUUbUUjj","jjUbbbUjj",".f.UUU.f.","...U.U...","...U.U...","..uu.uu..","..kk.kk.."];
+const PAL_DBOT={m:rgb(70,76,84),M:rgb(150,156,166),'*':rgb(80,255,120),c:rgb(30,110,50),g:rgb(40,140,60)};
+const SPR_DBOT=["..mmm..",".mMMMm.",".M*M*M.",".mMMMm.","c.mMm.c","cMMgMMc","cMgggMc","cMMgMMc","M.ggg.M","..M.M..","..M.M..",".mM.Mm.",".mm.mm."];
+// the pruning stick: a glowing orange baton held out ahead
+function pruneStick(e){beams.push({x0:e.x+e.face*3,y0:e.y,x1:e.x+e.face*11,y1:e.y-5,life:1,w:1,c:[255,200,120],g:[255,120,30]});}
+function prune(e,p,dmg){zap(e.x+e.face*8,e.y-3,p.x,p.y,[255,224,160],[255,120,30]);hurtTarget(e,dmg);flash(p.x,p.y,16,[255,140,40],4);
+  for(let k=0;k<10;k++)spawn(p.x+(R()-.5)*8,p.y+(R()-.5)*12,(R()-.5)*1.5,-R()*1.5,rgb(255,170+R()*60|0,60),18,0,1,0,1);
+  if(AI_ALLY!==e){pl_.vx+=e.face*3;pl_.vy-=2;}if(R()<.4)fxWord(p.x,p.y-14,'PRUNED!',.8,'#ffb050');snd('zap',p.x,p.y,{pitch:1.4,v:.5});}
+const altAt=(e,ty)=>Math.max(20,Math.min(H-60,ty)); // flyers keep near the fight, never above the map
+// TVA Minuteman with a pruning stick: rushes in and prunes at close range
+defineEnemy('tva_pruner',{hp:40,w:7,h:13,fly:false,score:15,boom:4,team:'tva',sprite:SPR_TVA,pal:PAL_TVA,glow:'*',
+  think(e){const p=player(),dx=p.x-e.x,dist=Math.abs(dx);e.face=dx>0?1:-1;
+    if(dist>12)e.vx+=(e.face*1.6-e.vx)*.2;else e.vx*=.6;
+    if(e.ground&&e.mem.blocked&&e.t-e.mem.blocked<4)e.vy=-4.8;
+    if(e.ground&&dist<70&&dist>30&&e.cd===0&&R()<.03){e.vy=-4;e.vx=e.face*3.2;}
+    pruneStick(e);if(e.cd===0&&dist<16&&Math.abs(p.y-e.y)<18){e.cd=50;prune(e,p,14);}
+  }});
+// TVA Minuteman with a time-stick blaster: holds range and fires orange bolts
+defineEnemy('tva_gunner',{hp:35,w:7,h:13,fly:false,score:15,boom:4,team:'tva',sprite:SPR_TVA,pal:PAL_TVA,glow:'*',
+  think(e){const p=player(),dx=p.x-e.x,dist=Math.abs(dx);e.face=dx>0?1:-1;
+    if(dist>130)e.vx+=(e.face*1.1-e.vx)*.2;else if(dist<70)e.vx+=(-e.face*.9-e.vx)*.2;else e.vx*=.8;
+    if(e.ground&&e.mem.blocked&&e.t-e.mem.blocked<4)e.vy=-4.5;
+    if(e.cd===0&&dist<280&&los(e,p.x,p.y)){enemyShoot(e,{speed:4,dmg:8,col:[255,150,50],lead:10,spread:.07,boom:4});e.cd=55+R()*45|0;}
+  }});
+// TVA Minuteman on a jetpack: strafes from the air, dives in with the stick
+defineEnemy('tva_jet',{hp:34,w:9,h:13,fly:true,score:20,boom:5,team:'tva',sprite:SPR_TVAJ,pal:PAL_TVA,glow:'*',
+  think(e){const p=player();e.mem.side??=R()<.5?-1:1;e.face=p.x>e.x?1:-1;
+    if(e.mem.dive>0){e.mem.dive--;seek(e,p.x,p.y,4.2,.2);pruneStick(e);if(Math.hypot(p.x-e.x,p.y-e.y)<14){prune(e,p,12);e.mem.dive=0;e.cd=70;}}
+    else{if(Math.abs(e.x-(p.x+e.mem.side*110))<20)e.mem.side*=-1;seek(e,p.x+e.mem.side*110,altAt(e,p.y-30+Math.sin(e.t*.05)*24),2.4,.05);
+      if(e.cd===0&&pdist(e)<240){if(R()<.35){e.mem.dive=40;}else enemyShoot(e,{speed:4.2,dmg:7,col:[255,150,50],spread:.09});e.cd=50+R()*40|0;}}
+    if(frame%2===0)spawn(e.x-e.face*4,e.y+4,(R()-.5)*.4,1.2,R()<.5?rgb(255,170,60):rgb(255,240,190),8,0,1,0);
+  }});
+// Doombot: Latverian infantry, holds range and blasts green; now and then a charged beam
+defineEnemy('doombot',{hp:50,w:7,h:13,fly:false,score:15,boom:5,team:'doom',sprite:SPR_DBOT,pal:PAL_DBOT,glow:'*',
+  think(e){const p=player(),dx=p.x-e.x,dist=Math.abs(dx);e.face=dx>0?1:-1;
+    if(dist>110)e.vx+=(e.face*1-e.vx)*.2;else if(dist<60)e.vx+=(-e.face*.8-e.vx)*.2;else e.vx*=.8;
+    if(e.ground&&e.mem.blocked&&e.t-e.mem.blocked<4)e.vy=-4.5;
+    if(e.mem.charge>0){e.mem.charge--;e.vx*=.7;if(e.mem.charge%3===0)spawn(e.x,e.y-3,(R()-.5)*2,(R()-.5)*2,gcol(),8,0,1,0,1);if(e.mem.charge===0)enemyBeam(e,{dmg:11,col:[60,255,110],oy:-3});}
+    else if(e.cd===0&&dist<270&&los(e,p.x,p.y)){if(R()<.25)e.mem.charge=28;else enemyShoot(e,{speed:3.8,dmg:8,col:[80,255,120],lead:8,spread:.07,boom:5});e.cd=60+R()*50|0;}
+  }});
+// Doombot with jet boots: hovers at the hero's height and keeps firing
+defineEnemy('doombot_jet',{hp:44,w:7,h:13,fly:true,score:20,boom:5,team:'doom',sprite:SPR_DBOT,pal:PAL_DBOT,glow:'*',
+  think(e){const p=player(),ang=e.t*.012+(e.mem.ph??=R()*6.28);e.face=p.x>e.x?1:-1;
+    seek(e,p.x+Math.cos(ang)*120,altAt(e,p.y-24+Math.sin(ang*1.6)*26),1.9,.06);
+    if(e.cd===0&&pdist(e)<260&&los(e,p.x,p.y)){enemyShoot(e,{speed:4,dmg:7,col:[80,255,120],spread:.08,boom:4});e.cd=50+R()*45|0;}
+    if(frame%2===0)spawn(e.x+(R()-.5)*3,e.y+7,(R()-.5)*.3,1.2,gcol(),8,0,1,0);
+  }});
+
 // ---- NYC 2099 robots
 // swarmbot: cheap kamikaze drone, comes in clouds
 defineEnemy('swarmbot',{hp:14,w:5,h:5,fly:true,score:5,boom:3,glow:'*c',
@@ -3788,7 +4138,7 @@ function sentinelThink(e){
 defineEnemy('sentinel',{hp:900,w:18,h:42,fly:false,score:150,boom:18,spd:.45,glow:'*o',
   sprite:SENT_SPR,pal:{p:rgb(84,40,120),P:rgb(122,62,168),M:rgb(206,112,170),m:rgb(150,70,124),F:rgb(184,176,206),f:rgb(140,132,166),K:rgb(36,30,46),H:rgb(196,104,160),h:rgb(150,70,124),'*':rgb(255,222,90),o:rgb(255,80,80)},
   think:sentinelThink});
-defineEnemy('master_mold',{hp:6500,w:36,h:84,fly:false,score:0,boom:32,spd:.26,scale:2,title:'MASTER MOLD',glow:'*o',
+defineEnemy('master_mold',{hp:6500,w:29,h:67,fly:false,score:0,boom:32,spd:.26,scale:1.6,title:'MASTER MOLD',glow:'*o',
   sprite:SENT_SPR,pal:{p:rgb(58,40,78),P:rgb(92,70,120),M:rgb(150,92,140),m:rgb(104,60,98),F:rgb(150,146,170),f:rgb(108,104,130),K:rgb(26,22,34),H:rgb(150,92,140),h:rgb(104,60,98),'*':rgb(255,90,60),o:rgb(255,60,60)},
   think:sentinelThink});
 defineEnemy('sentinel_scout',{hp:140,w:9,h:16,fly:true,score:40,boom:7,glow:'*o',
@@ -3850,7 +4200,7 @@ defineEnemy('magneto',{hp:2200,w:9,h:16,fly:true,score:0,boom:16,metal:false,tit
 // ---- the big three, rebuilt from their playable versions: same sprites (scaled up), same moves aimed at you
 function bossDist(e){return Math.hypot(pl_.x-e.x,pl_.y-PH/2-e.y);}
 function bossQuake(e,x,y,r,dmg){quake(x,y,{col:[214,184,130],r});if(Math.abs(pl_.x-x)<r*2.4&&Math.abs(pl_.y-y)<30){hurtTarget(e,dmg);pl_.vy=-5;pl_.vx+=Math.sign(pl_.x-x)*4;}}
-defineEnemy('juggernaut',{hp:3200,w:28,h:46,fly:false,score:0,boom:20,metal:false,title:'JUGGERNAUT',glow:'',scale:2,sprite:SPR_JUGG,pal:PAL_JUGG,spd:.8,
+defineEnemy('juggernaut',{hp:3200,w:22,h:37,fly:false,score:0,boom:20,metal:false,title:'JUGGERNAUT',glow:'',scale:1.6,sprite:SPR_JUGG,pal:PAL_JUGG,spd:.8,
   think(e){const p=player(),dx=p.x-e.x,dist=Math.abs(dx),enr=e.hp<e.def.hp*.5,hw=e.def.w/2,hh=e.def.h/2;if(e.frozen>0)e.frozen=Math.max(0,e.frozen-4);
     if(e.mem.surge>0){e.mem.surge--;e.mem.shield=Math.max(e.mem.shield||0,1);if(e.t%2===0)spawn(e.x+(R()-.5)*hw*2,e.y+(R()-.5)*hh*2,0,-.8,rgb(255,40,30),14,0,1,0,1);}
     if(e.mem.charge>0){e.mem.charge--;e.vx=e.mem.dir*(enr?5.4:4.6);crushAhead(e.x+e.mem.dir*hw,e.y,e.mem.dir,e.def.h,7);if(e.t%4===0){shake=Math.max(shake,5);afters.length<40&&spawn(e.x-e.mem.dir*hw,e.y+hh,(R()-.5)*3,-R()*2,rgb(150,140,125),20,0,0,1);}
@@ -3866,9 +4216,13 @@ defineEnemy('juggernaut',{hp:3200,w:28,h:46,fly:false,score:0,boom:20,metal:fals
     else if(m%5===3){const b=wallChunk(e.x,e.y,e.face,10);if(b){b.x=e.x;b.y=e.y-hh-b.rmax;hurlBody(b,p.x,p.y,9);fxWord(e.x,e.y-hh-8,'CATCH!',1,'#e23b2e',true);snd('rip',e.x,e.y);}e.cd=70;} // Wall Rip
     else if(m%5===4&&e.ground){bossQuake(e,e.x,e.y+hh,36,20);e.cd=90;} // Ground Pound
     else{if(enr){e.mem.surge=240;fxWord(e.x,e.y-hh-8,'POWER OF CYTTORAK!',1.2,'#e23b2e',true);}e.cd=60;}}}); // Crimson Surge
-defineEnemy('ultron_prime',{hp:2000,w:22,h:38,fly:true,score:0,boom:18,glow:'*@',title:'ULTRON PRIME',scale:1.8,sprite:SPR_ULTRON,pal:PAL_ULTRON,
+// flying bosses hold roughly the player's height (a little above, weaving up and down) and never leave the map
+function bossAlt(e,p,wob){const hh=e.def.h*(e.def.scale||1)/2;return Math.max(hh+24,Math.min(H-60,p.y-PH/2-18+wob));}
+// extra vertical spring pulls them back after knockback; the top of the map is a hard ceiling
+function bossFly(e,x,y,sp,acc){seek(e,x,y,sp,acc);e.vy+=(y-e.y)*.004;e.vy*=.97;const top=e.def.h*(e.def.scale||1)/2+6;if(e.y<top){e.y=top;if(e.vy<0)e.vy=0;}}
+defineEnemy('ultron_prime',{hp:2000,w:18,h:30,fly:true,score:0,boom:18,glow:'*@',title:'ULTRON PRIME',scale:1.44,sprite:SPR_ULTRON,pal:PAL_ULTRON,
   think(e){const p=player(),enr=e.hp<e.def.hp*.5,hh=e.def.h/2;
-    seek(e,p.x+Math.sin(e.t*.01)*110,p.y-90+Math.sin(e.t*.023)*20,enr?2.2:1.6,.04);e.face=p.x>e.x?1:-1;
+    bossFly(e,p.x+Math.sin(e.t*.01)*110,bossAlt(e,p,Math.sin(e.t*.023)*34),enr?2.2:1.6,.04);e.face=p.x>e.x?1:-1;
     if(e.mem.shell>0){e.mem.shell--;e.mem.shield=Math.max(e.mem.shield||0,1);if(e.t%3===0)spawn(e.x+(R()-.5)*20,e.y+(R()-.5)*30,0,0,rgb(220,230,255),8,0,1,0,1);}
     if(e.mem.beam>0&&--e.mem.bt<=0){enemyBeam(e,{oy:-hh*.6,ang:e.mem.ang,dmg:12,col:[255,40,40],len:480,boom:5,w:2,quiet:true});e.mem.ang+=e.mem.dir*.05;e.mem.beam--;e.mem.bt=2;} // Encephalo Beam sweep
     if(frame%2===0)spawn(e.x+(R()-.5)*8,e.y+hh,(R()-.5)*.6,1.4,rgb(255,120,80),10,0,1,0);
@@ -3879,9 +4233,9 @@ defineEnemy('ultron_prime',{hp:2000,w:22,h:38,fly:true,score:0,boom:18,glow:'*@'
     else if(a%6===4){e.mem.shell=200;fxWord(e.x,e.y-hh-6,'ADAMANTIUM.',1,'#d8e4ff',true);snd('clang',e.x,e.y);e.cd=50;} // Adamantium Shell
     else if(a%6===5&&bossDist(e)<140){for(let k=0;k<6;k++){const an=k/6*6.283;zap(e.x,e.y,e.x+Math.cos(an)*60,e.y+Math.sin(an)*60,[255,200,190],[255,40,40]);}if(bossDist(e)<110)hurtTarget(e,18);explode(e.x|0,e.y|0,8,{self:true,enemy:true,dmg:0,col:[255,60,40]});fxWord(e.x,e.y-hh-6,'OVERLOAD!',1.2,'#ff6b5c',true);e.cd=70;} // Overload Pulse
     else{const host=enemies.find(o=>o.def.name==='swarmbot'&&Math.hypot(o.x-e.x,o.y-e.y)<150);if(host&&e.hp<e.def.hp*.9){zap(e.x,e.y,host.x,host.y,[255,200,190],[255,40,40]);host.mem.noScore=true;host.hp=0;e.hp=Math.min(e.def.hp,e.hp+e.def.hp*.06);fxWord(e.x,e.y-hh-6,'UPLOADED.',1,'#ff6b5c',true);}e.cd=40;}}}); // Upload: eats a drone to repair
-defineEnemy('magneto',{hp:2400,w:20,h:34,fly:true,score:0,boom:16,metal:false,title:'MAGNETO',glow:'',scale:1.6,sprite:SPR_MAGNETO,pal:PAL_MAGNETO,
+defineEnemy('magneto',{hp:2400,w:16,h:27,fly:true,score:0,boom:16,metal:false,title:'MAGNETO',glow:'',scale:1.28,sprite:SPR_MAGNETO,pal:PAL_MAGNETO,
   think(e){const p=player(),enr=e.hp<e.def.hp*.5,hh=e.def.h/2;
-    seek(e,p.x+Math.sin(e.t*.008)*130,p.y-95+Math.sin(e.t*.02)*16,enr?2:1.5,.04);e.face=p.x>e.x?1:-1;
+    bossFly(e,p.x+Math.sin(e.t*.008)*130,bossAlt(e,p,Math.sin(e.t*.02)*30),enr?2:1.5,.04);e.face=p.x>e.x?1:-1;
     if(e.mem.shieldT>0){e.mem.shieldT--;e.mem.shield=1;if(e.t%2===0)for(let k=0;k<3;k++){const a=R()*6.283;spawn(e.x+Math.cos(a)*20,e.y+Math.sin(a)*24,0,0,rgb(200,120,255),6,0,1,0,1);}}else e.mem.shield=0;
     if(e.mem.pull>0){e.mem.pull--;const dx=e.x-pl_.x,dy=e.y-(pl_.y-PH/2),d=Math.hypot(dx,dy)||1;pl_.vx+=dx/d*.35;pl_.vy+=dy/d*.35;if(e.t%3===0)beams.push({pts:[[e.x,e.y],[(e.x+pl_.x)/2+(R()-.5)*16,(e.y+pl_.y-PH/2)/2+(R()-.5)*16],[pl_.x,pl_.y-PH/2]],life:2,c:[230,170,255],g:[150,60,220]});}
     if(e.mem.rain>0){e.mem.rain--;if(e.mem.rain%3===0)shots.push({x:p.x+(R()-.5)*140,y:camY-6,vx:(R()-.5)*.4,vy:5,type:'spike',owner:'enemy',life:140,dmg:8,col:[170,176,190],boom:4,grav:.1});}
@@ -3947,7 +4301,7 @@ function drawSprite(x,y,ang,face,tintG,spr,pal,hurtF,ghost,scl=1){
   // rotate a sprite around its centre (nearest-neighbour inverse mapping)
   spr=spr||SPR;pal=pal||SPC;const sw=spr[0].length,sh=spr.length;
   const ca=Math.cos(ang),sa=Math.sin(ang),cx=x,cy=y-sh*scl/2,RR=Math.ceil(Math.hypot(sw,sh)*scl/2)+1;
-  const gc=CH.glow;
+  const gc=TG||CH.glow;
   for(let yy=-RR;yy<=RR;yy++)for(let xx=-RR;xx<=RR;xx++){
     const u=(xx*ca+yy*sa)/scl, v=(-xx*sa+yy*ca)/scl;
     const sx=Math.round(u+sw/2-.5), sy=Math.round(v+sh/2-.5);
@@ -3965,7 +4319,17 @@ function drawSprite(x,y,ang,face,tintG,spr,pal,hurtF,ghost,scl=1){
   for(let k=0;k<SPX.length;k+=3){const ch=SPX[k+2];pix(SPX[k],SPX[k+1],hurtF&&(hurtF&2)?rgb(255,120,110):pal[ch],GLOWCH[ch]?pal[ch]:0);}
   SPX.length=0;
 }
-const SPX=[];
+// Timeslip render: every pixel of the posed sprite becomes a thread. t=0 is the whole body; as t rises each row
+// smears out sideways into a long wavering strand that runs hot amber at its tip
+function drawSlip(S){const rows=S.rows,sw=rows[0].length,sh=rows.length,t=S.t,x0=S.x-sw/2,y0=S.y+PP-sh,amb=[255,190,120];
+  for(let y=0;y<sh;y++){const wob=Math.sin(y*.9+frame*.35)*t*5;
+    for(let x=0;x<sw;x++){const ch=rows[y][S.face>0?x:sw-1-x];if(ch==='.')continue;const c=SPC[ch];if(c===undefined)continue;
+      const cc=mix3(c,amb,t*.3),hsh=((x*7+y*13)%11)/11,L=t*t*(50+hsh*100),dir=S.dir*((x+y)%5===0?-.35:1),X=x0+x,Y=y0+y+wob;
+      const st=X+dir*L*.35*t,en=X+dir*L,n=Math.abs(en-st)|0;
+      if(n<1){pix(X,Y,cc,GLOWCH[ch]?c:0);continue;}
+      for(let k=0;k<=n;k++){const f=k/n;pix(st+(en-st)*f,Y+Math.sin(f*6+y+frame*.2)*t*2.5,f>.9?rgb(255,200,140):cc,f>.9?rgb(200,90,20):0);}}}
+}
+const SPX=[];let TG=null; // glow tint override for afterimages
 function drawHammer(x,y,a){const ca=Math.cos(a),sa=Math.sin(a); // a = direction the handle points from the head
   for(let k=-2;k<=2;k++)for(let w=-1;w<=1;w++){const X=x-sa*k+ca*w,Y=y+ca*k+sa*w;pix(X,Y,w===-1?rgb(214,220,232):w===1?rgb(120,126,140):rgb(170,176,186),rgb(60,90,170));}
   for(let k=2;k<7;k++)pix(x+ca*k,y+sa*k,k===6?rgb(70,50,30):rgb(116,84,50));}
@@ -4001,7 +4365,7 @@ function render(){
     return rgb(r>255?255:r,g>255?255:g,b>255?255:b);};
   for(let sy=0;sy<VH;sy++){
     const wy=sy+CY;let i=wy*W+CX,o=sy*VW;const frow=(Math.max(0,Math.min(H-1,sy+fyo)))*FW+fx0; // above the map the skyline sinks away at half speed
-    if(wy<0){for(let sx=0;sx<VW;sx++,o++){const f=far[frow+sx];buf[o]=sa>0?toSpace(f,sx,sy):f;}continue;}
+    if(wy<0){for(let sx=0;sx<VW;sx++,o++){let f=far[frow+sx];if(sa>0)f=toSpace(f,sx,sy);buf[o]=ink&&!htm[o]&&!farKeep[frow+sx]?lut(htL,f):f;}continue;}
     for(let sx=0;sx<VW;sx++,i++,o++){
       const m=t[i];
       if(m===0){const b=bg[i];if(b)buf[o]=lut(bgL,b);else{let f=far[frow+sx];if(sa>0)f=toSpace(f,sx,sy);buf[o]=ink&&!htm[o]&&!farKeep[frow+sx]?lut(htL,f):f;}continue;}
@@ -4038,7 +4402,7 @@ function render(){
       const so=(Y-CY)*VW+(X-CX);buf[so]=lut(fgL,bc);if(b.held&&!b.overhead&&((lx+ly+frame)&7)===0)gbuf[so]=rgb(40,160,70);
     }
   }
-  for(let n=0;n<np;n++){const c=pc[n],gl=pg[n]&1;if(pg[n]&16){pixA(px[n],py[n],c,Math.min(1,pl[n]/PHYS.dust.fade)*.75);continue;}pix(px[n],py[n],c,gl?c:0);const vx=pvx[n],vy=pvy[n];
+  for(let n=0;n<np;n++){const c=pc[n],gl=pg[n]&1;if(pg[n]&16){pixA(px[n],py[n],c,Math.min(1,pl[n]/PHYS.dust.fade)*.55);continue;}pix(px[n],py[n],c,gl?c:0);const vx=pvx[n],vy=pvy[n];
     if(vx*vx+vy*vy>4.5){const c2=shade(c,.62);pix(px[n]-vx*.45,py[n]-vy*.45,c2,gl?c2:0);}} // motion streaks on fast debris and sparks
   // projectiles
   for(const s of shots){
@@ -4076,12 +4440,12 @@ function render(){
   // orbital targeting
   for(const s of strikes)if(s.t>0){const r=6+s.t*.6;circle(s.x,mouse.wy,r,rgb(120,255,150),rgb(40,200,80));line(s.x,mouse.wy-r-4,s.x,mouse.wy+r+4,rgb(120,255,150),rgb(40,200,80));if(frame%6<3)line(s.x,CY,s.x,CY+VH,rgb(40,120,60),0);}
   // afterimages
-  for(const a of afters)drawSprite(a.x,a.y,a.ang,a.face,true);
+  for(const a of afters){TG=a.col||null;drawSprite(a.x,a.y,a.ang,a.face,true);}TG=null;
   // cape trail
   const p=pl_;
   if(CH.cape&&p.hist.length>3){const yo=PH-5;for(let k=1;k<Math.min(8,p.hist.length);k++){const [hx,hy]=p.hist[k];const wv=Math.sin(frame*.3+k)*1.2;pix(hx-p.face*(2+k*.4),hy-yo+k*.6+wv,k<4?CH.cape[0]:CH.cape[1]);pix(hx-p.face*(2+k*.4),hy-yo+1+k*.6+wv,CH.cape[1]);}}
   if(p.ant>0)drawSprite(p.x,p.y+5,0,p.face,false,(frame>>2)&1?FANT_A:FANT_B,FANT_PAL);
-  drawSprite(p.x,p.y+PP*SZ,p.ang,p.face,false,posePlayer(p),p.metal>0?metalPal():null,p.hurtF,p.stealth>0,SZ);
+  if(p.slip)drawSlip(p.slip);else drawSprite(p.x,p.y+PP*SZ,p.ang,p.face,false,posePlayer(p),p.metal>0?metalPal():null,p.hurtF,p.stealth>0,SZ);
   const h=hand();
   if(CH.id==='thor'&&!p.tow&&!pins.length&&!shots.some(s=>s.type==='hammer'||s.type==='pin')){for(let yy=0;yy<3;yy++)pix(h.x,h.y+yy,rgb(110,80,50));for(let yy=-2;yy<0;yy++)for(let xx=-1;xx<=1;xx++)pix(h.x+xx,h.y+yy,rgb(160,166,176));}
   else if(CH.id!=='hulk')pix(h.x,h.y,glowRGB(),glowRGB());
@@ -4135,7 +4499,115 @@ setChar(0);
 document.getElementById('wavebtn').onclick=e=>{startWave();e.target.blur();};
 const mapSel=document.getElementById('map');
 // maps: id -> {name, gen, amb (optional per-tick ambience)}
+// ---- Earth-828 New York: a retro-futurist 1960s city in pastels, with the Baxter Building at its heart
+const PASTEL=[[244,190,170],[168,214,196],[250,226,156],[176,204,232],[236,176,196],[206,190,232],[248,214,180]];
+function pastelize(x0,x1,top,GY,c){
+  const dk=[c[0]*.8,c[1]*.78,c[2]*.8];
+  for(let y=Math.max(0,top-20);y<GY;y++)for(let x=Math.max(0,x0);x<Math.min(W,x1);x++){const i=y*W+x,m=t[i];
+    if(m===CONC){const v=(R()-.5)*12;col[i]=rgb(cl(c[0]+v),cl(c[1]+v),cl(c[2]+v));}else if(m===STEEL)col[i]=rgb(234,228,214);else if(m===GLASS)col[i]=rgb(150,214,220);
+    if(bg[i])bg[i]=mix3(bg[i],dk,.72);}
+}
+function googieTower(x,GY){ // a slim pastel column under a flying-saucer deck, sputnik antenna on top
+  const cx=x+30,top=GY-150-R()*90|0,c=PASTEL[R()*PASTEL.length|0];BLD.push([cx-6,cx+6,top]);
+  for(let y=top;y<GY;y++)for(let xx=cx-6;xx<cx+6;xx++)setc(y*W+xx,(y-top)%10<3||xx===cx-6||xx===cx+5?CONC:GLASS);
+  for(let y=top+4;y<GY;y++)for(let xx=cx-5;xx<cx+5;xx++){const i=y*W+xx;if(t[i]===0)bg[i]=rgb(200,180,170);}
+  for(let dy=-7;dy<=5;dy++){const hw=Math.round(30*Math.sqrt(Math.max(0,1-(dy/(dy<0?8:6))**2)));fill(cx-hw,top+dy,cx+hw,top+dy+1,dy<-2?GLASS:CONC);}
+  fill(cx-30,top+1,cx+30,top+2,NEON);tint(cx-30,top+1,cx+30,top+2,255,170,150,10);
+  fill(cx,top-24,cx+1,top-7,STEEL);disc(cx,top-26,2,NEON);tint(cx-2,top-28,cx+3,top-23,255,120,110,8);
+  pastelize(cx-31,cx+31,top-30,GY,c);
+  return x+60;
+}
+function baxter(x0,GY){ // the Baxter Building: the tallest tower on the skyline, the 4 on its crown
+  const x1=x0+84,top=60,mx=(x0+x1)>>1;
+  building(x0,x1,top,GY);pastelize(x0,x1,top,GY,[226,230,236]);
+  for(let y=top;y<GY;y++)for(const xx of [x0+20,x0+21,x1-22,x1-21])if(t[y*W+xx])col[y*W+xx]=rgb(120,170,214); // blue piping up the facade
+  // stepped crown with an observation dome and the antenna
+  fill(x0+8,top-14,x1-8,top,CONC);tint(x0+8,top-14,x1-8,top,226,230,236,6);fill(x0+20,top-26,x1-20,top-14,CONC);tint(x0+20,top-26,x1-20,top-14,214,220,230,6);
+  for(let dy=-12;dy<=0;dy++){const hw=Math.round(16*Math.sqrt(1-(dy/12)**2));fill(mx-hw,top-26+dy,mx+hw,top-25+dy,GLASS);tint(mx-hw,top-26+dy,mx+hw,top-25+dy,170,220,235,8);}
+  fill(mx-1,top-60,mx+1,top-38,STEEL);disc(mx,top-62,2,NEON);tint(mx-2,top-64,mx+3,top-59,120,190,255,8);
+  // the emblem: a blue neon ring with a white 4, high on the facade
+  const ey=top+26,G4=['...#.','..##.','.#.#.','#..#.','#####','...#.','...#.'];
+  for(let a=0;a<6.283;a+=.04){const X=mx+Math.round(Math.cos(a)*11),Y=ey+Math.round(Math.sin(a)*11);for(const [ox,oy] of [[0,0],[1,0]]){const i=(Y+oy)*W+X+ox;t[i]=NEON;col[i]=rgb(90,160,240);}}
+  for(let gy=0;gy<7;gy++)for(let gx=0;gx<5;gx++)if(G4[gy][gx]==='#')for(let s2=0;s2<2;s2++)for(let s3=0;s3<2;s3++){const i=(ey-7+gy*2+s3)*W+mx-5+gx*2+s2;t[i]=NEON;col[i]=rgb(244,248,255);}
+  for(let y=ey-12;y<=ey+12;y++)for(let x=mx-12;x<=mx+12;x++){const i=y*W+x;if(t[i]===0&&(x-mx)**2+(y-ey)**2<=110)setc(i,CONC),col[i]=rgb(40,70,120);}
+  return x1;
+}
+function genRetro(){
+  clearAll();
+  const GY=340, GB=143+(GY-143)*.5|0;
+  makeFar([138,196,224],[252,214,186],()=>{
+    for(let y=-22;y<=22;y++)for(let x=-22;x<=22;x++)if(x*x+y*y<484){const X=(FW*.7|0)+x;far[(70+y)*FW+X]=rgb(255,242,204);}
+    for(const [base,c,lit] of [[GB-30,rgb(212,184,208),.08],[GB+10,rgb(178,160,204),.25]]){
+      for(let x=0;x<FW;){const w=10+R()*24|0,h=40+R()*170|0,y0=Math.max(4,base-h),round=R()<.5,hw=w/2;
+        for(let y=y0;y<H;y++)for(let xx=x;xx<x+w&&xx<FW;xx++){if(round&&y<y0+hw){const dx=xx-x-hw,dy=y-y0-hw;if(dx*dx+dy*dy>hw*hw)continue;}far[y*FW+xx]=(xx%4===1&&y%6===2&&R()<lit)?rgb(255,238,176):c;}
+        if(R()<.3){const ax=x+(w>>1);for(let y=Math.max(0,y0-18);y<y0;y++)far[y*FW+ax]=c;if(y0>=19)far[(y0-19)*FW+ax]=rgb(255,140,120);}
+        x+=w+2+(R()*4|0);}
+    }
+    for(const ly of [GB-60,GB-20])for(let x=0;x<FW;x++)if((x>>3)%5!==0)far[ly*FW+x]=rgb(236,226,214); // distant monorail lines
+  });
+  cityUnder(GY);
+  let x=6,bax=false;
+  while(x<W-40){
+    if(!bax&&x>660){x=baxter(x+8,GY)+12;bax=true;continue;}
+    const r=R();
+    if(r<.22)x=googieTower(x,GY);
+    else if(r<.36)x=park(x,GY);
+    else{const w=36+R()*44|0,h=60+R()*140|0,x1=Math.min(W-2,x+w),top=Math.max(80,GY-h);building(x,x1,top,GY);pastelize(x,x1,top,GY,PASTEL[R()*PASTEL.length|0]);
+      fill(x,top-3,x1,top-1,NEON);tint(x,top-3,x1,top-1,...PASTEL[R()*PASTEL.length|0],10);x=x1;} // neon crown line
+    const gap=10+R()*24|0;if(gap>22&&x+gap<W)car(x+3,GY);x+=gap;
+  }
+  // the monorail: a cream deck strung between towers on slim pylons
+  const MY=GY-96;
+  for(let x2=4;x2<W-4;x2++){const free=y=>{const i=y*W+x2;return t[i]===0&&bg[i]===bgD[i];};if(!free(MY)||!free(MY+1)||!free(MY+2))continue;
+    for(let y=MY;y<MY+2;y++){setc(y*W+x2,STEEL);col[y*W+x2]=rgb(238,230,214);}setc((MY+2)*W+x2,NEON);col[(MY+2)*W+x2]=rgb(130,210,200);
+    if(x2%90===0)for(let y=MY+3;y<GY;y++){const i=y*W+x2;if(t[i]===0&&bg[i]===bgD[i]){setc(i,STEEL);col[i]=rgb(220,214,200);setc(i+1,STEEL);col[i+1]=rgb(200,194,182);}}}
+  for(let x2=0;x2<W;x2++){const i=GY*W+x2;if(KIND[t[i]]===S&&t[i-W]===0&&(x2>>4)%3===0){t[i]=NEON;col[i]=rgb(...PASTEL[(x2>>6)%PASTEL.length]);}} // pastel kerb lights
+}
+function ambRetro(){ // bubble-top flying cars cruising the skyline
+  if(frame%6===0){const dir=R()<.5?1:-1,y=camY+10+R()*90,x=dir>0?camX-4:camX+VW+4,sp=(1.4+R()*1.6)*dir,c=PASTEL[R()*PASTEL.length|0];
+    for(let k=0;k<3;k++)spawn(x-dir*k*2,y,sp,0,k===2?rgb(255,250,240):rgb(c[0],c[1],c[2]),260,0,k===2?1:0,0);}
+}
+// ---- Incursion New York: two universes touching. A blood-red sky splitting along glowing cracks,
+//      another city hanging upside down from the heavens, ruins floating loose, the streets cratered and burning
+function genIncursion(){
+  genCity();
+  const GY=330, GB=143+(GY-143)*.5|0;
+  makeFar([92,18,40],[236,96,62],()=>{
+    for(let x=0;x<FW;){const w=8+R()*24|0,h=30+R()*120|0;for(let y=0;y<h;y++)for(let xx=x;xx<x+w&&xx<FW;xx++)far[y*FW+xx]=(xx%4===1&&y%6===3&&R()<.25)?rgb(255,170,110):y>h-3?rgb(255,120,90):rgb(70,22,44);x+=w+2+(R()*6|0);} // the other city, upside down, its broken edge glowing
+    for(let k=0;k<70;k++){let x=R()*FW;const y0=20+R()*120|0,L=40+R()*140|0;for(let y=y0;y<Math.min(H,y0+L);y++){x+=Math.sin(y*.05+k)*.35;if(R()<.85&&x>=0&&x<FW)far[y*FW+(x|0)]=R()<.3?rgb(255,150,120):rgb(150,60,80);}} // strands pulled between the two cities
+    for(let k=0;k<40;k++){const cx=R()*FW|0,cy=120+R()*150|0,w=4+R()*16|0,h=3+R()*10|0;for(let y=cy;y<cy+h;y++)for(let xx=cx;xx<cx+w&&xx<FW;xx++)if(R()<.92)far[y*FW+xx]=rgb(84,30,48);} // floating ruins
+    for(let k=0;k<12;k++){let x=R()*FW,y=60+R()*140;for(let st=0;st<220;st++){x+=(R()-.5)*3+(k%2?1:-1)*.9;y+=(R()-.5)*3.4;const X=x|0,Y=y|0;if(X>=1&&X<FW-1&&Y>=1&&Y<H-2){far[Y*FW+X]=rgb(255,240,210);far[Y*FW+X+1]=rgb(255,200,150);far[(Y+1)*FW+X]=rgb(255,90,70);far[(Y-1)*FW+X]=rgb(255,120,90);farKeep[Y*FW+X]=1;}}} // cracks in the sky, kept bright
+    for(const [base,c] of [[GB-10,rgb(60,20,28)],[GB+20,rgb(36,12,20)]])for(let x=0;x<FW;){const w=8+R()*26|0,h=30+R()*150|0,top=base-h;for(let y=Math.max(0,top);y<H;y++)for(let xx=x;xx<x+w&&xx<FW;xx++){if(y<top+6&&R()<.5)continue;far[y*FW+xx]=(xx%4===1&&y%6===2&&R()<.15)?rgb(255,120,60):c;}x+=w+1+(R()*3|0);}
+  });
+  // ruin the street: torn-off tops, craters, rubble heaps, fissures and fires
+  for(const [x0,x1,top] of BLD){if(R()<.85){const cut=top+(.2+R()*.5)*(GY-top);for(let x=x0;x<x1;x++){const c2=cut+Math.sin(x*.7)*6+R()*8;fill(x,top-30,x+1,c2,EMPTY);}}}
+  for(let k=0;k<26;k++){const x=R()*W|0,y=GY-10-R()*160|0;disc(x,y,8+R()*18|0,EMPTY);}
+  for(let k=0;k<5;k++){const x=40+R()*(W-80)|0;fill(x,GY-2,x+4,GY+18,EMPTY);fill(x,GY+14,x+4,GY+18,LAVA);}
+  for(let k=0;k<22;k++){const x=R()*W|0,w=6+R()*16|0;for(let h=0;h<w/2;h++)fill(x+h,GY-1-h,x+w-h,GY-h,RUBBLE);}
+  for(let i=0;i<N;i++){const m=t[i];if(m&&(KIND[m]===S||KIND[m]===P))col[i]=mix3(col[i],[118,70,70],.38);}
+  for(let k=0;k<40;k++){const x=R()*W|0;let y=0;while(y<GY&&!t[y*W+x])y++;if(y>2&&y<GY&&t[(y-1)*W+x]===0)setc((y-1)*W+x,R()<.2?GFIRE:FIRE);}
+}
+function skyChunk(x){ // a piece of the falling universe: a slab of building drops out of the sky
+  if(bodies.length>120)return;const w=6+R()*10|0,h=5+R()*8|0,lm=new Uint8Array(w*h),lc=new Uint32Array(w*h);let n=0;
+  for(let y=0;y<h;y++)for(let xx=0;xx<w;xx++){if((xx===0||xx===w-1||y===0||y===h-1)&&R()<.35)continue;const m=R()<.15?STEEL:R()<.15?GLASS:CONC;lm[y*w+xx]=m;lc[y*w+xx]=mix3(mkcol(m),[110,60,60],.3);n++;}
+  const b=finishBody(lm,lc,w,h,w/2,h/2,x,camY-24,R()*6,n,false);b.vx=(R()-.5)*2;b.vy=2+R()*2;b.va=(R()-.5)*.08;b.thrown=true;
+  for(let k=0;k<6;k++)spawn(x+(R()-.5)*w,camY-20,(R()-.5),1,rgb(255,140,90),30,0,1,0,1);
+}
+function ambIncursion(){
+  for(let k=0;k<2;k++)spawnFlake(camX+R()*VW,camY-2,(R()-.5)*.3,.6+R()*.5,R()<.5?rgb(90,80,80):rgb(140,120,110),300,0); // falling ash
+  if(R()<.05)spawn(camX+R()*VW,camY+VH,(R()-.5)*.4,-.8-R(),rgb(255,120+R()*80|0,40),140,0,1,0,1); // embers rising
+  // the city comes apart at the seams: exposed building cells peel off as threads drifting up into the broken sky
+  for(let k=0;k<6;k++){const X=camX+R()*VW|0,Y=camY+R()*VH|0;if(X<1||X>=W-1||Y<1||Y>=H-50)continue;const i=Y*W+X,m=t[i];
+    if(KIND[m]!==S||gnd[i]||m===STEEL)continue;const side=t[i-1]===0?-1:t[i+1]===0?1:0;if(t[i-W]!==0&&!side)continue;
+    const c=col[i],vx=side*(.25+R()*.3)+(R()-.5)*.15,vy=-(.35+R()*.45);
+    for(let j=0;j<5;j++)spawn(X,Y,vx*(1+j*.18),vy*(1+j*.22),j?shade(c,1-j*.08):mix3(c,[255,170,150],.4),150+R()*60,0,j===0?1:0,0,0);
+    setc(i,EMPTY);}
+  if(frame%240===0&&R()<.5){const x=camX+R()*VW;zap(x,camY-10,x+(R()-.5)*60,camY+40+R()*60,[255,200,190],[255,40,60]);}
+  if(frame%420===0&&GS==='play'&&!(MODE&&MODE.id==='doomsday'))skyChunk(camX+R()*VW);
+}
 const MAPDEFS={city:{name:'City',gen:genCity},nyc:{name:'New York',gen:genNYC},nyc2099:{name:'NYC 2099',gen:genNYC2099,amb:amb2099,rain:true},forest:{name:'Forest',gen:genForest},xmansion:{name:'X-Mansion',gen:genXMansion},
+  retro:{name:'Earth-828 NYC',gen:genRetro,amb:ambRetro},
+  incursion:{name:'Incursion NYC',gen:genIncursion,amb:ambIncursion},
   savage:{name:'Savage Land',gen:genSavageLand,amb:ambSavage},arctic:{name:'Weapon X',gen:genArctic,amb:ambArctic,wind:true}};
 for(const id in MAPDEFS){const o=document.createElement('option');o.value=id;o.textContent=MAPDEFS[id].name;mapSel.appendChild(o);}
 function shadeWorld(){
@@ -4198,6 +4670,12 @@ addEventListener('blur',()=>{for(const k in keys)keys[k]=false;mouse.down=false;
 cv.addEventListener('mousemove',e=>{mouse.sx=(e.clientX-ox)/scale;mouse.sy=(e.clientY-oy)/scale;});
 cv.addEventListener('mousedown',e=>{if(e.button===0)mouse.down=true;if(e.button===2)mouse.right=true;});
 addEventListener('mouseup',e=>{if(e.button===0)mouse.down=false;if(e.button===2)mouse.right=false;});
+// touch: a finger on the game aims and casts (hold for beams), lifting it stops
+const touchAim=e=>{const t0=e.touches[0];if(!t0)return;mouse.sx=(t0.clientX-ox)/scale;mouse.sy=(t0.clientY-oy)/scale;};
+cv.style.touchAction='none';
+cv.addEventListener('touchstart',e=>{e.preventDefault();touchAim(e);mouse.down=true;},{passive:false});
+cv.addEventListener('touchmove',e=>{e.preventDefault();touchAim(e);},{passive:false});
+for(const ev of ['touchend','touchcancel'])cv.addEventListener(ev,e=>{if(!e.touches.length)mouse.down=false;});
 cv.addEventListener('contextmenu',e=>e.preventDefault());
 cv.addEventListener('wheel',e=>{selPower(cur+(e.deltaY>0?1:-1));e.preventDefault();},{passive:false});
 
@@ -4211,7 +4689,7 @@ function tick(){
   if(mouse.down){if(SPAWN.tool)useTool();else cast();}if(cd>0)cd--;
   updTelekinesis();
   const world=!(slowT>0&&(slowT--&1))&&!SPAWN.pause; // Tactical Focus runs the world at half speed; the spawn menu can freeze it
-  updPlayer();updShots(world);
+  updPlayer();if(!pl_.slip){TSL.push({x:pl_.x,y:pl_.y,hp:pl_.hp,face:pl_.face});if(TSL.length>300)TSL.shift();}updShots(world);
   if(world){updDrones();updVortex();updStrikes();updStorm();updEnemies();updJets();}
   updPins();updTherm();updDecoy();if(world)updWave2();
   for(let n=ACT.length-1;n>=0;n--)if(ACT[n]()===false)ACT.splice(n,1);
@@ -4300,7 +4778,8 @@ function buildMenu(){
     for(const [tag,cl2,txt] of parts){const e=document.createElement(tag);if(cl2)e.className=cl2;e.textContent=txt;d.appendChild(e);}
     if(bgc){d.style.background=bgc;d.style.color=fg||'#fff8e8';}d.onclick=click;parent.appendChild(d);};
   $('modes').innerHTML='';for(const id in MODES){const m=MODES[id],b=bestOf(id);
-    mk($('modes'),'card mode',[['b','',m.name.toUpperCase()],['span','sub',m.sub.toUpperCase()],['span','desc',m.desc],...(b?[['span','best','BEST '+b.toLocaleString()]]:[])],SEL.mode===id,()=>{SEL.mode=id;buildMenu();});}
+    mk($('modes'),'card mode',[['b','',m.name.toUpperCase()],['span','sub',m.sub.toUpperCase()]],SEL.mode===id,()=>{SEL.mode=id;buildMenu();});}
+  {const m=MODES[SEL.mode],b=bestOf(SEL.mode),el=$('mdesc');el.innerHTML='';const h=document.createElement('b');h.textContent=m.name.toUpperCase();el.append(h,m.desc+(b?' · BEST '+b.toLocaleString():''));} // the selected story's blurb, shown once instead of on every card
   $('heroes').innerHTML='';CHARS.forEach((c,i)=>mk($('heroes'),'card',[['b','',c.name.toUpperCase()],['span','sub',`${c.hp} HP · ${MOVE_TAG[c.id]||(c.fly?'FLIES':'LEAPS')}`]],SEL.hero===i,()=>{SEL.hero=i;buildMenu();},false,HERO_UI[c.id],HERO_DARK.has(c.id)?'#14110f':null));
   const fixed=MODES[SEL.mode].map;
   $('maps').innerHTML='';for(const id in MAPDEFS)mk($('maps'),'chip',[['span','',MAPDEFS[id].name.toUpperCase()]],fixed?fixed===id:SEL.map===id,()=>{SEL.map=id;buildMenu();},fixed&&fixed!==id);
@@ -4319,6 +4798,8 @@ $('svol').oninput=e=>{SET.vol=+e.target.value;saveSet();setVolume(SET.vol/100*.9
 $('svol').onchange=()=>snd('ui',camX+VW/2,camY+VH/2);
 // browsers only allow audio after a user gesture
 addEventListener('pointerdown',()=>initAudio(),true);addEventListener('keydown',()=>initAudio(),true);
+addEventListener('touchend',()=>initAudio(),true); // iOS Safari only unlocks audio on touchend
+addEventListener('gesturestart',e=>e.preventDefault()); // no pinch-zoom on iOS
 document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('button,.card,.chip'))snd('ui',camX+VW/2,camY+VH/2,{gap:.03});},true);
 $('sback').onclick=closeSettings;$('msettings').onclick=()=>openSettings('menu');$('psettings').onclick=()=>openSettings('pause');
 function playFromMenu(){startRun(SEL.mode,SEL.hero,SEL.map);}
@@ -4358,6 +4839,29 @@ function nextRobotWave(s){
   queueWave(list,18);
   banner('WAVE '+n,n%5===0?'ULTRON PRIME INCOMING':['Swarm detected','Mechs on the avenue','Drones over the skyways'][n%3]);
 }
+
+// ---- Doomsday: a three-way war in a collapsing New York
+defineMode('doomsday',{name:'Doomsday',sub:'Incursion · three-way war',map:'incursion',
+  desc:'Two universes are colliding over New York. The TVA steps out of time doors to prune everything; Doombots pour through green portals. They fight each other and you. 3 lives.',
+  setup(s){s.lives=3;s.wave=0;s.phase='break';s.timer=200;s.q=[];banner('INCURSION','DOOMSDAY · the sky is breaking');},
+  update(s){
+    for(let n=s.q.length-1;n>=0;n--){const it=s.q[n];if(--it.d>0)continue;s.q.splice(n,1);arrive(it.type);}
+    if(s.phase==='break'){if(--s.timer<=0)nextDoomWave(s);}
+    else if(enemies.length===0&&s.q.length===0){const bonus=120*s.wave;score+=bonus;s.phase='break';s.timer=240;pl_.hp=Math.min(CH.hp,pl_.hp+CH.hp*.35);pl_.en=100;banner('WAVE '+s.wave+' SURVIVED','+'+bonus+' · the incursion worsens');}
+    if(s.t%Math.max(90,300-s.wave*20)===0)skyChunk(camX+R()*VW); // the sky keeps falling, faster every wave
+  },
+  onDeath(s){s.lives--;if(s.lives<=0){endRun();return true;}banner('PRUNED',s.lives+(s.lives===1?' life':' lives')+' left');return false;},
+  hud(s){if(s.phase==='break')return `next wave in ${Math.ceil(s.timer/60)}s · lives ${s.lives}`;let tv=0,db=0;for(const e of enemies){if(e.team==='tva')tv++;else if(e.team==='doom')db++;}return `TVA ${tv} · Doombots ${db} · lives ${s.lives}`;},
+  result(s){return{title:'UNIVERSE DESTROYED',stats:[['WAVE REACHED',s.wave],['KILLS',kills]]};}
+});
+// an arrival: a time door (TVA) or a green portal (Doombots) opens, and the enemy steps out of it
+function arrive(type){const d=ENEMY_TYPES[type],pos=spawnPoint(d);if(!pos)return;const [x,y]=pos;
+  if(d.team==='tva')tvaDoor(x,y+d.h/2,60);else doomPortal(x,y,60);
+  let k=0;ACT.push(()=>{if(++k<24)return true;const e=spawnEnemy(type,x,y);if(e)e.vx=(pl_.x>x?1:-1)*1.5;return false;});}
+function nextDoomWave(s){s.wave++;wave=s.wave;s.phase='fight';const n=s.wave;
+  const L=[['tva_pruner',1+n],['tva_gunner',Math.ceil(n*.6)],['tva_jet',Math.floor(n/2)],['doombot',1+n],['doombot_jet',Math.ceil(n*.5)]];
+  let k=0;for(const [type,c] of L)for(let i=0;i<c;i++)s.q.push({type,d:20+(k++)*16+R()*30|0});
+  banner('WAVE '+n,n%2?'time doors opening':'Doombots incoming');}
 
 // ---- Sentinel Siege: giant Sentinels march on the X-Mansion
 defineMode('sentinels',{name:'Sentinel Siege',sub:'X-Mansion · giant waves',map:'xmansion',
