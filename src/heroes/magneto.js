@@ -1,0 +1,79 @@
+// Magneto (playable): sprite, palette, rig entry, powers and roster entry.
+import './ultron.js'; // evaluation order: runs after heroes/ultron.js
+import { ST } from '../state.js';
+import { EMPTY, F, G, KIND, R, RUBBLE, S, STEEL, rgb } from '../world/materials.js';
+import { H, W, col, markDirty, setc, t, wake } from '../world/grid.js';
+import { bodies, gnd, q } from '../world/support.js';
+import { makeBody } from '../world/bodies.js';
+import { disc, tint } from '../maps/gen.js';
+import { spawn } from '../world/particles.js';
+import { beams, fxWord, rings } from '../render/fx.js';
+import { ANIM, rect } from '../render/rig.js';
+import { snd, sndLoop } from '../sfx.js';
+import { isMetal, pickC, shieldAs, shockFx, shots } from './powers.js';
+import { ACT } from './xmen.js';
+import { solidCells } from './wave2.js';
+import { hurlBody } from './villains.js';
+import { mouse } from '../player.js';
+import { damageLine, enemies, hitEnemy, nearestEnemy } from '../enemies/core.js';
+import { groundBelow } from '../ui/spawn.js';
+
+export const SPR_MAGNETO=[
+"....RRRRR....",
+"...RRrRRRR...",
+"..RRfffFRRr..",
+"..RRfkfkFRr..",
+"..rRffFFRRp..",
+"..pRRRRRRRp..",
+".pPRRRRRRRPp.",
+"PRrRRRMRRRrRP",
+"PRrRRMMMRRrRP",
+"PRrRRRMRRRrRP",
+"PRr.RRRRR.rRP",
+"PMm.MMMMM.mMP",
+"PRr.RRRRR.rRP",
+"P...RR.RR...P",
+"P...RR.RR...P",
+"P..RR...RR..P",
+"p..RR...RR..p",
+"p..RR...RR..p",
+"p..MM...MM..p",
+"p.MMM...MMm.p",
+"..MMM...MMm..",
+"..mmm...mmm.."];
+export const PAL_MAGNETO={R:rgb(186,30,42),r:rgb(110,16,24),f:rgb(226,184,150),F:rgb(170,128,100),k:rgb(30,20,24),M:rgb(122,52,152),m:rgb(76,28,98),P:rgb(102,42,126),p:rgb(64,22,82)};
+
+// animation rig entry (see render/rig.js)
+ANIM.magneto={leg:13,mid:6,armC:'RRr',tipC:'MMm',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,12),blink:null,cape:'Pp'};
+const MAG_POWERS=[
+ {n:'Magnetic Bolts',fn:(a,p,use)=>{if(!use(6))return;ST.cd=10;for(let k=-1;k<=1;k++){const an=Math.atan2(a.dy,a.dx)+k*.12;shots.push({x:a.h.x,y:a.h.y,vx:Math.cos(an)*6,vy:Math.sin(an)*6,type:'mbolt',life:110,col:[210,130,255],ecol:[210,130,255],boom:5});}}},
+ // tear a chunk out of the nearest building (steel first) and hurl it at the cursor
+ {n:'Rip Steel',fn:(a,p,use)=>{let n=0;for(let tries=0;tries<80&&n<16;tries++){const X=p.x+(R()-.5)*160|0,Y=p.y-ST.PH/2+(R()-.4)*120|0;if(X<4||X>=W-4||Y<4||Y>=H-50)continue;if(KIND[t[Y*W+X]]===S&&!gnd[Y*W+X])n=solidCells(X,Y,6,false);}
+   if(n<16||!use(18))return;ST.cd=30;const b=makeBody(q,n,false);if(!b)return;b.x=p.x;b.y=p.y-ST.PH-b.rmax-4;hurlBody(b,mouse.wx,mouse.wy,9.5);b.safeP=ST.frame+40;fxWord(p.x,p.y-ST.PH-10,'RISE!',1,'#c88cff',true);snd('rip',p.x,p.y);}},
+ // hold: enemy fire caught in his field is bent around and sent at the nearest enemy
+ {n:'Polarity Shield',fn:(a,p,use)=>{if(!use(.5))return;shieldAs([[230,170,255],[150,70,220],[170,90,255]],false);
+   for(const s2 of shots)if(s2.owner==='enemy'&&Math.hypot(s2.x-p.x,s2.y-p.y+8)<30){const e=nearestEnemy(s2.x,s2.y,300);s2.owner='player';s2.col=[210,130,255];s2.ecol=[210,130,255];if(e){const dx=e.x-s2.x,dy=e.y-s2.y,d=Math.hypot(dx,dy)||1;s2.vx=dx/d*6;s2.vy=dy/d*6;}else{s2.vx*=-1.2;s2.vy*=-1.2;}}}},
+ // every scrap of steel and every robot near the cursor is crushed into one ball and thrown
+ {n:'Scrap Ball',fn:(a,p,use)=>{if(!use(30))return;ST.cd=50;const cx=mouse.wx|0,cy=mouse.wy|0,r=34;let n=0;for(let y=-r;y<=r&&n<900;y++)for(let x=-r;x<=r;x++){if(x*x+y*y>r*r)continue;const X=cx+x,Y=cy+y;if(X<0||X>=W||Y<0||Y>=H-44)continue;const i=Y*W+X;if(t[i]===STEEL){t[i]=0;wake(i);markDirty(i);n++;}}
+   let crushed=0;for(const e of enemies)if(isMetal(e)&&!e.def.title&&Math.hypot(e.x-cx,e.y-cy)<r+10){hitEnemy(e,60,0,0);crushed++;}
+   const rr=Math.max(4,Math.min(12,Math.sqrt(n/3.1)|0));if(n>20){disc(cx,cy,rr,STEEL);tint(cx-rr,cy-rr,cx+rr+1,cy+rr+1,120,126,140,14);const m=solidCells(cx,cy,rr,true);const b=m>=12?makeBody(q,m,false):null;if(b){hurlBody(b,cx+(cx-p.x)*2,cy-20,7);}}
+   fxWord(cx,cy-r,crushed?'CRUSHED':'COMPACTED',1.1,'#c88cff',true);snd('clang',cx,cy);ST.shake+=6;}},
+ // pull iron out of the sky: steel spikes rain down around the cursor
+ {n:'Iron Rain',fn:(a,p,use)=>{if(!use(30))return;ST.cd=55;const cx=mouse.wx;let k=0;fxWord(cx,ST.camY+20,'IRON RAIN',1.1,'#c88cff',true);
+   ACT.push(()=>{if(k%2===0)shots.push({x:cx+(R()-.5)*120,y:ST.camY-6,vx:(R()-.5)*.4,vy:6,type:'spike',life:120,col:[170,176,190],boom:4,grav:.12});return++k<90;});}},
+ // a magnetic pulse that throws everything metal, and every enemy, away from him
+ {n:'Repulse',fn:(a,p,use)=>{if(!use(22))return;ST.cd=36;const cx=p.x,cy=p.y-ST.PH/2;for(const e of enemies){const dx=e.x-cx,dy=e.y-cy,d=Math.hypot(dx,dy)||1;if(d<120){const k=isMetal(e)?9:5;e.vx+=dx/d*k;e.vy+=dy/d*k-2;e.thrownT=40;hitEnemy(e,12,0,0);}}
+   for(const b of bodies){const dx=b.x-cx,dy=b.y-cy,d=Math.hypot(dx,dy)||1;if(d<140){b.vx+=dx/d*6;b.vy+=dy/d*6-1;b.thrown=true;}}rings.push({x:cx,y:cy,r:6,vr:6,life:14,c:[200,120,255]});shockFx(cx,cy,.8);fxWord(cx,cy-24,'REPULSE!',1.2,'#c88cff',true);}},
+ // a steel rod fired at magnetic speed: pierces everything in a straight line
+ {n:'Rail Shot',fn:(a,p,use)=>{if(!use(26))return;ST.cd=40;let x=a.h.x,y=a.h.y;for(let s=0;s<520;s++){x+=a.dx;y+=a.dy;const X=x|0,Y=y|0;if(X<1||X>=W-1||Y<1||Y>=H-44)break;const i=Y*W+X,m=t[i];if(m&&KIND[m]!==G&&KIND[m]!==F){if(R()<.3)spawn(X,Y,a.dx*3+(R()-.5)*2,a.dy*3-R()*2,col[i],40,KIND[m]===S?RUBBLE:m,0);setc(i,EMPTY);}}
+   damageLine(a.h.x,a.h.y,x,y,4,60);beams.push({x0:a.h.x,y0:a.h.y,x1:x,y1:y,life:5,w:1,c:[240,230,255],g:[170,90,255]});fxWord(a.h.x+a.dx*40,a.h.y-10,'SHHHRAK!',1,'#c88cff',true);snd('zap',a.h.x,a.h.y,{pitch:.5});ST.shake+=5;}},
+ // hold: crush the metal in robots near the cursor
+ {n:'Crush',fn:(a,p,use)=>{if(!use(.6))return;const cx=mouse.wx,cy=mouse.wy;for(const e of enemies)if(isMetal(e)&&Math.hypot(e.x-cx,e.y-cy)<40+e.def.w/2){hitEnemy(e,2.4,0,0);e.vx*=.6;e.vy*=.6;if(ST.frame%3===0)spawn(e.x+(R()-.5)*e.def.w,e.y+(R()-.5)*e.def.h,(R()-.5)*2,(R()-.5)*2,rgb(255,230,160),8,0,1,1);}
+   if(ST.frame%2===0)rings.push({x:cx,y:cy,r:30,vr:-2,life:5,c:[200,120,255]});sndLoop('crush','hum',cx,cy,{v:.7});}},
+ // Asteroid M: rip a mountain of ground out from under the cursor and drop it from the sky
+ {n:'Asteroid M',fn:(a,p,use)=>{if(!use(55))return;ST.cd=140;const cx=mouse.wx|0,cy=groundBelow(cx,mouse.wy)+10,n=solidCells(cx,cy,18,true);if(n<60)return;const b=makeBody(q,n,true);if(!b)return;b.tx=cx;b.ty=Math.max(30,ST.camY+40);let k=0;
+   fxWord(cx,cy-40,'ASTEROID M!',1.5,'#c88cff',true);snd('rip',cx,cy);ST.shake+=10;ACT.push(()=>{k++;if(!bodies.includes(b))return false;if(k<60){b.tx=mouse.wx;b.ty=Math.max(30,ST.camY+40);return true;}b.held=false;b.vx=0;b.vy=10;b.thrown=true;b.safeP=ST.frame+30;return false;});}},
+];
+
+// roster entry (CHARS in heroes/index.js)
+export const CHAR_MAGNETO={id:'magneto',name:'Magneto',spr:SPR_MAGNETO,pal:PAL_MAGNETO,pw:7,ph:19,fly:true,fs:3.0,boost:2.0,run:1.8,jump:4.4,hp:330,armor:.75,glow:[200,120,255],cape:null,thrust:()=>pickC([210,140,255]),powers:MAG_POWERS};

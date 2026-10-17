@@ -5,8 +5,6 @@ import { spawn } from '../world/particles.js';
 import { hurtTarget } from '../heroes/powers.js';
 import { defineEnemy, enemyBeam, enemyShoot, los, pdist, player, seek, spawnEnemy } from './core.js';
 
-
-
 // ---- NYC 2099 robots
 // swarmbot: cheap kamikaze drone, comes in clouds
 defineEnemy('swarmbot',{hp:14,w:5,h:5,fly:true,score:5,boom:3,glow:'*c',
@@ -18,7 +16,6 @@ defineEnemy('swarmbot',{hp:14,w:5,h:5,fly:true,score:5,boom:3,glow:'*c',
     if(pdist(e)<7){hurtTarget(e,10);e.mem.noScore=true;e.hp=0;}
     if(ST.frame%3===0)spawn(e.x,e.y,(R()-.5)*.4,.3,rgb(255,70,210),6,0,1,0);
   }});
-
 // mech: heavy street walker, lobs rocket salvos that chew through buildings
 defineEnemy('mech',{hp:140,w:11,h:14,fly:false,score:40,boom:9,glow:'*c',
   sprite:["...AAAAA...","..AA*A*AA..","..AAAAAAA..","cAAAAAAAAAc","cAmmAAAmmAc","c.AAAAAAA.c","..AmmAmmA..","...AA.AA...","..AA...AA..","..A.....A..",".AA.....AA.",".A.......A.","AA.......AA","cc.......cc"],
@@ -30,7 +27,6 @@ defineEnemy('mech',{hp:140,w:11,h:14,fly:false,score:40,boom:9,glow:'*c',
     if(e.ground&&Math.abs(e.vx)>.3&&e.t%18===0){ST.shake=Math.max(ST.shake,1.5);for(let k=0;k<4;k++)spawn(e.x+(R()-.5)*10,e.y+7,(R()-.5)*1.5,-R(),rgb(150,140,125),20,0,0,1);}
     if(e.cd===0&&dist<320&&los(e,p.x,p.y)){enemyShoot(e,{speed:2.8,dmg:12,col:[255,170,60],boom:7,fire:.3,lead:20,spread:.05});e.mem.salvo=(e.mem.salvo||0)+1;e.cd=e.mem.salvo%3?14:130;}
   }});
-
 // Ultron Prime: boss. Beam bursts, missile rings, calls in swarms; enraged under half health
 defineEnemy('ultron_prime',{hp:1400,w:15,h:13,fly:true,score:0,boom:16,glow:'*c',title:'ULTRON PRIME',
   sprite:["....AAAAAAA....","..AAAAAAAAAAA..",".AAA**AAA**AAA.","AAAA**AAA**AAAA","AAAAAAAAAAAAAAA","AAAAAmmmmmAAAAA",".AAAm*****mAAA.","..AAAmmmmmAAA..","...AAAAAAAAA...","..cA.aaaaa.Ac..",".c..a.aaa.a..c.","c....a...a....c",".....c...c....."],

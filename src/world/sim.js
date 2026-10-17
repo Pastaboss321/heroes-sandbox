@@ -4,8 +4,6 @@ import { ST } from '../state.js';
 import { ACID, ASH, EMBER, EMPTY, F, FIRE, FLAM, G, GFIRE, GLASS, HARD, ICE, KIND, L, LAVA, OBSID, OIL, P, PROPANE, R, RUBBLE, S, SAND, SMOKE, SNOW, STEAM, STEEL, WATER, WOOD, rgb } from './materials.js';
 import { MP, spawn } from './particles.js';
 
-
-
 export function step(){
   ST.clock=(ST.clock%255)+1; ST.frame++;
   const tmp=ST.act; ST.act=ST.nxt; ST.nxt=tmp; ST.nxt.fill(0);
@@ -27,7 +25,6 @@ export function step(){
     }
   }
 }
-
 function updPowder(i,m,x,y){
   if(m===EMBER){ wake(i); if(--life[i]===0){setc(i,ASH);return;} const j=rn(i); if(j>=0&&FLAM[t[j]]>0&&R()<.08)ignite(j); }
   if(y>=H-1)return;
@@ -45,7 +42,6 @@ function updPowder(i,m,x,y){
   if(x-d>=0&&x-d<W&&canSink(m,t[j-d])){swap(i,j-d);if(i>=W&&KIND[t[i-W]]===S)markDirty(i-W);return;}
   if(hit>3&&x+d*2>=0&&x+d*2<W&&t[i+d]===0&&t[i+d*2]===0)swap(i,i+d); // impact scatter
 }
-
 function updLiquid(i,m,x,y){
   if(m===LAVA){ wake(i); if(reactLava(i))return; if(R()<.55)return; }
   else if(m===ACID){ if(reactAcid(i))return; }
@@ -65,7 +61,6 @@ function updLiquid(i,m,x,y){
   for(let s=1;s<=reach;s++){const nx=x+d*s;if(nx<0||nx>=W)break;const j=i+d*s;if(canSink(m,t[j]))best=j;else break;}
   if(best>=0)swap(i,best);
 }
-
 function updGas(i,m,x,y){
   wake(i);
   if(m!==PROPANE&&--life[i]===0){ setc(i,(m===STEAM&&R()<.35)?WATER:EMPTY); return; }
@@ -79,7 +74,6 @@ function updGas(i,m,x,y){
     if(x+d>=0&&x+d<W&&t[i+d]===0){swap(i,i+d);return;}
   }
 }
-
 export function ignite(j){
   const m=t[j];
   if(m===PROPANE){ booms.push([j%W,(j/W)|0,7]); setc(j,FIRE); return; }
@@ -87,7 +81,6 @@ export function ignite(j){
   if(KIND[m]===S){ setc(j,R()<.25?EMBER:FIRE); if(m===WOOD)life[j]=200; }
   else setc(j,FIRE);
 }
-
 function reactFire(i,m,x,y){
   wake(i);
   const g=m===GFIRE;
@@ -105,7 +98,6 @@ function reactFire(i,m,x,y){
   if(y>0&&R()<.35){const d=((R()*3)|0)-1,j=i-W+d;if(x+d>=0&&x+d<W&&t[j]===0)swap(i,j);}
   if(!g&&R()<.0025&&ST.np<MP-4000)spawn(x,y-1,(R()-.5)*.5,-.5-R()*.9,rgb(255,140+R()*90|0,40),40+R()*50,0,1,0); // embers drift up from big fires
 }
-
 function reactLava(i){
   const j=rn(i); if(j<0)return false; const tm=t[j];
   if(tm===WATER){ setc(i,OBSID); setc(j,STEAM); return true; }
@@ -115,7 +107,6 @@ function reactLava(i){
   if(R()<.0003){setc(i,OBSID);return true;}
   return false;
 }
-
 function reactAcid(i){
   const j=rn(i); if(j<0)return false; const tm=t[j];
   if(tm===0||tm===ACID||tm===GLASS||KIND[tm]===G||KIND[tm]===F)return false;

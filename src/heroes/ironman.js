@@ -13,7 +13,6 @@ import { aimFrom } from './xmen.js';
 import { mouse } from '../player.js';
 import { enemies, hitEnemy } from '../enemies/core.js';
 
-
 const SPR_IRON=[
 "....rQRRr....",
 "...rQRRRRr...",
@@ -37,12 +36,10 @@ const SPR_IRON=[
 "..QRR...RRr..",
 "..QRR...RRr..",
 "..rrr...rrr.."];
-
 const PAL_IRON={R:rgb(176,28,28),r:rgb(100,12,16),Q:rgb(232,72,58),G:rgb(214,164,50),Y:rgb(252,216,112),g:rgb(146,104,26),k:rgb(36,12,12),'*':rgb(205,242,255),'@':rgb(225,252,255)};
 
 // animation rig entry (see render/rig.js)
 ANIM.iron={leg:14,mid:6,armC:'QRr',tipC:'**G',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null};
-
 const IRON_POWERS=[
  {n:'Repulsor',fn:(a,p,use)=>{if(!use(3))return;shots.push({x:a.h.x,y:a.h.y,vx:a.dx*8,vy:a.dy*8,type:'repulsor',life:90,boom:6,fire:.05,col:CYAN,ecol:CYAN});ST.cd=7;flash(a.h.x,a.h.y,10,CYAN,3);ST.shake+=.8;}},
  {n:'Unibeam',fn:(a,p,use)=>{if(!use(1.1))return;const c={x:p.x+p.face,y:p.y-ST.PH+8};const dx=mouse.wx-c.x,dy=mouse.wy-c.y,d=Math.hypot(dx,dy)||1;
@@ -51,7 +48,6 @@ const IRON_POWERS=[
  {n:'Laser Cutter',fn:(a,p,use)=>{if(!use(.5))return;beamCore(a,{pow:240,rad:0,len:520,w:0,c:[255,170,160],g:[255,50,40],spark:()=>rgb(255,120+R()*100,60),dmg:3,noAsh:true});}},
  {n:'Pulse Bomb',fn:(a,p,use)=>{if(!use(20))return;shots.push({x:a.h.x,y:a.h.y,vx:a.dx*4.5,vy:a.dy*4.5-1.5,type:'bomb',life:240,boom:17,fire:.3,grav:.15,ecol:[255,200,120]});ST.cd=40;}},
 ];
-
 IRON_POWERS.push(
  {n:'Proton Cannon',fn:(a,p,use)=>{if(!use(30))return;ST.cd=60;const o={x:p.x-p.face*2,y:p.y-ST.PH+3};const b=aimFrom(o);shots.push({x:o.x,y:o.y,vx:b.dx*4.5,vy:b.dy*4.5,type:'proton',life:240,boom:22,fire:.35,col:[160,240,255],ecol:[160,240,255]});
    p.vx-=b.dx*2.5;p.vy-=b.dy*1.5;flash(o.x,o.y,30,[160,240,255],6);fxWord(o.x,o.y-12,'KA-CHUNK!',1.1,'#bfe3ff',true);ST.shake+=6;}},
@@ -61,7 +57,6 @@ IRON_POWERS.push(
    for(const e of enemies)if(Math.hypot(e.x-p.x,e.y-p.y)<110)e.frozen=Math.max(e.frozen||0,45);}},
  {n:'Energy Shield',fn:(a,p,use)=>{if(!use(.5))return;shieldAs([[200,245,255],[80,190,255],[60,170,255]],true);}},
 );
-
 IRON_POWERS.push(
  // hold: a magnetic field that only grips metal. Rips steel frames out of buildings, drags robots in
  {n:'Electromagnet',fn:(a,p,use)=>{if(!use(.55))return;const cx=a.h.x,cy=a.h.y,ang=Math.atan2(a.dy,a.dx),R0=170;

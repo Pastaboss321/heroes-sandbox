@@ -56,6 +56,10 @@ export const ST={
   shieldOn:false,
   shieldC:[[170,255,190],[80,220,120],[60,255,100]],
   senseT:0,
+  // heroes/wave2.js
+  T0:null,
+  C0:null,
+  B0:null,
   // player.js
   SPR:null, // set in player.js
   SPC:null, // set in player.js
@@ -63,6 +67,7 @@ export const ST={
   SH:16,
   PW:7,
   PH:16,
+  SZ:1,
   SPAWNX:50,
   CH:null, // current hero, set by setChar()
   camX:0,

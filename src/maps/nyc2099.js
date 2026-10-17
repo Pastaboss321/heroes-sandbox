@@ -6,8 +6,6 @@ import { makeFar, tint } from './gen.js';
 import { BLD } from './city.js';
 import { spawn } from '../world/particles.js';
 
-
-
 // ---- NYC 2099: the same island seventy-five years on. Neon-banded towers, skyways strung between them,
 // a violet smog sky full of traffic lanes, and steady acid-free rain.
 export function genNYC2099(){
@@ -38,7 +36,6 @@ export function genNYC2099(){
   // street-level neon: kerb strip along Manhattan
   for(let x=430;x<W;x++){const i=GY*W+x;if(KIND[t[i]]===S&&t[i-W]===0&&(x>>3)%2===0){t[i]=NEON;col[i]=rgb(...NC[(x>>6)%2]);}}
 }
-
 export function amb2099(){ // sky traffic and rain
   if(ST.frame%5===0){const dir=R()<.5?1:-1,y=ST.camY+8+R()*80,x=dir>0?ST.camX-4:ST.camX+VW+4,sp=(2.5+R()*2.5)*dir,c=R()<.5?rgb(120,240,255):rgb(255,120,230);
     for(let k=0;k<3;k++)spawn(x-dir*k*2,y,sp,0,k?rgb(255,90,90):c,200,0,1,0);}

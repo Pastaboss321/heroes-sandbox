@@ -11,8 +11,6 @@ import { pickC, shockFx } from '../heroes/powers.js';
 import { hurt, pl_ } from '../player.js';
 import { damageEnemies } from '../enemies/core.js';
 
-
-
 // ================= destruction =================
 export function explode(cx,cy,r,opt={}){
   const fire=opt.fire||0, green=opt.green, ec=opt.col;
@@ -60,15 +58,12 @@ export function explode(cx,cy,r,opt={}){
   if(r>=5)for(let n=0;n<r*r*1.6;n++){const an=R()*6.283,d=r*(.95+R()*.4),X=cx+Math.cos(an)*d|0,Y=cy+Math.sin(an)*d|0;if(X<0||X>=W||Y<0||Y>=H)continue;const i=Y*W+X;if(KIND[t[i]]===S&&t[i]!==ICE&&t[i]!==NEON)col[i]=shade(col[i],.55+R()*.25);} // scorched crater rim
   for(const b of bodies){const ddx=b.x-cx,ddy=b.y-cy,d=Math.hypot(ddx,ddy)||1;if(d<r*4+b.rmax){const f=r*3/(d+8)*Math.min(1,300/b.n);b.vx+=ddx/d*f;b.vy+=ddy/d*f-.3;b.va+=(R()-.5)*f*.04;}}
 }
-
 export function bgHit(cx,cy,r){
   for(let y=-r;y<=r;y++)for(let x=-r;x<=r;x++){if(x*x+y*y>r*r)continue;const X=cx+x|0,Y=cy+y|0;if(X<0||X>=W||Y<0||Y>=H)continue;const i=Y*W+X;if(!bgB[i])continue;
     if(R()<.3&&ST.np<MP-500){const a=Math.atan2(y,x),sp=.5+R()*2.5;spawn(X,Y,Math.cos(a)*sp,Math.sin(a)*sp-1,shade(bg[i],.8),90,RUBBLE,0);}
     bg[i]=bgD[i];bgB[i]=0;}
 }
-
 export const shade=(c,k)=>rgb((c&255)*k,((c>>8)&255)*k,((c>>16)&255)*k);
-
 export function punchOut(p){ // armour shoves its way out instead of teleporting
   for(let yy=Math.ceil(p.y-ST.PH);yy<=Math.floor(p.y-1);yy++)for(let xx=Math.floor(p.x-ST.PW/2);xx<=Math.floor(p.x+ST.PW/2);xx++){
     if(!solidAt(xx,yy)||xx<0||xx>=W||yy<0||yy>=H)continue;const i=yy*W+xx,m=t[i],k=KIND[m];

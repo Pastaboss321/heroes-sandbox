@@ -5,8 +5,6 @@ import { H, W, bg, bgD, setc, sxy } from '../world/grid.js';
 import { clearAll, disc, fill, makeFar, tint } from './gen.js';
 import { building, car, cityUnder, glassTower } from './city.js';
 
-
-
 export function genNYC(){
   clearAll();
   const GY=340, GB=143+(GY-143)*.5|0, RX=300;
@@ -57,13 +55,11 @@ export function genNYC(){
   }
   ST.SPAWNX=RX+130;
 }
-
 export function waterTower(x,top){
   for(const lx of [x,x+9])fill(lx,top-6,lx+1,top+4,STEEL);
   fill(x-1,top-16,x+11,top-6,WOOD);tint(x-1,top-16,x+11,top-6,120,84,52,10);fill(x+1,top-15,x+9,top-7,WATER);
   for(let r=0;r<6;r++)fill(x-1+r,top-16-r,x+11-r,top-15-r,WOOD);
 }
-
 function steppedTower(x,GY){
   // setback tiers like a 1930s skyscraper, then a mast and antenna
   const tiers=[[96,110],[74,60],[54,46],[38,34],[24,22]];let bot=GY,top;
@@ -71,7 +67,6 @@ function steppedTower(x,GY){
   const mx=x+48;fill(mx-3,top-18,mx+3,top,STEEL);tint(mx-3,top-18,mx+3,top,200,205,215,6);fill(mx-1,top-60,mx+1,top-18,STEEL);fill(mx,Math.max(2,top-95),mx+1,top-60,STEEL);
   return x+96;
 }
-
 function decoTower(x,GY){
   const w=56,top=GY-235;building(x,x+w,top,GY);
   // terraced steel crown with triangular windows, then a needle spire
@@ -82,7 +77,6 @@ function decoTower(x,GY){
   fill(x+w/2-1,y-60,x+w/2+1,y+14,STEEL); // spire sunk into the crown so it is attachedfill(x+w/2,Math.max(2,y-80),x+w/2+1,y-60,STEEL);
   return x+w;
 }
-
 function centralPark(x,GY){
   const w=210;
   fill(x,GY-3,x+w,GY,GRASS);fill(x,GY,x+w,GY+4,DIRT);

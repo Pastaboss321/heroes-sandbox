@@ -7,11 +7,10 @@ import { comics } from './fx.js';
 import { pl_ } from '../player.js';
 import { enemies } from '../enemies/core.js';
 
-
 // comic overlay drawn at screen resolution: focus lines, impact frames, starbursts, sound words, vignette, damage edge
 export function drawComics(sx,sy){
   const S=x=>ST.ox+sx+(x-ST.CX)*ST.scale, T=y=>ST.oy+sy+(y-ST.CY)*ST.scale, p=pl_;
-  ctx.drawImage(vig,0,0);
+  if(vig.width&&vig.height)ctx.drawImage(vig,0,0);
   if(ST.GS==='play'&&(p.boost>0||p.boring||p.charge>0||p.slam)){ // manga focus lines toward the hero
     const cx=S(p.x),cy=T(p.y-ST.PH/2),R0=Math.max(cv.width,cv.height);ctx.strokeStyle='rgba(243,233,210,.22)';
     for(let k=0;k<22;k++){const a=R()*6.283,r1=90*ST.scale/3+R()*60;ctx.lineWidth=1+R()*3;ctx.beginPath();ctx.moveTo(cx+Math.cos(a)*r1,cy+Math.sin(a)*r1);ctx.lineTo(cx+Math.cos(a)*R0,cy+Math.sin(a)*R0);ctx.stroke();}}
@@ -36,5 +35,4 @@ export function drawComics(sx,sy){
   if(ST.hurtV>.02){const g=ctx.createRadialGradient(cv.width/2,cv.height/2,Math.min(cv.width,cv.height)*.3,cv.width/2,cv.height/2,Math.max(cv.width,cv.height)*.7);
     g.addColorStop(0,'rgba(226,59,46,0)');g.addColorStop(1,`rgba(226,59,46,${.55*ST.hurtV})`);ctx.fillStyle=g;ctx.fillRect(0,0,cv.width,cv.height);if(ST.GS==='play')ST.hurtV*=.92;}
 }
-
 addEventListener('resize',resize);

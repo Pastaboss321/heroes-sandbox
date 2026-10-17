@@ -4,8 +4,6 @@ import { ACID, ASH, CONC, DIRT, EMPTY, GLASS, GRASS, LAVA, OBSID, OIL, PROPANE, 
 import { H, W, bg, bgD, setc, sxy, t } from '../world/grid.js';
 import { tree } from './forest.js';
 
-
-
 export function cityUnder(GY){
   // ground: asphalt, dirt, subway, bedrock
   fill(0,GY,W,GY+4,CONC); tint(0,GY,W,GY+4,45,45,50,5);
@@ -33,7 +31,6 @@ export function cityUnder(GY){
   SURF.fill(GY+40); ST.PIN2=[GY,GY+8];
   bgD.set(bg);
 }
-
 export function genCity(){
   clearAll();
   const GY=330, GB=143+(GY-143)*.5|0;
@@ -67,9 +64,7 @@ export function genCity(){
     x+=gap;
   }
 }
-
 export const BLD=[];
-
 export function building(x0,x1,top,GY){
   const fh=16;BLD.push([x0,x1,top]);
   const WCS=[[150,148,142],[140,90,70],[170,160,130],[110,115,125],[86,128,140],[176,96,72],[196,160,84],[120,96,140],[132,160,138],[188,120,110]],wc=WCS[R()*WCS.length|0];
@@ -103,7 +98,6 @@ export function building(x0,x1,top,GY){
   if(R()<.6){const tx=x0+4+R()*(x1-x0-16)|0;fill(tx,top-8,tx+10,top,STEEL);fill(tx+1,top-7,tx+9,top,WATER);fill(tx+1,top,tx+2,top,STEEL);}
   fill(x1-6,top-14,x1-5,top,STEEL);
 }
-
 export function glassTower(x0,x1,top,GY){
   BLD.push([x0,x1,top,'glass']);
   for(let y=top;y<GY;y++)for(let xx=x0;xx<x1;xx++){
@@ -115,7 +109,6 @@ export function glassTower(x0,x1,top,GY){
   // spire
   const mx=(x0+x1)>>1; fill(mx-1,top-30,mx+1,top,STEEL); fill(mx-4,top-4,mx+4,top,STEEL);
 }
-
 function houseRow(x,GY){
   for(let k=0;k<2+(R()*3|0);k++){
     const w=26+R()*12|0, h=26+R()*20|0, top=GY-h, x1=x+w;
@@ -131,7 +124,6 @@ function houseRow(x,GY){
   }
   return x;
 }
-
 function park(x,GY){
   const w=150; fill(x,GY-2,x+w,GY,GRASS); fill(x,GY-1,x+w,GY,DIRT);
   // pond carved into street
@@ -140,7 +132,6 @@ function park(x,GY){
   fill(x+20,GY-6,x+34,GY-5,WOOD);fill(x+21,GY-5,x+22,GY-2,WOOD);fill(x+32,GY-5,x+33,GY-2,WOOD);
   return x+w;
 }
-
 function gasStation(x,GY){
   const w=110;
   fill(x,GY-36,x+w,GY-33,CONC); for(const px of [x+4,x+50,x+w-6])fill(px,GY-33,px+2,GY,STEEL);
@@ -150,7 +141,6 @@ function gasStation(x,GY){
     fill(tx-1,GY-28-2,tx+21,GY-28+20+2,STEEL); fill(tx+1,GY-28,tx+19,GY-28+20,k?PROPANE:OIL);}
   return x+w;
 }
-
 function bridge(x,GY){
   const w=300, dy=GY-70;
   fill(x,dy,x+w,dy+4,CONC); fill(x,dy+4,x+w,dy+6,STEEL);
@@ -162,7 +152,6 @@ function bridge(x,GY){
   for(let k=0;k<3;k++)car(x+30+k*90+R()*20|0,dy);
   return x+w;
 }
-
 function crane(x,GY){
   const h=230, top=GY-h;
   for(let y=top;y<GY;y++){sxy(x,y,STEEL);sxy(x+8,y,STEEL);if((y-top)%8===0)fill(x,y,x+9,y+1,STEEL);if((y-top)%8<8){sxy(x+((y-top)%8),y,STEEL);}}
@@ -174,7 +163,6 @@ function crane(x,GY){
   for(const px of [x+20,x+40,x+59])fill(px,GY-40,px+1,GY,STEEL);
   return x+110;
 }
-
 export function car(x,GY,cc){
   const c=cc||[[180,30,30],[30,80,180],[200,170,40],[220,220,220],[40,140,60]][R()*5|0];
   fill(x,GY-6,x+16,GY-2,STEEL);tint(x,GY-6,x+16,GY-2,c[0],c[1],c[2],8);
@@ -183,5 +171,4 @@ export function car(x,GY,cc){
   fill(x+12,GY-5,x+14,GY-3,OIL); if(R()<.5)fill(x+1,GY-5,x+3,GY-3,PROPANE);
   for(const wx of [x+2,x+11]){fill(wx,GY-3,wx+4,GY,STEEL);tint(wx,GY-3,wx+4,GY,25,25,25,4);}
 }
-
 export function noise2(x,y,s){return(Math.sin(x*.05+s)*Math.cos(y*.07+s*1.3)+Math.sin(x*.11-y*.06+s*2.1)*.6+Math.sin((x+y)*.033+s*.7)*.5+Math.sin(x*.021-s)*Math.sin(y*.043+s)*.5)/2.6;}

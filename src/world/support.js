@@ -1,14 +1,12 @@
 // Structural support: anchor flood, support checks, back-wall orphan sweep, cluster flood into rigid bodies.
 import './sim.js'; // evaluation order: runs after world/sim.js
 import { ST } from '../state.js';
-import { CONC, DIRT, GLASS, GRASS, KIND, LEAF, NEON, NM, OBSID, P, R, RUBBLE, S, STEEL, STONE, WOOD } from './materials.js';
+import { CONC, DIRT, GLASS, GRASS, KIND, LEAF, NEON, NM, OBSID, P, R, RUBBLE, S, STEEL, STONE, WEB, WOOD } from './materials.js';
 import { H, N, W, bg, bgB, bgD, col, markDirty, t, vel, wake } from './grid.js';
 import { dust, makeBody } from './bodies.js';
 import { MP, spawn } from './particles.js';
 import { shade } from './destruction.js';
 import { snd } from '../sfx.js';
-
-
 
 // ================= structural support → rotating rigid chunks =================
 // Deep natural ground is "pinned" (bedrock-like). Anything not connected to pinned
@@ -16,18 +14,13 @@ import { snd } from '../sfx.js';
 // that falls, tips over its edge, and shatters on impact.
 export const vis=new Uint32Array(N), q=new Int32Array(N), bm=new Uint32Array(N), pin=new Uint8Array(N);
  // vgen, bgen: shared state (ST in state.js)
-
 export const bodies=[];
  const CAP=40000;
-
 // lastBoom: shared state (ST in state.js)
-
 // how much weight one supporting cell of a material can carry, and how heavy each cell is
 const LOAD=new Float32Array(NM), MASS=new Float32Array(NM);
-
 LOAD.fill(400);
 MASS.fill(1);
-
 LOAD[STEEL]=900;
 LOAD[CONC]=450;
 LOAD[STONE]=700;
@@ -37,7 +30,6 @@ LOAD[DIRT]=250;
 LOAD[GLASS]=120;
 LOAD[LEAF]=20;
 LOAD[GRASS]=120;
-
 export const NAT=new Uint8Array(NM);
 NAT[DIRT]=NAT[GRASS]=NAT[STONE]=NAT[OBSID]=1; // natural ground vs built structures
 export const gnd=new Uint8Array(N); // per cell: counts as ground (natural ground, plus streets/decks/tunnels wider than any building)
@@ -49,12 +41,11 @@ MASS[GLASS]=.8;
 MASS[WOOD]=.5;
 MASS[LEAF]=.2;
 MASS[GRASS]=.3;
-
+LOAD[WEB]=160;
+MASS[WEB]=.05; // spider silk: featherweight and strong, so strands span gaps
 let collapses=0;
-
 const vis2=new Uint32Array(N), GCAP=150000;
  let ggen=0, gstart=0;
-
 function anchorFlood(s,init){
   const id=++ggen;let sp=0,tl=0;stk[sp++]=s;q[tl++]=s;vis2[s]=id;
   while(sp>0){
@@ -73,7 +64,6 @@ function anchorFlood(s,init){
     if(tl<200||lf*2>tl){for(let k=0;k<tl;k++){t[q[k]]=0;wake(q[k]);}return;}}
   dropCluster(q,tl);
 }
-
 // a floating cluster comes down: tiny bits and loose whiskers crumble to dust, the rest falls as one rigid chunk
 // (made of whatever materials it is built from) that tumbles and shatters on landing
 function dropCluster(list,n){
@@ -93,10 +83,8 @@ function dropCluster(list,n){
   if(k2>0){const b=makeBody(list,k2,false);if(b){b.vy=Math.max(b.vy,.4);b.va+=(R()-.5)*.01;}}
   ST.shake=Math.min(22,ST.shake+Math.min(6,Math.sqrt(n)/12));
 }
-
 export const unq=[], stk=new Int32Array(N), rid=new Int32Array(N), rcount=[0];
  let vstart=0;
-
 // rid: which intact piece a cell belongs to (set at generation and when debris settles). Untouched pieces never topple.
 export function supportCheck(init){
   // hooks next to fresh damage let go: generated floating pieces only hang until touched
@@ -115,14 +103,10 @@ export function supportCheck(init){
   if(!init){ // back walls are swept less often, one dirty area at a time
     sweepBg();}
 }
-
 const ob=[W,-1,H,-1]; // where structure was actually destroyed since the last back-wall sweep
 export function obAdd(x,y){if(x<ob[0])ob[0]=x;if(x>ob[1])ob[1]=x;if(y<ob[2])ob[2]=y;if(y>ob[3])ob[3]=y;}
-
 function sweepBg(){if(ST.frame%8!==0||ob[1]<0)return;orphanBg(ob[0]-70,ob[1]+70,ob[2]-70,ob[3]+70);ob[0]=W;ob[1]=-1;ob[2]=H;ob[3]=-1;}
-
 export const BLDS=m=>KIND[m]===S&&!NAT[m]&&m!==LEAF;
-
 function orphanBg(x0,x1,y0,y1){
   const RCH=110;x0=Math.max(0,x0);x1=Math.min(W-1,x1);y0=Math.max(0,y0);y1=Math.min(H-1,y1);
   for(let y=y0;y<=y1;y++){const row=y*W;
@@ -135,9 +119,7 @@ function orphanBg(x0,x1,y0,y1){
   for(let x=x0;x<=x1;x++){let last=-1e9;for(let y=Math.max(0,y0-RCH);y<y0;y++)if(BLDS(t[y*W+x]))last=y;
     for(let y=y0;y<=y1;y++){const i=y*W+x;if(BLDS(t[i])){last=y;continue;}if(bgB[i]&&y-last>RCH)dropBg(i,x,y);}}
 }
-
 function dropBg(i,x,y){if(R()<.2&&ST.np<MP-500)spawn(x,y,(R()-.5)*1.5,-R(),shade(bg[i],.8),90,RUBBLE,0);bg[i]=bgD[i];bgB[i]=0;}
-
 function flood(s,init){
   // walk one connected structure (natural ground and built stuff are separate structures)
   // depth-first, diving down first: anything resting on the world floor is proven sound in a few hundred steps

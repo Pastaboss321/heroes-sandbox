@@ -3,9 +3,7 @@ import '../world/destruction.js'; // evaluation order: runs after world/destruct
 import { ST } from '../state.js';
 import { mouse } from '../player.js';
 
-
 export const GLOWCH={e:1,'*':1,'@':1,V:1,'+':1};
-
 // ---- procedural animation rig. The hero sprite is re-posed every frame before drawing:
 //   leg   first leg row (rows below swing for walking / tuck for jumps / trail in flight)
 //   mid   columns left of this belong to the back leg
@@ -16,16 +14,11 @@ export const GLOWCH={e:1,'*':1,'@':1,V:1,'+':1};
 //   blink eye char and the lid char that replaces it for a blink
 //   cape  chars that hang from the shoulders and never move with the legs
 export const rect=(x0,x1,y0,y1)=>{const r=[];for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)r.push([x,y]);return r;};
-
 export const ANIM={}; // per-hero rig entries: ANIM.<id> is set in src/heroes/<hero>.js
-
 export const PP=8; // padding around the posed sprite for limbs that reach out
-const ARM_UP=new Set(['Downburst','Heat Wave','Icicle Drop','Mjolnir Pin','Ice Golem','Telekinetic Rip','Blizzard','Phoenix Wings','Storm Call','Lightning Call','Thunderbolt','Tornado','Hailstorm','Phoenix Force','Ice Wall','Ball Lightning','Conductor Strike','Flash Flood','Eye of the Storm','Bifrost','God Blast']);
-
-const ARM_BOTH=new Set(['EMP Burst','Not Today','Stealth Mode','Adamantium Skeleton','Mystic Shield','Thunderclap','Gale Force','Psychic Wave','Frost Nova','Mind Shield','Levitate Crowd','Debris Storm','Gamma Roar','Energy Shield','Avalanche']);
-
-const ARM_VISOR=new Set(['Tactical Focus','Blackbird Strafe','Puppet Master','Optic Cage','Uncontrolled Blast','Optic Blast','Concussive Burst','Ricochet Shot','Full Power','Optic Sweep','Optic Barrage','Leg Sweep','Visor Overload']);
-
+const ARM_UP=new Set(['Conjure Chaos','Chaos Unleashed','Gravity Hex','Ward of Vishanti','No More','Giant-Man','Downburst','Heat Wave','Icicle Drop','Mjolnir Pin','Ice Golem','Telekinetic Rip','Blizzard','Phoenix Wings','Storm Call','Lightning Call','Thunderbolt','Tornado','Hailstorm','Phoenix Force','Ice Wall','Ball Lightning','Conductor Strike','Flash Flood','Eye of the Storm','Bifrost','God Blast']);
+const ARM_BOTH=new Set(['Transmute','Elemental Inversion','Reweave','Crimson Bands','Mirror Fold','Banish','Pym Burst','Chaos Field','EMP Burst','Not Today','Stealth Mode','Adamantium Skeleton','Mystic Shield','Thunderclap','Gale Force','Psychic Wave','Frost Nova','Mind Shield','Levitate Crowd','Debris Storm','Gamma Roar','Energy Shield','Avalanche']);
+const ARM_VISOR=new Set(['Bad Luck','Time Loop','Spider-Sense','Tactical Focus','Blackbird Strafe','Puppet Master','Optic Cage','Uncontrolled Blast','Optic Blast','Concussive Burst','Ricochet Shot','Full Power','Optic Sweep','Optic Barrage','Leg Sweep','Visor Overload']);
 export function armMode(p){
   if(p.ball)return'clap';
   if(p.grip)return'grip';
@@ -46,21 +39,17 @@ export function armMode(p){
   if(p.fly&&(p.boost>0||Math.hypot(p.vx,p.vy)>2.6))return'super';
   return null;
 }
-
 // sprite-space direction from the front shoulder toward the mouse (undoes body tilt and facing)
 export function aimLocal(p,tx=mouse.wx,ty=mouse.wy){
   const A=ANIM[ST.CH.id],sw=ST.SW,sh=ST.SH,ca=Math.cos(p.ang),sa=Math.sin(p.ang);
-  const lx=(A.sh[0]+.5-sw/2)*p.face,ly=A.sh[1]+.5-sh/2;
-  const shx=p.x+lx*ca-ly*sa,shy=p.y-sh/2+lx*sa+ly*ca;
+  const lx=(A.sh[0]+.5-sw/2)*p.face*ST.SZ,ly=(A.sh[1]+.5-sh/2)*ST.SZ;
+  const shx=p.x+lx*ca-ly*sa,shy=p.y-sh/2*ST.SZ+lx*sa+ly*ca;
   let dx=tx-shx,dy=ty-shy;const d=Math.hypot(dx,dy)||1;dx/=d;dy/=d;
   const rx=dx*ca+dy*sa,ry=-dx*sa+dy*ca;
   return{shx,shy,wx:dx,wy:dy,lx:rx*p.face,ly:ry};
 }
-
 export function armLen(p,mode){const L=ANIM[ST.CH.id].al;return mode==='punch'?(p.punchF>6?L-1+(10-p.punchF)*1.5:L-1+p.punchF*.6):L-(p.recoilF>3?1.5:0);}
-
 const POSE={g:[],rows:[]};
-
 const LGX=-.7071,LGY=-.7071; // key light from the upper left, in sprite space
 export function posePlayer(p){
   const A=ANIM[ST.CH.id],spr=ST.SPR,sw=ST.SW,sh=ST.SH,w=sw+PP*2,h=sh+PP*2,G=POSE.g;

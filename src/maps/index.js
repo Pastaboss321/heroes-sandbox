@@ -16,18 +16,15 @@ import { afters, beams, comics, flashes, rings } from '../render/fx.js';
 import { drones, jets, pins, shots, strikes, therm, waves } from '../heroes/powers.js';
 import { ACT } from '../heroes/xmen.js';
 import { slide } from '../heroes/iceman.js';
+import { RW, ants, gzones, limbo, portals, tramps } from '../heroes/wave2.js';
 import { pl_, spawnPlayer } from '../player.js';
 import { clearEnemies } from '../enemies/core.js';
 
-
 export const mapSel=document.getElementById('map');
-
 // maps: id -> {name, gen, amb (optional per-tick ambience)}
 export const MAPDEFS={city:{name:'City',gen:genCity},nyc:{name:'New York',gen:genNYC},nyc2099:{name:'NYC 2099',gen:genNYC2099,amb:amb2099,rain:true},forest:{name:'Forest',gen:genForest},xmansion:{name:'X-Mansion',gen:genXMansion},
   savage:{name:'Savage Land',gen:genSavageLand,amb:ambSavage},arctic:{name:'Weapon X',gen:genArctic,amb:ambArctic,wind:true}};
-
 for(const id in MAPDEFS){const o=document.createElement('option');o.value=id;o.textContent=MAPDEFS[id].name;mapSel.appendChild(o);}
-
 function shadeWorld(){
   for(let x=0;x<W;x++){let depth=-1;
     for(let y=0;y<H;y++){const i=y*W+x,m=t[i];
@@ -37,12 +34,11 @@ function shadeWorld(){
         const c=col[i];col[i]=rgb(cl((c&255)*k),cl(((c>>8)&255)*k),cl(((c>>16)&255)*k));}
       else if(m===0||KIND[m]!==S)depth=-1;}}
 }
-
 let R0gen=1; // pieces registered at generation time have rid < R0gen (Wrecking Crew counts what is still standing)
 export function countBuilt(){let n=0;for(let i=0;i<N;i++){const m=t[i];if(KIND[m]===S&&!NAT[m]&&m!==LEAF&&rid[i]>0&&rid[i]<R0gen)n++;}return n;}
-
 export function regen(){
   ST.np=0;ACT.length=0;slide.length=0;shots.length=0;drones.length=0;strikes.length=0;ST.vortex=null;ST.held=null;ST.heldE=null;ST.storm=null;clearEnemies();
+  ants.length=0;tramps.length=0;gzones.length=0;limbo.length=0;portals.a=portals.b=null;RW.length=0;
   pins.length=0;therm.length=0;jets.length=0;waves.length=0;comics.length=0;ST.impactF=0;ST.hurtV=0;ST.decoy=null;ST.stasis=null;ST.slowT=0;ST.heatZ=null;
   Object.assign(pl_,{script:0,ball:0,tow:null,grip:null,cling:0,crouch:0,stealth:0,grit:0,dodge:0,sprint:0,leap:false,slam:false});ST.wave=0;ST.SPAWNX=50;booms.length=0;rings.length=0;flashes.length=0;beams.length=0;afters.length=0;
   pin.fill(0);str.fill(10);rid.fill(0);rcount.length=1;ST.PIN2=null;ST.genMode=true;(MAPDEFS[mapSel.value]||MAPDEFS.city).gen();ST.genMode=false;
@@ -59,10 +55,9 @@ export function regen(){
   ST.dx0=0;ST.dy0=0;ST.dx1=W-1;ST.dy1=H-1;supportCheck(true);
   ST.dx0=0;ST.dy0=0;ST.dx1=W-1;ST.dy1=H-1; // whole map gets one runtime pass on the first tick: anything left floating falls
   R0gen=rcount.length;
+  ST.T0=t.slice();ST.C0=col.slice();ST.B0=bg.slice(); // the untouched map, for Scarlet Witch's Reweave
   applyTOD();
   spawnPlayer();
 }
-
 document.getElementById('regen').onclick=e=>{regen();e.target.blur();};
-
 mapSel.onchange=()=>{regen();mapSel.blur();};

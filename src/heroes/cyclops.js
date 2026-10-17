@@ -15,7 +15,6 @@ import { ACT, aimFrom, eyes } from './xmen.js';
 import { mouse, pl_ } from '../player.js';
 import { damageCone, damageLine, enemies, enemyAt, hitEnemy } from '../enemies/core.js';
 
-
 const SPR_CYC=[
 "....hHHhh....",
 "...hHHhhhh...",
@@ -39,12 +38,10 @@ const SPR_CYC=[
 "..MNN...NNn..",
 "..MNN...NNn..",
 "..nnn...nnn.."];
-
 const PAL_CYC={h:rgb(80,50,28),H:rgb(132,92,56),N:rgb(30,46,110),n:rgb(14,22,60),M:rgb(62,86,162),Y:rgb(236,196,48),y:rgb(168,128,24),V:rgb(255,60,40),v:rgb(110,20,20),f:rgb(222,174,136),F:rgb(168,122,90),k:rgb(10,14,36)};
 
 // animation rig entry (see render/rig.js)
 ANIM.cyclops={leg:14,mid:6,armC:'MNn',tipC:'YYy',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null};
-
 const CYC_POWERS=[
  {n:'Optic Blast',fn:(a,p,use)=>{if(!use(.9))return;const b=aimFrom(eyes());beamCore(b,{pow:90,rad:1,len:480,w:2+((ST.frame>>1)&1),c:[255,210,200],g:[255,40,30],spark:()=>rgb(255,60+R()*120,40),dmg:4,noAsh:true});damageCone(b.h.x,b.h.y,b.dx,b.dy,200,0,.6);}},
  {n:'Concussive Burst',fn:(a,p,use)=>{if(!use(18))return;const b=aimFrom(eyes());beamCore(b,{pow:420,rad:4,len:100,w:5,c:[255,220,210],g:[255,50,40],spark:()=>rgb(255,90,60),dmg:30,noAsh:true});
@@ -64,7 +61,6 @@ const CYC_POWERS=[
  {n:'Optic Sweep',fn:(a,p,use)=>{if(!use(26))return;const o=eyes(),base=Math.atan2(mouse.wy-o.y,mouse.wx-o.x);let k=0;fxWord(o.x,o.y-16,'ZWAAAARM!',1.1,'#ff6b5c',true);ST.cd=40;
    ACT.push(()=>{const an=base-1.1+k/28*2.2,e=eyes();beamCore({h:e,dx:Math.cos(an),dy:Math.sin(an)},{pow:120,rad:1,len:360,w:2,c:[255,210,200],g:[255,40,30],spark:()=>rgb(255,80,50),dmg:6,noAsh:true});return++k<28;});}},
 ];
-
 // Cyclops: hold F to aim the optic blast at the ground and ride it up. Barely scorches what it hits.
 export function opticThrust(p,on,ax){
   if(!on||p.en<=.8)return;p.en-=.8;p.thrustF=4; // net drain about 0.3/frame against regen: roughly 5 s of lift
@@ -77,7 +73,6 @@ export function opticThrust(p,on,ax){
   if(hit){for(let k=0;k<4;k++)spawn(x,y-1,(R()-.5)*3,-R()*2.5,R()<.5?rgb(255,120,80):rgb(255,220,160),10+R()*8,0,1,1);flash(x,y,16,[255,60,40],2);if(ST.frame%5===0)for(let k=0;k<3;k++)dust(x+(R()-.5)*8|0,y-2);}
   damageLine(o.x,o.y,x,y,3,1.5);ST.shake=Math.max(ST.shake,1.2);if(ST.frame%30===0)fxWord(x,y-6,'FWOOM',.7,'#ff6b5c',true);
 }
-
 CYC_POWERS.push(
  {n:'Optic Barrage',fn:(a,p,use)=>{if(!use(16))return;ST.cd=30;let k=0;fxWord(p.x,p.y-ST.PH-6,'PEW-PEW-PEW!',1,'#ff6b5c',true);
    ACT.push(()=>{if(k%2===0){const o=eyes(),b=aimFrom(o),an=Math.atan2(b.dy,b.dx)+(R()-.5)*.25;shots.push({x:o.x,y:o.y,vx:Math.cos(an)*8,vy:Math.sin(an)*8,type:'optic',life:80,boom:5,col:[255,70,50],ecol:[255,70,50]});flash(o.x,o.y,8,[255,40,30],2);}return++k<16;});}},
@@ -86,7 +81,6 @@ CYC_POWERS.push(
  {n:'Visor Overload',fn:(a,p,use)=>{if(!use(35))return;ST.cd=60;const o=eyes();fxWord(o.x,o.y-20,'OVERLOAD!',1.4,'#ff6b5c',true);ST.hitstop=Math.max(ST.hitstop,3);fxImpact(o.x,o.y,3);
    for(let k=0;k<16;k++){const an=k/16*6.283;beamCore({h:o,dx:Math.cos(an),dy:Math.sin(an)},{pow:70,rad:1,len:90,w:1,c:[255,215,205],g:[255,40,30],spark:()=>rgb(255,80,50),dmg:18,noAsh:true});}flash(o.x,o.y,80,[255,40,30],10);ST.shake=18;}},
 );
-
 CYC_POWERS.push(
  {n:'Optic Cage',fn:(a,p,use)=>{if(!use(30))return;ST.cd=60;const cx=mouse.wx,cy=mouse.wy,r=22;let k=0;fxWord(cx,cy-r-8,'OPTIC CAGE!',1.1,'#ff6b5c',true);
    ACT.push(()=>{const c=[[cx-r,cy-r],[cx+r,cy-r],[cx+r,cy+r],[cx-r,cy+r]];for(let q2=0;q2<4;q2++){const [x0,y0]=c[q2],[x1,y1]=c[(q2+1)%4];beams.push({x0,y0,x1,y1,life:1,w:1,c:[255,215,205],g:[255,40,30]});}
@@ -96,7 +90,6 @@ CYC_POWERS.push(
    ACT.push(()=>{const o=eyes(),b=aimFrom(o),base=Math.atan2(b.dy,b.dx);for(let q2=-3;q2<=3;q2++){const an=base+q2*.09+(R()-.5)*.04;beamCore({h:o,dx:Math.cos(an),dy:Math.sin(an)},{pow:300,rad:2,len:520,w:3,c:[255,225,215],g:[255,30,20],spark:()=>rgb(255,60+R()*150,40),dmg:6,noAsh:true});}
      pl_.vx-=b.dx*.35;pl_.vy-=b.dy*.35;ST.shake=Math.max(ST.shake,14);return++k<40;});}},
 );
-
 CYC_POWERS.push(
  // bullet time: the whole world runs at half speed for five seconds, Cyclops doesn't
  {n:'Tactical Focus',fn:(a,p,use)=>{if(ST.slowT>0||!use(30))return;ST.cd=40;ST.slowT=300;fxWord(p.x,p.y-ST.PH-10,'TACTICAL FOCUS',1.2,'#bfe3ff',true);snd('charge',p.x,p.y,{pitch:.6});}},

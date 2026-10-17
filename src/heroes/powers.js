@@ -13,49 +13,33 @@ import { iceAt } from './xmen.js';
 import { carve, glowRGB, hand, hurt, mouse, pl_ } from '../player.js';
 import { damageCone, damageEnemies, damageLine, enemies, enemyAt, hitEnemy, nearestEnemy } from '../enemies/core.js';
 
-
-
 // ================= powers =================
 // A power is {n:name, fn(a,p,use)} (a = aim from the hand, use(cost) spends energy) or
 // {n, tk:{...}} for grab-and-throw powers handled by updTelekinesis.
 // cur, cd, cdMax: shared state (ST in state.js)
-
 // spawn menu state (sandbox): tool = what the next click places; pause/slow/god/inf are its toggles
 export const SPAWN={open:false,tool:null,brush:4,snap:true,pause:false,slow:false,god:false,inf:false,peace:false};
-
 export const shots=[],drones=[],strikes=[];
  let tkPrev=false;
-
 export function aim(){const h=hand();const dx=mouse.wx-h.x,dy=mouse.wy-h.y,d=Math.hypot(dx,dy)||1;return{h,dx:dx/d,dy:dy/d,d};}
-
 export const CYAN=[150,235,255], BLUE=[160,205,255], GAMMA=[130,255,90];
-
 export const pickC=c=>rgb(c[0]*(.7+R()*.3),c[1]*(.7+R()*.3),c[2]*(.7+R()*.3));
-
 
 // ================= extra powers =================
 export function zap(x0,y0,x1,y1,c,g){const pts=[[x0,y0]],n=Math.max(2,Math.hypot(x1-x0,y1-y0)/7|0);for(let k=1;k<n;k++){const f=k/n;pts.push([x0+(x1-x0)*f+(R()-.5)*7,y0+(y1-y0)*f+(R()-.5)*7]);}pts.push([x1,y1]);beams.push({pts,life:2,c,g});}
-
 export function shieldAs(cols,reflect){ST.shieldC=cols;shield();
   if(reflect)for(const s2 of shots)if(s2.owner==='enemy'&&Math.hypot(s2.x-pl_.x,s2.y-pl_.y+8)<26){s2.owner='player';s2.vx*=-1.3;s2.vy*=-1.3;s2.col=cols[0];s2.ecol=cols[0];flash(s2.x,s2.y,8,cols[2],3);}}
-
 // ================= overhaul powers: every hero but Doom gets a full 12-power kit =================
 // Each new power is unique to its hero and does something no other power in the game does.
 export const pins=[],therm=[],jets=[],waves=[];
 // decoy, stasis, slowT, heatZ, caPulse, AI_T, AI_TE, AI_ALLY: shared state (ST in state.js)
-
 export function surfaceY(x,y0,maxD=200){x=Math.max(0,Math.min(W-1,x|0));let y=Math.max(0,y0|0);const y1=Math.min(H-1,y+maxD);for(;y<y1;y++){const m=t[y*W+x];if(m&&KIND[m]!==G&&KIND[m]!==F&&KIND[m]!==L)break;}return y;}
-
 export function grabbable(x,y,r){let b=null,bd=r;for(const e of enemies){if(e.hp<=0||e.grabbed||e.def.title||e.def.w>20)continue;const d=Math.hypot(e.x-x,e.y-y)-e.def.w/2;if(d<bd){bd=d;b=e;}}return b;}
-
 export const isMetal=e=>e.def.metal!==false;
-
 export function crackCell(X,Y,vx){if(X<0||X>=W||Y<0||Y>=H-44)return;const i=Y*W+X,m=t[i];if(!m||KIND[m]===G||KIND[m]===F)return;if(m===OBSID||m===STEEL&&R()<.6)return;
   if(ST.np<MP-400&&R()<.45)spawn(X,Y,vx*(.5+R())+(R()-.5)*1.5,-1.5-R()*3,col[i],80,KIND[m]===S?RUBBLE:KIND[m]===L?m:0,0);setc(i,EMPTY);}
-
 export function shockFx(x,y,s=1){if(waves.length>5)waves.shift();waves.push({x,y,r:2,s,life:30});ST.caPulse=Math.max(ST.caPulse,s*3);} // GPU ring distortion + colour split
 export function updWaves(){for(let n=waves.length-1;n>=0;n--){const w=waves[n];w.r+=4+w.s*3;if(--w.life<=0)waves.splice(n,1);}ST.caPulse*=.85;}
-
 // ---- updaters for the new powers
 export function updPins(){for(let n=pins.length-1;n>=0;n--){const P2=pins[n];P2.life--;
   if(P2.e&&(P2.e.hp<=0||!enemies.includes(P2.e)))P2.e=null;
@@ -64,7 +48,6 @@ export function updPins(){for(let n=pins.length-1;n>=0;n--){const P2=pins[n];P2.
   if(ST.frame%30===0){const o=nearestEnemy(P2.x,P2.y,70);if(o&&o!==P2.e){zap(P2.x,P2.y-4,o.x,o.y,[230,240,255],[120,170,255]);hitEnemy(o,8,(P2.x-o.x)*.03,(P2.y-o.y)*.03);snd('zap',o.x,o.y);}}
   if(R()<.3)spawn(P2.x+(R()-.5)*6,P2.y-2,(R()-.5)*.8,-R(),pickC(BLUE),10,0,1,0,1);
   if(P2.life<=0){flash(P2.x,P2.y,20,BLUE,4);shots.push({x:P2.x,y:P2.y-3,vx:0,vy:-4,type:'hammer',life:300,out:0,hitSet:new Set(),spin:0});pins.splice(n,1);}}}
-
 export function updTherm(){for(let n=therm.length-1;n>=0;n--){const b=therm[n];
   if(!b.stuck){b.vy+=.12;const st=Math.ceil(Math.hypot(b.vx,b.vy))||1;
     for(let k=0;k<st;k++){b.x+=b.vx/st;b.y+=b.vy/st;const X=b.x|0,Y=b.y|0;if(X<1||X>=W-1||Y<1||Y>=H-1){b.life=0;break;}const i=Y*W+X,m=t[i];
@@ -84,35 +67,26 @@ export function updTherm(){for(let n=therm.length-1;n>=0;n--){const b=therm[n];
   let near=false;for(let d=0;d<4&&!near;d++){const X=b.x+(d===0?1:d===1?-1:0)|0,Y=b.y+(d===2?1:d===3?-1:0)|0;if(X>=0&&X<W&&Y>=0&&Y<H){const m=t[Y*W+X];if(m&&(KIND[m]===S||KIND[m]===P||m===LAVA))near=true;}}
   if(!near){b.stuck=false;b.vx=0;b.vy=.5;b.life=60;} // what it clung to burned away: it drips
   else if(--b.life<=0)therm.splice(n,1);}}
-
 export const JET_SPR=["..........kk..........","........kkSSk.........","kk....kkSSggSSkkkkkk..","kSkkkkSSSSSSSSSSSSSSkk","kkSSSSSSSSSSSSSSSSSSSk","..kkkSSSSSSSSSSkkkkk..","......kkkkkkkk........"];
-
 export const JET_PAL={k:rgb(18,18,24),S:rgb(46,48,60),g:rgb(120,170,210)};
-
 export function updJets(){for(let n=jets.length-1;n>=0;n--){const j=jets[n];j.t++;j.x+=j.dir*5.5;const dx=(j.x-j.tx)*j.dir;
   if(dx>-150&&dx<150){if(j.t%5===0)shots.push({x:j.x,y:j.y+4,vx:j.dir*2,vy:1.5,type:'bomb',life:240,boom:11,fire:.3,grav:.15,ecol:[255,200,120]});
     if(j.t%3===0){const gx=j.x+j.dir*30+(R()-.5)*30|0,gy=surfaceY(gx,j.y+6,VH);beams.push({x0:j.x+j.dir*8,y0:j.y+3,x1:gx,y1:gy,life:2,w:0,c:[255,240,190],g:[255,180,80]});explode(gx,gy,3,{quiet:true,self:true,col:[255,200,120]});damageEnemies(gx,gy,8,10,0,-1);snd('pop',gx,gy,{v:.4,gap:.04});}}
   for(let k=0;k<3;k++)spawn(j.x-j.dir*12,j.y+2+(R()-.5)*2,-j.dir*(2+R()*2),(R()-.5)*.4,R()<.5?rgb(255,220,150):rgb(255,140,60),10,0,1,0,1);
   sndLoop('jet'+n,'wind',j.x,j.y,{v:.8});
   if(j.t>400||dx>220)jets.splice(n,1);}}
-
 export function updDecoy(){if(!ST.decoy)return;const d=ST.decoy;d.life--;if(ST.frame%5===0)spawn(d.x+(R()-.5)*8,d.y-R()*ST.SH,0,-.3,rgb(220,245,255),12,0,1,0,1);
   if(d.hp<=0||d.life<=0){const cx=d.x,cy=d.y-ST.SH/2;fxWord(cx,cy-16,'SHATTER!',1.3,'#bfe3ff',true);snd('glass',cx,cy);
     for(let k=0;k<14;k++){const an=k/14*6.283;shots.push({x:cx,y:cy,vx:Math.cos(an)*5,vy:Math.sin(an)*5-1,type:'shard',life:50,col:[200,240,255],grav:.08,onHit:sh=>{for(let q2=0;q2<3;q2++)iceAt(sh.x+(R()-.5)*3,sh.y+(R()-.5)*3);damageEnemies(sh.x,sh.y,5,12,sh.vx*.3,sh.vy*.3);}});}
     damageEnemies(cx,cy,40,35,0,-2,true);for(const e of enemies)if(Math.hypot(e.x-cx,e.y-cy)<40)e.frozen=Math.max(e.frozen||0,120);ST.decoy=null;}}
-
 export function inStasis(x,y){const s=ST.stasis;return !!s&&(x-s.x)*(x-s.x)+(y-s.y)*(y-s.y)<s.r*s.r;}
-
 export function updStasis(){const s=ST.stasis;if(!s)return;
   if(--s.life<=0){ST.stasis=null;rings.push({x:s.x,y:s.y,r:s.r,vr:2,life:10,c:[255,150,230]});snd('psi',s.x,s.y,{pitch:1.4});
     for(let cy=Math.max(0,(s.y-s.r)>>5);cy<=Math.min(CHN-1,(s.y+s.r)>>5);cy++)for(let cx=Math.max(0,(s.x-s.r)>>5);cx<=Math.min(CW-1,(s.x+s.r)>>5);cx++)ST.nxt[cy*CW+cx]=1;return;}
   const nc=(ST.clock%255)+1,r=s.r|0; // pre-stamp the bubble so this tick's sim step skips it: sand, water and fire hang in place
   for(let y=-r;y<=r;y++){const Y=s.y+y|0;if(Y<0||Y>=H)continue;const hw=Math.sqrt(r*r-y*y)|0;for(let x=-hw;x<=hw;x++){const X=s.x+x|0;if(X<0||X>=W)continue;stamp[Y*W+X]=nc;}}}
-
 export function hurtTarget(e,d){if(ST.AI_ALLY===e){if(ST.AI_TE)hitEnemy(ST.AI_TE,d*2,0,0);return;}if(SPAWN.peace)return;if(ST.decoy){ST.decoy.hp-=d;return;}hurt(d);}
-
 export function beam(a){beamCore(a,{pow:48,rad:1,len:420,w:2+((ST.frame>>1)&1),c:[230,255,235],g:[90,255,130],spark:()=>R()<.5?gcol():rgb(230,255,230),dmg:3});}
-
 export function beamCore(a,o){
   if(ST.frame%26===0)fxWord(a.h.x+a.dx*34,a.h.y+a.dy*34-6,R()<.5?'ZZZAP!':'FZZZT!',.8,`rgb(${o.g[0]},${o.g[1]},${o.g[2]})`,true);
   let x=a.h.x,y=a.h.y,pow=o.pow;const x0=x,y0=y,rad=o.rad;
@@ -133,9 +107,7 @@ export function beamCore(a,o){
   flash(x,y,12,o.g,2); flash(x0,y0,8,o.g,2);
   ST.shake=Math.max(ST.shake,1.8);
 }
-
 // shieldOn, shieldC, senseT: shared state (ST in state.js)
-
 export function shield(){
   const cx=pl_.x,cy=pl_.y-8,r=17;
   for(let y=-r-1;y<=r+1;y++)for(let x=-r-1;x<=r+1;x++){const d2=x*x+y*y;if(d2>(r+1)*(r+1))continue;const X=cx+x|0,Y=cy+y|0;if(X<0||X>=W||Y<0||Y>=H)continue;const i=Y*W+X,m=t[i];
@@ -147,7 +119,6 @@ export function shield(){
   for(let n=shots.length-1;n>=0;n--){const s=shots[n];if(s.owner==='enemy'&&Math.hypot(s.x-cx,s.y-cy)<r+2){spawn(s.x,s.y,0,0,glowRGB(),10,0,1,0);shots.splice(n,1);}}
   ST.shieldOn=true;
 }
-
 export function quake(x,y,o={}){
   fxWord(x,y-18,'WHUDOOM!',1.5,'#ffc93c',true);snd('slam',x,y,{size:(o.r||36)/30});fxBurst(x,y,60,o.col?`rgb(${o.col[0]},${o.col[1]},${o.col[2]})`:'#8dffb0');ST.hitstop=Math.max(ST.hitstop,4);fxImpact(x,y,4);
   const r=o.r||36, gc=o.col||[120,255,160], green=!o.col;ST.shake=22;
@@ -162,7 +133,6 @@ export function quake(x,y,o={}){
   if(o.bolts)for(let k=0;k<6;k++)lightningStrike(x+(R()-.5)*120,y,6);
   flash(x,y,70,gc,12);
 }
-
 export function lightning(a,o={}){
   if(ST.frame%22===0)fxWord(a.h.x+a.dx*40,a.h.y+a.dy*40,'ZZRAK!',.8,o.c?'#bfe3ff':'#8dffb0',true);
   const C=o.c||[230,255,240],Gc=o.g||[120,255,170],Fc=o.f||[160,255,190],spark=o.spark||(()=>R()<.5?rgb(230,255,240):gcol()),green=!o.c;
@@ -183,7 +153,6 @@ export function lightning(a,o={}){
   flash(ex,ey,22,Gc,2);flash(a.h.x,a.h.y,12,Gc,2);
   ST.shake=Math.max(ST.shake,2);
 }
-
 export function lightningStrike(x,ty,r){
   snd('thunder',x,ty,{gap:.12,v:Math.min(1,.5+r/16)});
   fxWord(x,ty-24,'KRAKKA-THOOM!',1.3,'#bfe3ff',true);ST.hitstop=Math.max(ST.hitstop,2);fxImpact(x,ty,3);
@@ -199,7 +168,6 @@ export function lightningStrike(x,ty,r){
   flash(x,y,r*5,[150,190,255],8);flash(x,ST.camY+VH/2,200,[60,80,130],4);
   ST.shake=Math.min(24,ST.shake+r*.6);
 }
-
 export function thunderclap(a){
   fxWord(a.h.x+a.dx*30,a.h.y-10,'CLAP!!',1.5,'#ffc93c',true);fxBurst(a.h.x+a.dx*20,a.h.y+a.dy*20,50,'#bff07a');ST.hitstop=Math.max(ST.hitstop,3);
   const cx=a.h.x,cy=a.h.y,R0=85,ang=Math.atan2(a.dy,a.dx);
@@ -215,14 +183,12 @@ export function thunderclap(a){
   for(let k=0;k<120;k++){const t2=ang+(R()-.5)*1.1,s=3+R()*6;spawn(cx,cy,Math.cos(t2)*s,Math.sin(t2)*s,R()<.5?rgb(230,240,220):rgb(170,160,140),20+R()*20,0,0,0,1);}
   flash(cx,cy,70,[220,255,200],10);ST.shake=Math.min(24,ST.shake+14);
 }
-
 export function updStorm(){
   if(!ST.storm)return;const s=ST.storm;
   if(--s.life<=0){ST.storm=null;return;}
   if(R()<.07)lightningStrike(s.x+(R()-.5)*220,0,6+R()*6|0);
   for(let k=0;k<5;k++)spawn(s.x+(R()-.5)*300,ST.camY-4,(R()-.5)*.3,3+R()*1.5,rgb(130,160,230),160,R()<.4?WATER:0,0,1);
 }
-
 export function nova(){
   fxWord(pl_.x,pl_.y-34,'VWOOOM!',1.3,'#8dffb0',true);fxBurst(pl_.x,pl_.y-8,70,'#8dffb0');fxImpact(pl_.x,pl_.y-8,3);
   const p=pl_;rings.push({x:p.x,y:p.y-8,r:4,vr:4,life:12,c:[200,255,220]},{x:p.x,y:p.y-8,r:2,vr:3,life:15,c:[60,255,110]});
@@ -238,17 +204,14 @@ export function nova(){
   for(let k=0;k<160;k++){const a=R()*6.283;spawn(cx,cy,Math.cos(a)*(4+R()*3),Math.sin(a)*(4+R()*3),gcol(),18+R()*15,0,1,0,1);}
   for(const b of bodies){const dx=b.x-cx,dy=b.y-cy,d=Math.hypot(dx,dy)||1;if(d<r*2){b.vx+=dx/d*6;b.vy+=dy/d*6-2;}}
 }
-
 // a chunk already in flight near the grab point
 function grabBody(cx,cy,r){let best=null,bd=1e9;
   for(const b of bodies){if(b.held||Math.hypot(b.x-cx,b.y-cy)>b.rmax+r)continue;
     for(let k=0;k<24;k++){const a=k/24*6.283,d=(k&3)/3*r,X=cx+Math.cos(a)*d,Y=cy+Math.sin(a)*d;if(bodyAt(b,X,Y)){const dd=Math.hypot(b.x-cx,b.y-cy);if(dd<bd){bd=dd;best=b;}break;}}}
   return best;}
-
 // the whole connected structure under the grab point (a building, a tree, a car...), unless it is the landscape itself
 const GRABCAP=30000;
-
-function grabRegion(cx,cy,r){
+export function grabRegion(cx,cy,r){
   let s=-1,sd=1e9;
   for(let y=-r;y<=r;y++)for(let x=-r;x<=r;x++){const X=cx+x,Y=cy+y,d=x*x+y*y;if(d>r*r||X<0||X>=W||Y<0||Y>=H-1)continue;const m=t[Y*W+X];if(KIND[m]===S&&!gnd[Y*W+X]&&d<sd){sd=d;s=Y*W+X;}}
   if(s<0)return 0;
@@ -263,12 +226,10 @@ function grabRegion(cx,cy,r){
   for(let k=0;k<n;k++)markDirty(q[k]);
   return n;
 }
-
 // clear whatever world pixels a carried load overlaps (so it never starts a throw stuck inside terrain)
 export function smashOverlap(b){const c=Math.cos(b.a),s2=Math.sin(b.a);
   for(let k=0;k<b.ex.length;k++){const X=Math.round(b.x+b.ex[k]*c-b.ey[k]*s2),Y=Math.round(b.y+b.ex[k]*s2+b.ey[k]*c);if(X<0||X>=W||Y<0||Y>=H-40)continue;
     for(const i of [Y*W+X,Y*W+X+1,(Y+1)*W+X]){const m=t[i];if(KIND[m]===S||KIND[m]===P){if(ST.np<MP-300&&R()<.5)spawn(i%W,(i/W)|0,(R()-.5)*2,-R()*1.5,col[i],70,KIND[m]===S?RUBBLE:m,0);setc(i,EMPTY);}}}}
-
 export function updTelekinesis(){
   const pw=ST.CH.powers[ST.cur], tk=pw&&pw.tk, want=mouse.down&&!!tk;
   if(want&&!tkPrev&&!ST.held&&!ST.heldE&&pl_.en>=15){
@@ -327,7 +288,6 @@ export function updTelekinesis(){
   }
   tkPrev=want;
 }
-
 export function updShots(world=true){
   for(let n=shots.length-1;n>=0;n--){
     const s=shots[n];
@@ -395,7 +355,6 @@ export function updShots(world=true){
     }
   }
 }
-
 export function updDrones(){
   for(let n=drones.length-1;n>=0;n--){
     const d=drones[n];d.ph+=.05;const tx=pl_.x+Math.cos(d.ph+n*2.1)*22,ty=pl_.y-28+Math.sin(d.ph*1.3+n)*7;
@@ -411,7 +370,6 @@ export function updDrones(){
     if(--d.life<=0){explode(d.x,d.y,6,{fire:.2,green:true});drones.splice(n,1);}
   }
 }
-
 export function updVortex(){
   const v=ST.vortex;if(!v)return;if(--v.life<=0){explode(v.x,v.y,14,{fire:.3,green:true});rings.push({x:v.x,y:v.y,r:40,vr:-2.5,life:14,c:[120,255,160]});ST.vortex=null;return;}
   const r=48;
@@ -431,7 +389,6 @@ export function updVortex(){
   for(let k=0;k<8;k++){const a=R()*6.283,rr=r*(.5+R()*.5);spawn(v.x+Math.cos(a)*rr,v.y+Math.sin(a)*rr,-Math.sin(a)*2,Math.cos(a)*2,gcol(),16,0,1,0);}
   ST.shake=Math.max(ST.shake,1.2);
 }
-
 
 export function updStrikes(){
   for(let n=strikes.length-1;n>=0;n--){
@@ -453,7 +410,6 @@ export function updStrikes(){
     }
   }
 }
-
 export function updFx(){
   for(let n=rings.length-1;n>=0;n--){const r=rings[n];r.r+=r.vr;if(--r.life<=0||r.r<1)rings.splice(n,1);}
   for(let n=flashes.length-1;n>=0;n--)if(--flashes[n].life<=0)flashes.splice(n,1);

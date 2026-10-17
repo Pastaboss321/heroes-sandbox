@@ -14,7 +14,6 @@ import { ACT, aimFrom } from './xmen.js';
 import { boxHit, carve, hand, mouse, toggleFly } from '../player.js';
 import { damageEnemies, enemies, hitEnemy, nearestEnemy } from '../enemies/core.js';
 
-
 const SPR_THOR=[
 "....zyYYy....",
 "...zyYYYyz...",
@@ -38,12 +37,10 @@ const SPR_THOR=[
 "...bB...bB...",
 "..bbB...bbB..",
 "..BBB...BBB.."];
-
 const PAL_THOR={z:rgb(150,108,40),y:rgb(214,170,70),Y:rgb(246,218,128),f:rgb(226,178,140),F:rgb(168,118,88),e:rgb(150,206,255),d:rgb(26,30,46),D:rgb(54,62,90),o:rgb(146,154,170),O:rgb(214,222,234),C:rgb(158,22,28),c:rgb(98,12,18),b:rgb(110,80,46),B:rgb(60,42,26),s:rgb(204,210,222),S:rgb(116,122,138),k:rgb(14,16,24)};
 
 // animation rig entry (see render/rig.js)
 ANIM.thor={leg:14,mid:6,armC:'ffF',tipC:'fFF',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:'e',lid:'f',cape:'Cc'};
-
 const THOR_POWERS=[
  {n:'Hammer Throw',fn:(a,p,use)=>{if(shots.some(s=>s.type==='hammer')||!use(8))return;shots.push({x:a.h.x,y:a.h.y,vx:a.dx*7,vy:a.dy*7,type:'hammer',life:400,out:Math.min(55,a.d/7+8),hitSet:new Set(),spin:0});ST.cd=10;ST.shake+=1.5;flash(a.h.x,a.h.y,12,BLUE,4);}},
  {n:'Lightning Call',fn:(a,p,use)=>{if(!use(16))return;lightningStrike(mouse.wx,mouse.wy,13);ST.cd=22;}},
@@ -51,7 +48,6 @@ const THOR_POWERS=[
  {n:'Thunder Slam',fn:(a,p,use)=>{if(!use(24))return;if(p.fly)toggleFly(false);if(p.ground){p.vy=-4.5;p.ground=false;}p.slam=true;p.slamOpt={col:BLUE,r:40,bolts:true};ST.cd=45;}},
  {n:'Storm Call',fn:(a,p,use)=>{if(ST.storm||!use(50))return;ST.storm={x:mouse.wx,life:480};ST.cd=60;flash(mouse.wx,ST.camY,140,BLUE,12);ST.shake+=4;}},
 ];
-
 THOR_POWERS.push(
  {n:'Bifrost',fn:(a,p,use)=>{if(!use(35))return;ST.cd=60;let x=mouse.wx|0,y=mouse.wy|0;for(let k=0;k<60&&boxHit(x,y);k++)y--;if(boxHit(x,y))return;
    const RB=[[255,70,70],[255,170,60],[255,240,80],[90,240,110],[80,170,255],[170,100,255]];
@@ -66,7 +62,6 @@ THOR_POWERS.push(
    if(p.god>=70){p.god=0;ST.cd=70;p.en=Math.max(0,p.en-30);let tf=30;fxWord(h.x,h.y-24,'ODINFORCE!',1.5,'#bfe3ff',true);ST.hitstop=Math.max(ST.hitstop,4);fxImpact(h.x,h.y,4);
      ACT.push(()=>{const b=aimFrom(hand());beamCore(b,{pow:1600,rad:4,len:650,w:6+((ST.frame>>1)&1),c:[240,248,255],g:[110,160,255],spark:()=>pickC(BLUE),dmg:12,noAsh:true});if(ST.frame%3===0)zap(b.h.x,b.h.y,b.h.x+b.dx*120+(R()-.5)*40,b.h.y+b.dy*120+(R()-.5)*40,[230,240,255],[120,170,255]);ST.shake=Math.max(ST.shake,10);return--tf>0;});}}},
 );
-
 THOR_POWERS.push(
  // hurl Mjolnir and hang on: Thor is dragged along behind it, smashing through anything
  {n:'Hammer Tow',fn:(a,p,use)=>{if(p.tow||!use(20))return;ST.cd=40;const dx=a.dx,dy=a.dy;let k=0;if(ST.CH.fly&&!p.fly)toggleFly(true);p.tow={dx,dy};fxWord(p.x,p.y-ST.PH-8,'HYAAAH!',1.1,'#bfe3ff',true);snd('whoosh',p.x,p.y);

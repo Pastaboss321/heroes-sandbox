@@ -4,18 +4,12 @@ import { ST } from '../state.js';
 import { F, FLAM, G, GFIRE, KIND, LEAF, P, R, S, STEEL, rgb } from './materials.js';
 import { H, W, col, life, lifeOf, setc, t, vel, wake } from './grid.js';
 
-
-
 // ================= particles =================
 export const MP=40000, px=new Float32Array(MP),py=new Float32Array(MP),pvx=new Float32Array(MP),pvy=new Float32Array(MP),pc=new Uint32Array(MP),pl=new Int16Array(MP),pm=new Uint8Array(MP),pg=new Uint8Array(MP);
-
 // np: shared state (ST in state.js)
-
 // flags: 1 glow, 2 gravity, 4 drag
 export function spawn(x,y,vx,vy,c,l,m,glow,grav=1,drag=0){if(ST.np>=MP)return;px[ST.np]=x;py[ST.np]=y;pvx[ST.np]=vx;pvy[ST.np]=vy;pc[ST.np]=c;pl[ST.np]=l;pm[ST.np]=m;pg[ST.np]=(glow?1:0)|(grav?2:0)|(drag?4:0);ST.np++;}
-
 export function solidAt(x,y){if(x<0||x>=W||y>=H)return true;if(y<0)return false;const m=t[(y|0)*W+(x|0)],k=KIND[m];return(k===S&&m!==LEAF)||k===P;}
-
 export function updParticles(){
   const ss=ST.stasis;
   for(let n=0;n<ST.np;n++){
@@ -46,7 +40,5 @@ export function updParticles(){
     px[n]=nx;py[n]=ny;
   }
 }
-
 const GREEN=[rgb(80,255,120),rgb(40,220,90),rgb(160,255,180),rgb(20,180,60),rgb(210,255,220)];
-
 export const gcol=()=>GREEN[R()*5|0];

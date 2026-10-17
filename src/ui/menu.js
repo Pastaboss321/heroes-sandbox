@@ -5,10 +5,8 @@ import { CHARS, HERO_DARK, HERO_UI, MOVE_TAG } from '../heroes/index.js';
 import { MAPDEFS } from '../maps/index.js';
 import { resetSpawn } from './spawn.js';
 
-
 // ---- main menu
 const SEL={mode:'robots2099',hero:0,map:'nyc'};
-
 function buildMenu(){
   const mk=(parent,cls,parts,on,click,disabled,bgc,fg)=>{const d=document.createElement('button');d.className=cls+(on?' on':'');d.disabled=!!disabled;
     for(const [tag,cl2,txt] of parts){const e=document.createElement(tag);if(cl2)e.className=cl2;e.textContent=txt;d.appendChild(e);}
@@ -19,20 +17,12 @@ function buildMenu(){
   const fixed=MODES[SEL.mode].map;
   $('maps').innerHTML='';for(const id in MAPDEFS)mk($('maps'),'chip',[['span','',MAPDEFS[id].name.toUpperCase()]],fixed?fixed===id:SEL.map===id,()=>{SEL.map=id;buildMenu();},fixed&&fixed!==id);
 }
-
 export function playFromMenu(){startRun(SEL.mode,SEL.hero,SEL.map);}
-
 export function showMenu(){ST.GS='menu';ST.MODE=null;ST.MS=null;resetSpawn();document.body.classList.remove('sandbox');bossBar(null);buildMenu();overlay('menu');}
-
 $('play').onclick=playFromMenu;
-
 $('resume').onclick=resumeRun;
-
 $('restart').onclick=()=>startRun(ST.RUN.mode,ST.RUN.hero,ST.RUN.map);
-
 $('retry').onclick=()=>startRun(ST.RUN.mode,ST.RUN.hero,ST.RUN.map);
-
 $('tomenu').onclick=showMenu;
 $('tomenu2').onclick=showMenu;
-
 $('menubtn').onclick=e=>{e.target.blur();if(ST.GS==='play')pauseRun();};

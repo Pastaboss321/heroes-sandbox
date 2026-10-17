@@ -9,8 +9,6 @@ import { beam, drones, lightning, nova, shield, shots, strikes } from './powers.
 import { mouse, toggleFly } from '../player.js';
 import { damageCone } from '../enemies/core.js';
 
-
-
 // ================= player / heroes =================
 // Each hero: sprite + palette (glow chars: e * @), body size, movement tuning and a power list.
 // ---- hero sprites: 3/4 front view, heroic proportions (small head, broad shoulders, V-taper, long legs),
@@ -38,12 +36,10 @@ export const SPR_DOOM=[
 "..GAa...GAa..",
 "..GAa...GAa..",
 "..aaa...aaa.."];
-
 export const PAL_DOOM={h:rgb(18,70,34),H:rgb(30,110,52),j:rgb(64,160,84),M:rgb(150,158,170),L:rgb(205,212,222),n:rgb(86,92,104),e:rgb(140,255,170),k:rgb(14,16,18),C:rgb(12,50,26),c:rgb(24,90,44),A:rgb(122,130,144),a:rgb(62,68,82),G:rgb(196,204,216),T:rgb(28,102,50),t:rgb(14,60,30),u:rgb(52,146,72),B:rgb(196,150,48),b:rgb(84,58,34)};
 
 // animation rig entry (see render/rig.js)
 ANIM.doom={leg:14,mid:6,armC:'GAa',tipC:'GGa',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:'e',lid:'M',cape:'Cc'};
-
 const DOOM_POWERS=[
  {n:'Eldritch Bolt',fn:(a,p,use)=>{if(!use(5))return;shots.push({x:a.h.x,y:a.h.y,vx:a.dx*6.5,vy:a.dy*6.5,type:'bolt',life:140,boom:11,fire:.25,green:true});ST.cd=8;ST.shake+=1.2;flash(a.h.x,a.h.y,10,[80,255,120],4);}},
  {n:'Mystic Fire',fn:(a,p,use)=>{if(!use(.4))return;for(let k=0;k<8;k++){const s=2.6+R()*3,sp=(R()-.5)*.4;spawn(a.h.x,a.h.y,(a.dx-sp*a.dy)*s+(R()-.5)*.4,(a.dy+sp*a.dx)*s+(R()-.5)*.4,gcol(),35+R()*30,GFIRE,1,1);}

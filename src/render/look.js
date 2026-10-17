@@ -4,13 +4,9 @@ import { ST } from '../state.js';
 import { cl, rgb } from '../world/materials.js';
 import { H } from '../world/grid.js';
 
-
-
 // ================= look: settings, time of day, colour grading =================
 export const SET=Object.assign({tod:'auto',dim:55,shake:80,words:true,ink:true,bloom:true,fps:false,sound:true,vol:70,fx:true,light:true},(()=>{try{return JSON.parse(localStorage.getItem('ironsorc.settings')||'{}');}catch(e){return {};}})());
-
 export function saveSet(){try{localStorage.setItem('ironsorc.settings',JSON.stringify(SET));}catch(e){}}
-
 // sky gradient top/bottom, haze (what distant things fade into), light on the foreground, window lights on/off
 const TODS={
   dawn:{top:[64,86,170],bot:[250,170,120],haze:[214,160,150],light:[1.02,.92,.92],sun:[255,214,160],win:.5,stars:.15,clouds:[255,196,170]},
@@ -18,22 +14,16 @@ const TODS={
   dusk:{top:[52,34,104],bot:[244,128,78],haze:[170,100,120],light:[1.02,.84,.76],sun:[255,150,90],win:.9,stars:.35,clouds:[255,150,120]},
   night:{top:[6,8,26],bot:[36,32,78],haze:[30,32,66],light:[.62,.68,.92],moon:true,win:1,stars:1,clouds:null},
 };
-
 // farBase, farSky, farKeep: shared state (ST in state.js)
 export const fgL=new Uint8Array(768), bgL=new Uint8Array(768), rimL=new Uint8Array(768), inkL=new Uint8Array(768), htL=new Uint8Array(768);
-
 export const lut=(L,c)=>((255<<24)|(L[512+((c>>16)&255)]<<16)|(L[256+((c>>8)&255)]<<8)|L[c&255])>>>0;
-
 function buildLUT(){
   const T=TODS[SET.tod],Lc=T?T.light:[1,1,1],dim=SET.dim/100;
   for(let k=0;k<3;k++)for(let v=0;v<256;v++){const j=k*256+v;
     fgL[j]=cl(v*Lc[k]);bgL[j]=cl(v*Lc[k]*(1-dim*.55));rimL[j]=cl(v*1.22+12);inkL[j]=cl(v*.36);htL[j]=cl(v*.8);}
 }
-
-function mix3(c,t,k){return rgb((c&255)+(t[0]-(c&255))*k,((c>>8)&255)+(t[1]-((c>>8)&255))*k,((c>>16)&255)+(t[2]-((c>>16)&255))*k);}
-
+export function mix3(c,t,k){return rgb((c&255)+(t[0]-(c&255))*k,((c>>8)&255)+(t[1]-((c>>8)&255))*k,((c>>16)&255)+(t[2]-((c>>16)&255))*k);}
 export function lumC(c){return((c&255)*.3+((c>>8)&255)*.59+((c>>16)&255)*.11);}
-
 // regrade the parallax backdrop for the chosen time of day, and push it back (desaturate + haze) so gameplay reads first
 export function applyTOD(){
   buildLUT();

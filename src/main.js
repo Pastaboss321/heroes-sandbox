@@ -24,7 +24,6 @@ import { $, MODES, defineMode, startRun } from './modes/core.js';
 import { showMenu } from './ui/menu.js';
 import { syncSettings } from './ui/settings.js';
 
-
 resize();
 initGL(sim,glc,cv).then(ok=>{ST.GL=ok;});
 buildSpawnUI();
@@ -34,5 +33,4 @@ mapSel.value='nyc2099';
 regen();
 showMenu();
 requestAnimationFrame(loop);
-
 window.GAME={dbg:()=>({rid,rcount,gnd}),pose:()=>posePlayer(pl_).filter(r=>/[^.]/.test(r)).join('|'),set hitstop(v){ST.hitstop=v},startRun,showMenu,MODES,defineMode,get GS(){return ST.GS},get MS(){return ST.MS},get dbox(){return[ST.dx0,ST.dy0,ST.dx1,ST.dy1]},explode:(x,y,r)=>explode(x,y,r),get pin(){return pin},supportCheck:()=>supportCheck(false),t,W,H,pl_,mouse,keys,pressed,selPower,cast:()=>cast(),regen,tick,render,bodies,shots,drones,strikes,get vortex(){return ST.vortex},get held(){return ST.held},get fps(){return ST.fps},get simMs(){return ST.simMs},get frameMs(){return ST.frameMs},get np(){return ST.np},get cam(){return[ST.camX,ST.camY]},count:m=>{let c=0;for(let i=0;i<N;i++)if(t[i]===m)c++;return c;},MATS,toggleFly,BLD,bodyHit,setChar,CHARS,get CH(){return ST.CH},enemies,spawnEnemy,startWave,clearEnemies,ENEMY_TYPES,defineEnemy,get storm(){return ST.storm},cut:(x0,x1,y0,y1)=>{for(let y=y0;y<y1;y++)for(let x=x0;x<x1;x++)setc(y*W+x,EMPTY);},setCam:(x,y)=>{ST.camX=x;ST.camY=y;},comics,rings,flashes,waves,SET,SPAWN,get decoy(){return ST.decoy},get stasis(){return ST.stasis},pins,therm,jets,get slowT(){return ST.slowT},placeStruct,OBJS,spawnUI:()=>ST.spawnUI,MAPDEFS,mapSel};

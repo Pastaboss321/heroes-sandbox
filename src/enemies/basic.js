@@ -3,8 +3,6 @@ import { ST } from '../state.js';
 import { R, rgb } from '../world/materials.js';
 import { spawn } from '../world/particles.js';
 
-
-
 // --- Ultron sentry drone: hovers at range, strafes, fires a red laser
 defineEnemy('ultron',{hp:45,w:9,h:7,fly:true,score:15,boom:6,
   sprite:["..aaaaa..",".aAAAAAa.","aA*AAA*Aa","aAAAmAAAa",".aAmmmAa.","..a...a..",".a.....a."],
@@ -17,7 +15,6 @@ defineEnemy('ultron',{hp:45,w:9,h:7,fly:true,score:15,boom:6,
     if(e.mem.charge>0){e.mem.charge--;e.vx*=.8;e.vy*=.8;if(e.mem.charge%3===0)spawn(e.x,e.y,(R()-.5)*2,(R()-.5)*2,rgb(255,80,60),8,0,1,0,1);if(e.mem.charge===0)enemyBeam(e,{dmg:9,col:[255,60,50]});}
     if(ST.frame%3===0)spawn(e.x+(R()-.5)*4,e.y+4,(R()-.5)*.3,.8,rgb(255,120,80),6,0,1,0);
   }});
-
 // --- Chitauri soldier: walks in, keeps distance, fires plasma bolts, hops obstacles
 defineEnemy('chitauri',{hp:35,w:7,h:13,fly:false,score:10,boom:4,
   sprite:["..bbb..",".bgggb.",".g*g*g.",".bgggb.","..bbb..","bsssssb","bsgsgsb","bsssssb","w.sss.w","..s.s..","..s.s..",".bb.bb.",".bb.bb."],
@@ -28,7 +25,6 @@ defineEnemy('chitauri',{hp:35,w:7,h:13,fly:false,score:10,boom:4,
     if(e.ground&&e.mem.blocked&&e.t-e.mem.blocked<4)e.vy=-4.5;
     if(e.cd===0&&dist<260&&los(e,p.x,p.y)){enemyShoot(e,{speed:3.6,dmg:7,col:[140,200,255],lead:12,spread:.08});e.cd=60+R()*50|0;}
   }});
-
 // --- Chitauri glider: fast swooping flyer on a hover-sled
 defineEnemy('chitauri_glider',{hp:30,w:13,h:7,fly:true,score:20,boom:6,
   sprite:["....bbb......","...bg*gb.....","....sss......","..wsssssw....","sssssssssssss",".ccccccccccc.","..*.......*.."],

@@ -6,9 +6,6 @@ import { SURF, bgRect, clearAll, fill, makeFar, tint } from './gen.js';
 import { noise2 } from './city.js';
 import { birch, pine, tree } from './forest.js';
 
-
-
-
 // ---- X-Mansion: the Xavier Institute's courtyard. The mansion itself towers in the backdrop.
 export function genXMansion(){
   clearAll();
@@ -103,7 +100,6 @@ export function genXMansion(){
     blackbird(700,y1); }
   ST.SPAWNX=600;
 }
-
 function blackbird(x,fy){ // the X-Men's jet, parked on its gear
   const cy=fy-12;
   for(let k=0;k<160;k++){const th=k<24?k*.22:k<120?5:Math.max(1,5-(k-120)*.1);for(let y=cy-th|0;y<=cy+th;y++)sxy(x+k,y,STEEL);}

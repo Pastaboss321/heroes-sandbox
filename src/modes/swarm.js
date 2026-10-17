@@ -4,8 +4,6 @@ import { pl_ } from '../player.js';
 import { enemies, queueWave, spawnQ } from '../enemies/core.js';
 import { banner, bossBar, defineMode, endRun } from './core.js';
 
-
-
 // ---- Savage Land Swarm: the Brood pour out of the volcano caves; Hydra strike teams and Magneto join in
 defineMode('savage',{name:'Savage Land Swarm',sub:'Savage Land · brood waves',map:'savage',
   desc:'Brood hives have hatched beneath the volcano. Survive waves of leaping aliens and Hydra jet-troopers; Magneto descends every 5th wave. 3 lives, heal between waves.',

@@ -7,14 +7,13 @@ import { SET } from './look.js';
 import { GLOWCH } from './rig.js';
 import { buf, gaddS, gbuf, pix } from './canvas.js';
 
-
-export function drawSprite(x,y,ang,face,tintG,spr,pal,hurtF,ghost){
+export function drawSprite(x,y,ang,face,tintG,spr,pal,hurtF,ghost,scl=1){
   // rotate a sprite around its centre (nearest-neighbour inverse mapping)
   spr=spr||ST.SPR;pal=pal||ST.SPC;const sw=spr[0].length,sh=spr.length;
-  const ca=Math.cos(ang),sa=Math.sin(ang),cx=x,cy=y-sh/2,RR=Math.ceil(Math.hypot(sw,sh)/2)+1;
+  const ca=Math.cos(ang),sa=Math.sin(ang),cx=x,cy=y-sh*scl/2,RR=Math.ceil(Math.hypot(sw,sh)*scl/2)+1;
   const gc=ST.CH.glow;
   for(let yy=-RR;yy<=RR;yy++)for(let xx=-RR;xx<=RR;xx++){
-    const u=xx*ca+yy*sa, v=-xx*sa+yy*ca;
+    const u=(xx*ca+yy*sa)/scl, v=(-xx*sa+yy*ca)/scl;
     const sx=Math.round(u+sw/2-.5), sy=Math.round(v+sh/2-.5);
     if(sx<0||sx>=sw||sy<0||sy>=sh)continue;
     const ch=spr[sy][face>0?sx:sw-1-sx];if(ch==='.')continue;
@@ -30,13 +29,10 @@ export function drawSprite(x,y,ang,face,tintG,spr,pal,hurtF,ghost){
   for(let k=0;k<SPX.length;k+=3){const ch=SPX[k+2];pix(SPX[k],SPX[k+1],hurtF&&(hurtF&2)?rgb(255,120,110):pal[ch],GLOWCH[ch]?pal[ch]:0);}
   SPX.length=0;
 }
-
 const SPX=[];
-
 export function drawHammer(x,y,a){const ca=Math.cos(a),sa=Math.sin(a); // a = direction the handle points from the head
   for(let k=-2;k<=2;k++)for(let w=-1;w<=1;w++){const X=x-sa*k+ca*w,Y=y+ca*k+sa*w;pix(X,Y,w===-1?rgb(214,220,232):w===1?rgb(120,126,140):rgb(170,176,186),rgb(60,90,170));}
   for(let k=2;k<7;k++)pix(x+ca*k,y+sa*k,k===6?rgb(70,50,30):rgb(116,84,50));}
-
 export function drawAxe(x,y,spin){const ca=Math.cos(spin),sa=Math.sin(spin);
   for(let k=-3;k<=4;k++)pix(x+ca*k,y+sa*k,rgb(110,80,50)); // haft
   for(let k=-3;k<=3;k++){const d=4.5+(3-Math.abs(k))*.5;for(let w=3;w<=d;w+=.5)pix(x+ca*w-sa*k,y+sa*w+ca*k,Math.abs(k)===3||w>=d-.4?rgb(230,238,255):rgb(170,184,206),rgb(90,140,255));}}

@@ -11,15 +11,10 @@ import { $, pauseRun, resumeRun } from '../modes/core.js';
 import { playFromMenu } from './menu.js';
 import { closeSettings } from './settings.js';
 
-
 export const helpEl=document.getElementById('help');
-
 document.getElementById('helpbtn').onclick=e=>{helpEl.style.display=helpEl.style.display==='none'?'':'none';e.target.blur();};
-
 const KEYMAP={Digit1:0,Digit2:1,Digit3:2,Digit4:3,Digit5:4,Digit6:5,Digit7:6,Digit8:7,Digit9:8,Digit0:9,Minus:10,Equal:11};
-
 const MAPS=Object.keys(MAPDEFS);
-
 addEventListener('keydown',e=>{
   const setOpen=!$('settings').classList.contains('hidden');
   if(e.code==='Escape'){if(setOpen)closeSettings();else if(ST.GS==='play'&&ST.spawnUI&&ST.spawnUI.isOpen()){ST.spawnUI.close();}else if(ST.GS==='play')pauseRun();else if(ST.GS==='pause')resumeRun();e.preventDefault();return;}
@@ -35,16 +30,10 @@ addEventListener('keydown',e=>{
   if(sb&&e.code==='KeyR')regen();if(sb&&e.code==='KeyM'){mapSel.value=MAPS[(MAPS.indexOf(mapSel.value)+1)%MAPS.length];regen();}
   if(e.code==='KeyH')helpEl.style.display=helpEl.style.display==='none'?'':'none';
   if(e.code==='Space'||e.code.startsWith('Arrow'))e.preventDefault();});
-
 addEventListener('keyup',e=>{keys[e.code]=false;});
-
 addEventListener('blur',()=>{for(const k in keys)keys[k]=false;mouse.down=false;if(ST.GS==='play'&&ST.MODE&&!ST.MODE.sandbox)pauseRun();}); // never lose a run to an alt-tab
 cv.addEventListener('mousemove',e=>{mouse.sx=(e.clientX-ST.ox)/ST.scale;mouse.sy=(e.clientY-ST.oy)/ST.scale;});
-
 cv.addEventListener('mousedown',e=>{if(e.button===0)mouse.down=true;if(e.button===2)mouse.right=true;});
-
 addEventListener('mouseup',e=>{if(e.button===0)mouse.down=false;if(e.button===2)mouse.right=false;});
-
 cv.addEventListener('contextmenu',e=>e.preventDefault());
-
 cv.addEventListener('wheel',e=>{selPower(ST.cur+(e.deltaY>0?1:-1));e.preventDefault();},{passive:false});

@@ -15,7 +15,6 @@ import { ACT } from './xmen.js';
 import { carve, keys, mouse, pressed, toggleFly } from '../player.js';
 import { damageEnemies, enemies, hitEnemy } from '../enemies/core.js';
 
-
 const SPR_HULK=[
 "......hhhhh......",
 ".....hhhhhhh.....",
@@ -43,12 +42,10 @@ const SPR_HULK=[
 "...GGgg...GGgg...",
 "..kGGgg...GGGgg..",
 "..ggggg...ggggg.."];
-
 const PAL_HULK={h:rgb(18,20,16),G:rgb(84,150,58),g:rgb(44,96,34),k:rgb(140,200,96),K:rgb(26,58,22),e:rgb(220,255,190),w:rgb(232,228,204),p:rgb(98,50,130),q:rgb(56,26,80),P:rgb(140,84,172)};
 
 // animation rig entry (see render/rig.js)
 ANIM.hulk={leg:19,mid:8,armC:'kGg',tipC:'kGg',aw:3,al:9,fs:4,sh:[14,7],hide:rect(14,16,8,18),blink:'e',lid:'K'};
-
 const HULK_POWERS=[
  {n:'Smash',fn:(a,p,use)=>{if(!use(4))return;p.punchF=10;const x=a.h.x+a.dx*7,y=a.h.y+a.dy*7;explode(x,y,p.rage>0?16:10,{self:true,col:[210,200,170],word:'SMASH!'});damageEnemies(x,y,16,35,a.dx*6,a.dy*6-2);
    for(const b of bodies){const dx=b.x-x,dy=b.y-y,d=Math.hypot(dx,dy)||1;if(d<b.rmax+16){b.vx+=a.dx*7;b.vy+=a.dy*7-2;b.va+=(R()-.5)*.08;b.thrown=true;}}
@@ -60,7 +57,6 @@ const HULK_POWERS=[
  {n:'Rip & Throw',tk:{r:14,range:26,tether:false,throwMul:0,overhead:true}},
  {n:'Gamma Quake',fn:(a,p,use)=>{if(!use(28))return;if(p.ground){p.vy=-5;p.ground=false;}p.slam=true;p.slamOpt={col:GAMMA,r:46};ST.cd=50;}},
 ];
-
 HULK_POWERS.push(
  {n:'Gamma Roar',fn:(a,p,use)=>{if(!use(20))return;ST.cd=45;const cx=a.h.x,cy=a.h.y-6,R0=120,ang=Math.atan2(a.dy,a.dx);fxWord(cx+a.dx*30,cy-16,'RRRAAAARGH!',1.6,'#bff07a',true);fxImpact(cx,cy,3);ST.hitstop=Math.max(ST.hitstop,3);
    for(let n=0;n<5000;n++){const d=Math.sqrt(R())*R0,t2=ang+(R()-.5)*1.3,X=cx+Math.cos(t2)*d|0,Y=cy+Math.sin(t2)*d|0;if(X<0||X>=W||Y<0||Y>=H)continue;const i=Y*W+X,m=t[i];
@@ -74,7 +70,6 @@ HULK_POWERS.push(
    fxWord(b.x,b.y-10,'HUP!',1,'#bff07a',true);for(let k=0;k<30;k++)spawn(X0+(R()-.5)*12,Y0,(R()-.5)*3,-R()*3,rgb(150,140,125),25,0,0,1);ST.shake+=5;}},
  {n:'Worldbreaker',fn:(a,p,use)=>{if(p.rage>0||!use(45))return;p.rage=420;ST.cd=40;fxWord(p.x,p.y-ST.PH-14,'HULK SMASH!!',1.7,'#bff07a',true);fxBurst(p.x,p.y-ST.PH/2,60,'#bff07a');quake(p.x,p.y,{col:GAMMA,r:30});}},
 );
-
 HULK_POWERS.push(
  // grab a foe and smash it into the ground, side to side, five times
  {n:'Puny God',fn:(a,p,use)=>{const e=grabbable(p.x+p.face*10,p.y-ST.PH/2,44);if(!e){if(ST.frame-(p.denyT||-99)>20){p.denyT=ST.frame;fxWord(p.x,p.y-ST.PH-6,'HRRM?',.8,'#bff07a',true);snd('deny',p.x,p.y);}return;}

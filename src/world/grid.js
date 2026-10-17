@@ -3,22 +3,16 @@ import { DENS, EMBER, F, FIRE, G, GFIRE, KIND, L, R, S, SMOKE, STEAM, mkcol } fr
 import { ST } from '../state.js';
 import { NAT, gnd, obAdd, pin, rid, unq } from './support.js';
 
-
 // ================= world size =================
 export const W=1600, H=640, N=W*H, VW=480, VH=270;
-
 export const CS=32, CW=Math.ceil(W/CS), CHN=Math.ceil(H/CS);
-
 
 // ================= grid =================
 export const t=new Uint8Array(N), col=new Uint32Array(N), life=new Uint8Array(N), stamp=new Uint8Array(N), vel=new Uint8Array(N);
-
 export const bg=new Uint32Array(N), bgD=new Uint32Array(N), bgB=new Uint8Array(N); // bgD: backdrop with no structures; bgB: pixel belongs to a structure's backdrop
 export const BACK=255; // chunk cell that is backdrop wall (drawn, no collision)           // 0 = open sky (parallax layer shows)
 ST.act=new Uint8Array(CW*CHN);ST.nxt=new Uint8Array(CW*CHN);
-
 // clock, frame, genMode: shared state (ST in state.js)
-
 ST.dx0=W;ST.dy0=H;          // dirty box for support checks
 export const booms=[];                         // deferred explosions (chain reactions)
 export function wake(i){
@@ -26,29 +20,21 @@ export function wake(i){
   const xa=cx>0?cx-1:0,xb=cx<CW-1?cx+1:cx,ya=cy>0?cy-1:0,yb=cy<CHN-1?cy+1:cy;
   for(let yy=ya;yy<=yb;yy++)for(let xx=xa;xx<=xb;xx++)ST.nxt[yy*CW+xx]=1;
 }
-
 export function markDirty(i){const x=i%W,y=(i/W)|0;if(x<ST.dx0)ST.dx0=x;if(x>ST.dx1)ST.dx1=x;if(y<ST.dy0)ST.dy0=y;if(y>ST.dy1)ST.dy1=y;
   if(pin[i]===2||pin[i-1]===2||pin[i+1]===2||pin[i-W]===2||pin[i+W]===2)unq.push(i);}
-
 export function lifeOf(m){switch(m){case FIRE:return 15+R()*35;case GFIRE:return 40+R()*60;case SMOKE:return 50+R()*90;case STEAM:return 90+R()*120;case EMBER:return 80+R()*120;default:return 0;}}
-
 // CAPT: shared state (ST in state.js)
 export function setc(i,m){
   if(!ST.genMode){ if((KIND[t[i]]===S||KIND[m]===S)&&m!==t[i]){markDirty(i);if(KIND[m]!==S)obAdd(i%W,(i/W)|0);} wake(i); }
   if(ST.CAPT!==null&&KIND[m]===S)ST.CAPT.push(i);
   t[i]=m;col[i]=mkcol(m);life[i]=lifeOf(m);stamp[i]=ST.clock;vel[i]=0;pin[i]=0;rid[i]=0;gnd[i]=NAT[m];
 }
-
 export function sxy(x,y,m){if(x>=0&&x<W&&y>=0&&y<H)setc(y*W+x,m);}
-
 export function swap(i,j){
   const a=t[i];t[i]=t[j];t[j]=a;const c=col[i];col[i]=col[j];col[j]=c;
   const l=life[i];life[i]=life[j];life[j]=l;const v=vel[i];vel[i]=vel[j];vel[j]=v;
   stamp[j]=ST.clock;stamp[i]=ST.clock;wake(i);
 }
-
 export function canSink(m,tm){if(tm===0)return true;const k=KIND[tm];if(k===G||k===F)return true;if(k===L&&DENS[tm]<DENS[m])return true;return false;}
-
 const NB=[[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[1,-1],[-1,1],[1,1]];
-
 export function rn(i){const x=i%W,y=(i/W)|0,o=NB[(R()*8)|0],nx=x+o[0],ny=y+o[1];return(nx<0||nx>=W||ny<0||ny>=H)?-1:ny*W+nx;}

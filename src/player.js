@@ -1,5 +1,5 @@
 // Player state (pl_), input state, movement, hurt, camera.
-import './heroes/storm.js'; // evaluation order: runs after heroes/storm.js
+import './heroes/magneto.js'; // evaluation order: runs after heroes/magneto.js
 import { ST } from './state.js';
 import { ACID, DENS, EMPTY, F, FIRE, G, GLASS, ICE, KIND, L, LAVA, LEAF, OBSID, PROPANE, R, RUBBLE, S, STEEL, WOOD, rgb } from './world/materials.js';
 import { H, N, VH, VW, W, booms, col, setc, t } from './world/grid.js';
@@ -13,31 +13,22 @@ import { aimFrom, slashFx } from './heroes/xmen.js';
 import { PAL_DOOM, SPR_DOOM } from './heroes/doom.js';
 import { opticThrust } from './heroes/cyclops.js';
 import { iceSlideStep } from './heroes/iceman.js';
+import { ray } from './heroes/wave2.js';
 import { damageEnemies, hitEnemy, nearestEnemy } from './enemies/core.js';
 
-
-ST.SPR=SPR_DOOM;ST.SPC=PAL_DOOM;
-
+ST.SPR=SPR_DOOM;ST.SPC=PAL_DOOM; // SZ: Ant-Man's current size (1 = normal)
 export const pl_={x:60,y:100,vx:0,vy:0,face:1,hp:100,en:100,ground:false,slam:false,fly:false,coyote:0,buffer:0,lastJump:-99,jumpHeldF:0,boost:0,boostCd:0,bob:0,hist:[],airF:0,ang:0,charge:0,chargeCd:0,leap:false,slamOpt:null,hurtF:0};
-
 export function boxHit(x,y){for(let yy=Math.ceil(y-ST.PH);yy<=Math.floor(y-1);yy++)for(let xx=Math.floor(x-ST.PW/2);xx<=Math.floor(x+ST.PW/2);xx++)if(solidAt(xx,yy))return true;return false;}
-
 // SPAWNX: shared state (ST in state.js)
-
 export function spawnPlayer(){
   const x=pl_.x=ST.SPAWNX+R()*30|0;let y=0;while(y<H-1&&!solidAt(x,y))y++;pl_.y=y-1;pl_.vx=pl_.vy=0;pl_.hp=ST.CH.hp;pl_.en=100;pl_.fly=false;pl_.slam=false;pl_.leap=false;
   ST.camX=Math.max(0,Math.min(W-VW,pl_.x-VW/2));ST.camY=Math.max(0,Math.min(H-VH,pl_.y-VH/2));
 }
-
 export const keys={}, pressed={};
-
 export const mouse={sx:VW/2,sy:VH/2,wx:0,wy:0,down:false,right:false};
-
 // CH: shared state (ST in state.js)
 export const glowRGB=()=>rgb(ST.CH.glow[0],ST.CH.glow[1],ST.CH.glow[2]);
-
 export function toggleFly(on){const p=pl_;if(on&&!ST.CH.fly)return;p.fly=on;p.slam=false;if(on){p.vy=Math.min(p.vy,-1.2);rings.push({x:p.x,y:p.y-ST.PH/2,r:3,vr:1.6,life:12,c:ST.CH.glow});for(let k=0;k<20;k++){const a=R()*6.283;spawn(p.x,p.y,Math.cos(a)*1.5,Math.sin(a)*.6+.5,ST.CH.thrust(),14,0,1,0,1);}}}
-
 // shared terrain carving used by boost-ramming, Hulk's charge and Thor's hammer
 export function carve(cx,cy,r,vx,vy,floorY=H){
   bgHit(cx,cy,r);
@@ -48,17 +39,18 @@ export function carve(cx,cy,r,vx,vy,floorY=H){
     if(m===PROPANE)booms.push([X,Y,6]);
     setc(i,EMPTY);}
 }
-
 function bore(p,sp){
   const r=Math.min(9,6+(sp-ST.CH.fs)*.8);
   carve(p.x+p.vx/sp*4,p.y-ST.PH/2+p.vy/sp*4,r,p.vx,p.vy);
   damageEnemies(p.x,p.y-ST.PH/2,r+6,3,p.vx*.5,p.vy*.5);
   if(ST.frame%3===0)ST.shake=Math.max(ST.shake,2.5);
 }
-
 export function hurt(d){
   const p=pl_;if(d<=0)return;
-  if(p.dodge>0||p.script>0)return; // mid-dash, mid-leap, rolling: untouchable
+  if(p.dodge>0||p.script>0||p.surge>0)return; // mid-dash, mid-leap, rolling, Crimson Surge: untouchable
+  if(p.shell>0)d*=.2; // Ultron's adamantium shell
+  if(p.sense>0&&R()<.7){p.vx+=(R()<.5?-1:1)*2.2;for(let k=0;k<6;k++)spawn(p.x,p.y-ST.PH/2,(R()-.5)*3,(R()-.5)*3,rgb(240,240,250),8,0,1,0,1);if(ST.frame-(p.dodgeW||-99)>30){p.dodgeW=ST.frame;fxWord(p.x,p.y-ST.PH-6,'DODGED!',.7,'#f3e9d2',true);}return;}
+  if(ST.SZ<.8)d*=.6;
   if(SPAWN.god)return;
   if(ST.shieldOn){for(let k=0;k<4;k++)spawn(p.x+(R()-.5)*30,p.y-8+(R()-.5)*30,(R()-.5)*2,(R()-.5)*2,glowRGB(),10,0,1,0,1);return;}
   if(p.metal>0){for(let k=0;k<5;k++)spawn(p.x+(R()-.5)*8,p.y-R()*ST.PH,(R()-.5)*3,-R()*2,rgb(255,240,200),8,0,1,1);return;}
@@ -67,20 +59,29 @@ export function hurt(d){
     for(let k=0;k<4;k++)spawn(p.x+(R()-.5)*8,p.y-R()*ST.PH,(R()-.5)*2,-R()*2,rgb(255,60+R()*60|0,40),12,0,1,0,1);return;}
   p.hp-=d*ST.CH.armor;p.hurtF=8;ST.hurtV=Math.min(1,ST.hurtV+d*ST.CH.armor/30);ST.shake=Math.max(ST.shake,2);snd('hurt',p.x,p.y,{gap:.14,v:Math.min(1,.4+d/20)});
 }
-
 export function updPlayer(){
   const p=pl_;
   const ax=(keys.KeyD?1:0)-(keys.KeyA?1:0), ay=(keys.KeyS?1:0)-((keys.KeyW||keys.Space)?1:0);
   const jumpP=pressed.KeyW||pressed.Space, jumpH=keys.KeyW||keys.Space, shiftP=pressed.ShiftLeft||pressed.ShiftRight, shiftH=keys.ShiftLeft||keys.ShiftRight;
   const FS=ST.CH.fs, BOOST=ST.CH.boost;
-  if(pressed.KeyF)toggleFly(!p.fly);
+  if(pressed.KeyF&&ST.CH.id!=='spidey')toggleFly(!p.fly);
+  if(ST.CH.id==='spidey'){ // F: shoot a web line at the cursor and swing on it; W/S reel in/out
+    if(pressed.KeyF){const h=hand(),a=aimFrom(h),r=ray(h.x,h.y,a.dx,a.dy,180);if(r.hit){p.web={x:r.x,y:r.y,L:Math.max(14,Math.hypot(r.x-p.x,r.y-p.y+ST.PH/2))};snd('whoosh',r.x,r.y,{pitch:1.9,v:.4});}}
+    if(!keys.KeyF&&p.web){p.web=null;p.grip=null;if(!p.ground)p.vy=Math.min(p.vy,p.vy-1);}}
   if(ST.CH.id==='cyclops')opticThrust(p,keys.KeyF,ax);
   if(p.boostCd>0)p.boostCd--; if(p.chargeCd>0)p.chargeCd--; if(p.hurtF>0)p.hurtF--;
   if(p.metal>0)p.metal--; if(p.wings>0)p.wings--;
   if(p.metal>0&&!p.ground&&p.vy>3)carve(p.x,p.y+2,4,0,p.vy,H); // adamantium cannonball through the floor
   if(p.wings>0){damageEnemies(p.x,p.y-ST.PH/2,10,3,0,0,true);for(let k=0;k<4;k++){const side=k&1?1:-1,u=R(),wx=p.x-p.face*2+side*(4+u*16),wy=p.y-ST.PH*.7-Math.sin(u*3)*6+u*4;spawn(wx,wy,side*.4-p.vx*.2,-.3,R()<.5?rgb(255,170,50):rgb(255,90,30),12,R()<.02?FIRE:0,1,0,1);}}
   if(p.thrustF>0)p.thrustF--; if(ST.senseT>0)ST.senseT--; if(p.spin>0)p.spin--; if(p.eye>0)p.eye--;
-  if(p.dodge>0)p.dodge--; if(p.stealth>0)p.stealth--;
+  if(p.dodge>0)p.dodge--; if(p.stealth>0)p.stealth--; if(p.sense>0)p.sense--; if(p.shell>0)p.shell--;
+  if(p.surge>0){p.surge--;damageEnemies(p.x,p.y-ST.PH/2,ST.PW+6,1.2,p.face*1.5,-.5);if(ST.frame%2===0)spawn(p.x+(R()-.5)*14,p.y-R()*ST.PH,(R()-.5)*.5,-.8,rgb(255,40+R()*40|0,30),12,0,1,0,1);}
+  if(p.ant>0){p.ant--;p.fly=true;if(p.ant===0){p.fly=false;fxWord(p.x,p.y-ST.PH-6,'BYE, ANT-THONY',.7,'#ff6b5c',true);}}
+  if(ST.CH.id==='antman'){ // Pym particles: ease toward the target size, the hitbox follows
+    const ts=p.sizeT||1;if(Math.abs((p.size||1)-ts)>.01){const grow=ts>(p.size||1);p.size=(p.size||1)+(ts-(p.size||1))*.15;if(Math.abs(p.size-ts)<.02)p.size=ts;
+      ST.PW=Math.max(3,Math.round(ST.CH.pw*Math.min(1.6,p.size)));ST.PH=Math.max(8,Math.round(ST.CH.ph*p.size));if(grow&&boxHit(p.x,p.y))punchOut(p);}
+    ST.SZ=p.size||1;if(ts>1.5){p.en-=.16;if(p.en<=1){p.sizeT=1;fxWord(p.x,p.y-ST.PH-6,'OUT OF PYM PARTICLES',.8,'#ff6b5c',true);}}
+    if(ST.SZ>1.5&&p.ground&&Math.abs(p.vx)>.4&&ST.frame%3===0){carve(p.x+p.face*(ST.PW/2+3),p.y-ST.PH*.5,ST.PH*.32,p.vx,0,Math.floor(p.y));damageEnemies(p.x+p.face*ST.PW,p.y-ST.PH/2,ST.PH*.4,6,p.face*3,-2);if(ST.frame%18===0){ST.shake=Math.max(ST.shake,4);snd('stomp',p.x,p.y);}}}
   if(p.grit>0){p.grit--;if(ST.frame%3===0)spawn(p.x+(R()-.5)*10,p.y-R()*ST.PH,(R()-.5)*.5,-.8,rgb(255,40+R()*80|0,30),14,0,1,0,1);
     if(p.grit===0&&ST.CH.id==='wolverine'){const h=p.gritD*.6;p.hp=Math.min(ST.CH.hp,p.hp+h);fxWord(p.x,p.y-ST.PH-8,'+'+(h|0)+' HP',1,'#ffc93c',true);}}
   if(p.castF>0)p.castF--; if(p.recoilF>0)p.recoilF--; if(p.landF>0)p.landF--; if(p.punchF>0)p.punchF--; if(p.throwF>0)p.throwF--;
@@ -140,7 +141,7 @@ export function updPlayer(){
         // Wolverine's feral sprint: keep running and he keeps accelerating
         if(wolf){if(p.ground&&ax&&p.vx*ax>ST.CH.run*.8)p.sprint=Math.min(90,(p.sprint||0)+1);else if(p.ground)p.sprint=Math.max(0,(p.sprint||0)-(ax?2:6));}
         const sk=wolf?1+.7*Math.max(0,Math.min(1,((p.sprint||0)-24)/40)):1;
-        const target=ax*ST.CH.run*sk*(ST.held&&ST.held.overhead?.6:1)*(p.rage>0?1.6:1)*(p.crouch>6?.15:1);
+        const target=ax*ST.CH.run*sk*(ST.held&&ST.held.overhead?.6:1)*(p.rage>0||p.surge>0?1.6:1)*(p.crouch>6?.15:1)*(ST.SZ>1.5?1.15:ST.SZ<.8?1.1:1);
         if(p.ground)p.vx+=(target-p.vx)*(ax?.28:.35)*(p.onIce?.18:1);
         else if(p.leap)p.vx+=ax*.06; // big leaps keep their momentum; a little steering
         else if(ax&&!(Math.sign(p.vx)===ax&&Math.abs(p.vx)>Math.abs(target)))p.vx+=(target-p.vx)*(wolf?.2:hulk?.15:.12); // air control never brakes you below what you already have
@@ -212,6 +213,16 @@ export function updPlayer(){
     my-=st;}
   if(!p.ground&&p.vy>=0&&boxHit(p.x,p.y+1))p.ground=true;
   }
+  if(ST.CH.id==='spidey'&&p.web){const w=p.web,dx=p.x-w.x,dy=p.y-ST.PH/2-w.y,d=Math.hypot(dx,dy)||1;
+    if(keys.KeyW)w.L=Math.max(12,w.L-1.8);if(keys.KeyS)w.L=Math.min(230,w.L+1.8);
+    if(d>w.L){const nx=dx/d,ny=dy/d,tx=w.x+nx*w.L,ty=w.y+ny*w.L+ST.PH/2;if(!boxHit(tx,ty)){p.x=tx;p.y=ty;}const vn=p.vx*nx+p.vy*ny;if(vn>0){p.vx-=vn*nx;p.vy-=vn*ny;}p.ground=false;}
+    p.grip={x:w.x,y:w.y};}
+  if(ST.CH.id==='spidey'&&!p.fly&&!p.web){ // crawl: stick to walls (W/S climb) and to ceilings (hold W)
+    const s=(keys.KeyD?1:0)-(keys.KeyA?1:0),touch=k=>boxHit(p.x+k*1.5,p.y-4)&&boxHit(p.x+k*1.5,p.y-ST.PH+4);
+    if(!p.ground&&s&&touch(s)){p.cling=s;}else if(p.cling&&(p.ground||!touch(p.cling)))p.cling=0;
+    if(p.cling){p.vy=keys.KeyW?-2.3:keys.KeyS?2.3:-.42;p.vx=0;if(pressed.Space){p.vx=-p.cling*4.4;p.vy=-5.4;p.face=-p.cling;p.cling=0;}}
+    p.ceil=!p.ground&&!p.cling&&keys.KeyW&&boxHit(p.x,p.y-1)?1:0;
+    if(p.ceil){p.vy=-.6;p.airF=0;}}
   if(p.ground&&!wasGround&&!p.fly){
     p.landF=fallV>3?8:4;p.clapF=0;
     if(p.metal>0&&fallV>4)quake(p.x,p.y,{col:[200,206,216],r:24});
@@ -238,7 +249,6 @@ export function updPlayer(){
   if(p.hp<=0){flash(p.x,p.y-8,40,[255,80,60],12);if(!(ST.MODE&&ST.MODE.onDeath&&ST.MODE.onDeath(ST.MS)))spawnPlayer();}
   p.hist.unshift([p.x,p.y]); if(p.hist.length>12)p.hist.pop();
 }
-
 function superLand(p,v){
   fxWord(p.x,p.y-ST.PH-8,'WHAM!',1.1,'#ffc93c',true);
   const big=ST.CH.id==='hulk';
@@ -249,17 +259,14 @@ function superLand(p,v){
   if(big)damageEnemies(p.x,p.y,r*3,20,0,-3);
   ST.shake=Math.min(22,ST.shake+v*(big?2:1.2));
 }
-
 export function hand(){
   const p=pl_,mode=ANIM[ST.CH.id]&&armMode(p);
-  if(mode==='aim'||mode==='punch'||mode==='both'){const L=aimLocal(p),len=armLen(p,mode==='both'?'aim':mode);return{x:L.shx+L.wx*len,y:L.shy+L.wy*len};}
+  if(mode==='aim'||mode==='punch'||mode==='both'){const L=aimLocal(p),len=armLen(p,mode==='both'?'aim':mode)*ST.SZ;return{x:L.shx+L.wx*len,y:L.shy+L.wy*len};}
   return {x:p.x+p.face*(ST.PW/2+.5),y:p.y-ST.PH/2};
 }
 
-
 // ================= camera =================
 // camX, camY: shared state (ST in state.js)
-
 export function updCamera(){
   const p=pl_, a=aim();
   const sp=Math.hypot(p.vx,p.vy);

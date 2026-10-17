@@ -14,6 +14,7 @@ import { PP, posePlayer } from './rig.js';
 import { JET_PAL, JET_SPR, SPAWN, drones, jets, pins, shots, strikes, therm, waves } from '../heroes/powers.js';
 import { metalPal } from '../heroes/xmen.js';
 import { DECOY_PAL, SPR_ICE } from '../heroes/iceman.js';
+import { FANT_A, FANT_B, FANT_PAL, drawWave2 } from '../heroes/wave2.js';
 import { glowRGB, hand, mouse, pl_ } from '../player.js';
 import { ENEMY_TYPES, enemies } from '../enemies/core.js';
 import { bctx, blur, buf, circle, ctx, cv, gaddS, gbuf, gctx, gimg, glc, img, line, mbuf, mctx, mimg, mm, pix, sctx, sim } from './canvas.js';
@@ -21,12 +22,9 @@ import { drawComics } from './comic.js';
 import { drawAxe, drawHammer, drawSprite } from './sprites.js';
 import { groundBelow } from '../ui/spawn.js';
 
-
 const flick=new Float32Array(256);
-
 const htm=new Uint8Array(VW*VH);
 for(let y=0;y<VH;y++)for(let x=0;x<VW;x++){const ox2=(y>>2)&1?2:0,dx=((x+ox2)&3)-1.5,dy=(y&3)-1.5;htm[y*VW+x]=dx*dx+dy*dy<1.8?1:0;}
-
 export function render(){
   ST.CX=ST.camX|0;ST.CY=ST.camY|0;
   gbuf.fill(0);const ink=SET.ink;let nFire=0,nLava=0;
@@ -93,6 +91,7 @@ export function render(){
   // drones
   for(const d of drones){for(let yy=0;yy<5;yy++)for(let xx=0;xx<7;xx++){const eye=yy===2&&(xx===2||xx===4);if((yy===0||yy===4)&&(xx===0||xx===6))continue;pix(d.x-3+xx,d.y-2+yy,eye?rgb(255,90,70):yy===0?rgb(150,158,170):rgb(100,108,120),eye?rgb(255,60,40):0);}}
   for(const e of enemies)drawEnemy(e);
+  drawWave2();
   // ---- new power visuals: planted / falling / towed Mjolnir, Stormbreaker, thermite, the X-Jet, Iceman's decoy
   for(const P2 of pins)drawHammer(P2.x,P2.y-2,-Math.PI/2);
   for(const s of shots){if(s.type==='pin')drawHammer(s.x,s.y-2,-Math.PI/2);else if(s.type==='axe')drawAxe(s.x,s.y,s.spin);}
@@ -112,7 +111,8 @@ export function render(){
   // cape trail
   const p=pl_;
   if(ST.CH.cape&&p.hist.length>3){const yo=ST.PH-5;for(let k=1;k<Math.min(8,p.hist.length);k++){const [hx,hy]=p.hist[k];const wv=Math.sin(ST.frame*.3+k)*1.2;pix(hx-p.face*(2+k*.4),hy-yo+k*.6+wv,k<4?ST.CH.cape[0]:ST.CH.cape[1]);pix(hx-p.face*(2+k*.4),hy-yo+1+k*.6+wv,ST.CH.cape[1]);}}
-  drawSprite(p.x,p.y+PP,p.ang,p.face,false,posePlayer(p),p.metal>0?metalPal():null,p.hurtF,p.stealth>0);
+  if(p.ant>0)drawSprite(p.x,p.y+5,0,p.face,false,(ST.frame>>2)&1?FANT_A:FANT_B,FANT_PAL);
+  drawSprite(p.x,p.y+PP*ST.SZ,p.ang,p.face,false,posePlayer(p),p.metal>0?metalPal():null,p.hurtF,p.stealth>0,ST.SZ);
   const h=hand();
   if(ST.CH.id==='thor'&&!p.tow&&!pins.length&&!shots.some(s=>s.type==='hammer'||s.type==='pin')){for(let yy=0;yy<3;yy++)pix(h.x,h.y+yy,rgb(110,80,50));for(let yy=-2;yy<0;yy++)for(let xx=-1;xx<=1;xx++)pix(h.x+xx,h.y+yy,rgb(160,166,176));}
   else if(ST.CH.id!=='hulk')pix(h.x,h.y,glowRGB(),glowRGB());

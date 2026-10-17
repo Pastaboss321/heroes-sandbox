@@ -6,7 +6,6 @@ import { SURF, bgRect, clearAll, fill, makeFar, tint } from './gen.js';
 import { noise2 } from './city.js';
 import { spawn } from '../world/particles.js';
 
-
 // ---- Weapon X: the secret facility dug into a snowbound mountain. Snowfields that slide, a frozen lake,
 // labs with experiment tanks behind a blast door, a fuel depot and a radio mast.
 export function genArctic(){
@@ -59,7 +58,6 @@ export function genArctic(){
   for(let x=2;x<W-2;x++)for(let y=GY-200;y<H-40;y++){const i=y*W+x;if(t[i]===0&&KIND[t[i-W]]===S&&t[i-W]!==SNOW&&R()<.015){const L=3+R()*5|0;for(let k=0;k<L&&t[i+k*W]===0;k++){t[i+k*W]=ICE;col[i+k*W]=rgb(190,230,250);}}}
   ST.SPAWNX=140;
 }
-
 export function ambArctic(){ // steady snowfall; a little of it settles
   for(let k=0;k<3;k++){const x=ST.camX+R()*(VW+40)-20;spawn(x,ST.camY-2,(R()-.5)*.4-.25,.5+R()*.5,R()<.5?rgb(240,244,252):rgb(214,224,240),400,R()<.08?SNOW:0,0,0,1);}
 }

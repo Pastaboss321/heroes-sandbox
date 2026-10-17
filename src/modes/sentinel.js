@@ -5,8 +5,6 @@ import { pl_ } from '../player.js';
 import { enemies, queueWave, spawnQ } from '../enemies/core.js';
 import { banner, bossBar, defineMode, endRun } from './core.js';
 
-
-
 // ---- Sentinel Siege: giant Sentinels march on the X-Mansion
 defineMode('sentinels',{name:'Sentinel Siege',sub:'X-Mansion · giant waves',map:'xmansion',
   desc:'Giant Sentinels march on the Xavier Institute. Hold the courtyard; Master Mold arrives every 5th wave. 3 lives, heal between waves.',
@@ -25,7 +23,6 @@ defineMode('sentinels',{name:'Sentinel Siege',sub:'X-Mansion · giant waves',map
   hud(s){return `${s.phase==='break'?'next wave in '+Math.ceil(s.timer/60)+'s':'sentinels left '+(enemies.length+spawnQ.length)} · lives ${s.lives}`;},
   result(s){return{title:'THE SENTINELS WIN',stats:[['WAVE REACHED',s.wave],['SENTINELS SCRAPPED',ST.kills]]};}
 });
-
 function nextSentinelWave(s){
   s.wave++;ST.wave=s.wave;s.phase='fight';const n=s.wave;
   const list=[['sentinel_scout',1+n],['sentinel',Math.ceil(n/2)]];

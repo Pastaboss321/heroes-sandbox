@@ -4,7 +4,6 @@ import { DIRT, EMPTY, GLASS, GRASS, LAVA, LEAF, OBSID, OIL, R, SAND, STEEL, STON
 import { H, W, bg, bgD, col, setc, sxy, t } from '../world/grid.js';
 import { SURF, bgRect, clearAll, disc, fill, makeFar, tint } from './gen.js';
 
-
 export function genForest(){
   clearAll();
   const s=R()*100;
@@ -53,7 +52,6 @@ export function genForest(){
   }
   for(let x=0;x<W;x++){if(!lakes.some(l=>Math.abs(x-l)<62)&&R()<.35){const h=1+R()*3|0;for(let k=1;k<=h;k++)sxy(x,hm[x]-k,GRASS);}}
 }
-
 function cabin(x,gy){
   fill(x-2,gy-1,x+42,gy+2,STONE);
   for(let y=gy-22;y<gy;y+=3)fill(x,y,x+40,y+2,WOOD);
@@ -63,7 +61,6 @@ function cabin(x,gy){
   fill(x+6,gy-5,x+14,gy-1,WOOD); fill(x+24,gy-6,x+30,gy-1,STEEL); fill(x+25,gy-5,x+29,gy-1,OIL);
   fill(x+32,gy-36,x+35,gy-22,STONE);
 }
-
 export function tree(x,gy){
   const h=28+R()*44|0, tw=2+(R()<.5?1:0);
   fill(x,gy-h,x+tw,gy+4,WOOD);
@@ -73,14 +70,12 @@ export function tree(x,gy){
   const r=7+R()*6|0; disc(x+1,gy-h-1,r,LEAF,.88); disc(x-r/2|0,gy-h+3,r-2,LEAF,.8); disc(x+r/2+2|0,gy-h+3,r-2,LEAF,.8);
   fill(x,gy-h,x+tw,gy-h+r,WOOD);
 }
-
 export function pine(x,gy){
   const h=40+R()*50|0;
   fill(x,gy-h,x+2,gy+4,WOOD);
   for(let y=0;y<h-6;y++){const w=((y%10)+y*.22)|0;for(let k=-w;k<=w+1;k++)if(R()<.9){sxy(x+k,gy-h+y,LEAF);col[(gy-h+y)*W+x+k]=rgb(24+R()*20,80+R()*30,40+R()*14);}}
   fill(x,gy-h,x+2,gy,WOOD);
 }
-
 export function birch(x,gy){
   const h=30+R()*30|0;
   fill(x,gy-h,x+2,gy+4,WOOD); tint(x,gy-h,x+2,gy,220,220,210,20);

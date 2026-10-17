@@ -4,8 +4,6 @@ import { pl_ } from '../player.js';
 import { enemies, queueWave, spawnQ } from '../enemies/core.js';
 import { banner, bossBar, defineMode, endRun } from './core.js';
 
-
-
 // ---- Robot Uprising: endless robot waves over NYC 2099
 defineMode('robots2099',{name:'Robot Uprising',sub:'NYC 2099 · wave survival',map:'nyc2099',
   desc:'Rogue machines pour out of the neon skyline. Survive endless waves; Ultron Prime arrives every 5th. 3 lives, heal between waves.',
@@ -23,7 +21,6 @@ defineMode('robots2099',{name:'Robot Uprising',sub:'NYC 2099 · wave survival',m
   hud(s){return `${s.phase==='break'?'next wave in '+Math.ceil(s.timer/60)+'s':'robots left '+(enemies.length+spawnQ.length)} · lives ${s.lives}`;},
   result(s){return{title:'THE MACHINES WIN',stats:[['WAVE REACHED',s.wave],['ROBOTS SCRAPPED',ST.kills]]};}
 });
-
 function nextRobotWave(s){
   s.wave++;ST.wave=s.wave;s.phase='fight';const n=s.wave;
   const list=[['swarmbot',2+n*2],['ultron',Math.ceil(n*.6)]];

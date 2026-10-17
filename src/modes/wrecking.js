@@ -6,8 +6,6 @@ import { pl_ } from '../player.js';
 import { countBuilt } from '../maps/index.js';
 import { banner, defineMode, endRun } from './core.js';
 
-
-
 // ---- Wrecking Crew: two minutes to level as much of the city as possible. Destruction keeps a combo going
 defineMode('demolition',{name:'Wrecking Crew',sub:'score attack · 2 minutes',
   desc:'Level the city before the clock runs out. Every pixel of building you destroy scores; keep the carnage going to push the combo to x8. Toppled towers pay a bonus.',

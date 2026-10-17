@@ -14,7 +14,6 @@ import { ACT, freezeArea, iceAt } from './xmen.js';
 import { mouse, pl_ } from '../player.js';
 import { damageEnemies, enemies, enemyAt, hitEnemy, nearestEnemy } from '../enemies/core.js';
 
-
 export const SPR_ICE=[
 "....iIIIi....",
 "...iI+IIiJ...",
@@ -38,12 +37,10 @@ export const SPR_ICE=[
 "..IIi...JJK..",
 "..IIi...JJK..",
 "..iiJ...JKK.."];
-
 const PAL_ICE={i:rgb(128,188,234),I:rgb(200,236,255),J:rgb(68,128,194),K:rgb(38,80,146),'+':rgb(240,255,255),e:rgb(255,255,255)};
 
 // animation rig entry (see render/rig.js)
 ANIM.iceman={leg:14,mid:6,armC:'IiJ',tipC:'+Ii',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:'e',lid:'I'};
-
 const ICE_POWERS=[
  {n:'Ice Beam',fn:(a,p,use)=>{if(!use(.6))return;let x=a.h.x,y=a.h.y;
    for(let s2=0;s2<300;s2++){x+=a.dx;y+=a.dy;const X=x|0,Y=y|0;if(X<0||X>=W||Y<0||Y>=H)break;const i=Y*W+X,m=t[i];
@@ -72,9 +69,7 @@ const ICE_POWERS=[
          for(let q2=0;q2<8;q2++)spawn(x+(R()-.5)*6,y-R()*h,(R()-.5)*3,-R()*3,rgb(225,245,255),16,0,1,1);flash(x,y-h/2,14,[150,210,255],3);}
        x+=dir*9;}return++k<20;});}},
 ];
-
 export const slide=[];
-
 // Iceman's slide: he fires frost down at his feet, freezing a ramp along his path that crumbles away soon after
 export function iceSlideStep(p){
   const sp=Math.hypot(p.vx,p.vy),bx=sp>.6?p.x-p.vx*2.2:p.x,by=sp>.6?p.y+1-p.vy*2.2:p.y+1; // behind him when moving, so it never blocks the way ahead
@@ -89,17 +84,15 @@ export function iceSlideStep(p){
   for(let k=0;k<3;k++)spawn(bx+(R()-.5)*8,by,(R()-.5)*1.5-p.vx*.2,-R()*.8,R()<.5?rgb(230,250,255):rgb(150,210,250),12+R()*10,0,1,0,1);
   if(ST.frame%4===0)flash(bx,by,8,[150,210,255],2);
 }
-
 export function updSlide(){
   if(!pl_.fly||ST.CH.id!=='iceman'){pl_.slideX=pl_.slideY=undefined;}
   let k2=0;
   for(let k=0;k<slide.length;k++){const e=slide[k];if(e[1]>ST.frame){slide[k2++]=e;continue;}
-    const i=e[0];if(t[i]===ICE&&pin[i]===3){pin[i]=0;const x=i%W,y=(i/W)|0;
-      if(ST.np<MP-300&&R()<.6)spawn(x,y,(R()-.5)*.8,R()*.5,R()<.5?rgb(225,245,255):rgb(160,215,250),30+R()*30,R()<.25?WATER:0,1,1);
+    const i=e[0];if(t[i]&&pin[i]===3){pin[i]=0;const x=i%W,y=(i/W)|0,ice=t[i]===ICE;
+      if(ST.np<MP-300&&R()<.6)spawn(x,y,(R()-.5)*.8,R()*.5,ice?(R()<.5?rgb(225,245,255):rgb(160,215,250)):col[i],30+R()*30,ice&&R()<.25?WATER:0,1,1);
       setc(i,EMPTY);}}
   slide.length=k2;
 }
-
 ICE_POWERS.push(
  {n:'Ice Prison',fn:(a,p,use)=>{if(!use(18))return;ST.cd=30;const e=nearestEnemy(mouse.wx,mouse.wy,50);const cx=e?e.x:mouse.wx,cy=e?e.y:mouse.wy,r=e?Math.max(e.def.w,e.def.h)/2+2:6;
    for(let y=-r-2;y<=r+2;y++)for(let x=-r-2;x<=r+2;x++){const d=Math.hypot(x,y);if(d>r+2||(e&&d<r))continue;iceAt(cx+x,cy+y);}if(e){e.frozen=Math.max(e.frozen||0,360);hitEnemy(e,10,0,0);}
@@ -115,7 +108,6 @@ ICE_POWERS.push(
      for(const i of cells)if(t[i]===ICE){const x=i%W,y=(i/W)|0,d=Math.hypot(x-cx,y-cy)||1;if(ST.np<MP-300&&R()<.7)spawn(x,y,(x-cx)/d*(2+R()*4),(y-cy)/d*(2+R()*4)-1,col[i],50+R()*40,R()<.2?ICE:0,1,1);setc(i,EMPTY);}
      damageEnemies(cx,cy,r+8,60,0,-3,true);fxWord(cx,cy-r-6,'SHATTER!',1.5,'#bfe3ff',true);fxBurst(cx,cy,50,'#bfe3ff');fxImpact(cx,cy,3);ST.shake=16;return false;});}},
 );
-
 ICE_POWERS.push(
  {n:'Ice Golem',fn:(a,p,use)=>{if(!use(45))return;ST.cd=90;let gx=mouse.wx|0,gy=mouse.wy|0;while(gy<H-1&&(t[gy*W+gx]===0||KIND[t[gy*W+gx]]!==S))gy++;
    const cells=[],body=["..IIII..",".IeIIeI.","..IIII..","IIIIIIII","IIIIIIII","II.II.II","II.II.II","II.II.II","..II.II.","..II.II.","..II.II.",".III.III"];
@@ -130,9 +122,7 @@ ICE_POWERS.push(
    for(let k=0;k<=n;k++){const X=x0+(x1-x0)*k/n|0,Y=y0+(y1-y0)*k/n|0;for(let d=0;d<3;d++){const i=(Y+d)*W+X;if(i<0||i>=N||(t[i]&&KIND[t[i]]!==G&&KIND[t[i]]!==F))continue;setc(i,ICE);pin[i]=3;slide.push([i,ST.frame+480+(k*.3|0)+(R()*40|0)]);}}
    fxWord((x0+x1)/2,(y0+y1)/2-10,'FSSHHK!',1,'#bfe3ff',true);for(let k=0;k<40;k++){const f=R();spawn(x0+(x1-x0)*f,y0+(y1-y0)*f,(R()-.5),-R(),rgb(220,245,255),20,0,1,0,1);}}},
 );
-
 export const DECOY_PAL=Object.assign({},PAL_ICE,{e:rgb(120,170,220),'+':rgb(200,240,255),J:rgb(120,170,220)});
-
 ICE_POWERS.push(
  // an ice statue of Bobby that every enemy targets until it shatters into shrapnel
  {n:'Ice Decoy',fn:(a,p,use)=>{if(ST.decoy||!use(25))return;ST.cd=40;const x=Math.max(8,Math.min(W-8,mouse.wx|0)),y=surfaceY(x,Math.max(2,mouse.wy-30),220);if(y>=H-6)return;

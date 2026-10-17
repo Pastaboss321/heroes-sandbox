@@ -6,8 +6,6 @@ import { fxWord } from '../render/fx.js';
 import { hurtTarget } from '../heroes/powers.js';
 import { defineEnemy, enemyShoot, los, pdist, player, seek } from './core.js';
 
-
-
 // ---- Brood: alien hive-bugs. Fast, leap at you, climb walls, come in packs
 defineEnemy('brood',{hp:30,w:9,h:7,fly:false,score:12,boom:3,metal:false,glow:'*',
   sprite:["....bBBb.","..bBBBBBb",".bBBBBg*B","bBBBBBBBm",".bbBBBBb.",".l.l.l.l.","l..l.l..l"],
@@ -17,7 +15,6 @@ defineEnemy('brood',{hp:30,w:9,h:7,fly:false,score:12,boom:3,metal:false,glow:'*
     if(e.mem.blocked&&e.t-e.mem.blocked<3)e.vy=-2.6; // skitters straight up walls
     if(e.ground&&e.cd===0&&dist<80&&dist>14){e.vx=e.face*4.2;e.vy=-3.6;e.cd=50+R()*40|0;}
     if(pdist(e)<9&&!(e.mem.bit>e.t)){hurtTarget(e,8);e.mem.bit=e.t+30;spawn(e.x+e.face*4,e.y,(R()-.5)*2,-R()*2,rgb(190,255,120),10,0,1,1);}}});
-
 // ---- Hydra jet-trooper: hovers on a jetpack, strafes and fires rocket pairs
 defineEnemy('hydra',{hp:40,w:7,h:11,fly:true,score:18,boom:5,metal:false,glow:'Yf',
   sprite:["..gGg..","..gYg..","..kkk..",".gGGGg.","tgGGGgt","tgGGGg.",".gGGG..","..g.g..","..g.g..",".ff.ff.","..f..f."],

@@ -6,13 +6,9 @@ import { pl_ } from '../player.js';
 import { ENEMY_TYPES, enemies, spawnEnemy, spawnPoint, spawnQ } from '../enemies/core.js';
 import { banner, bossBar, defineMode, endRun } from './core.js';
 
-
-
 // ---- Boss Rush: the four big ones, back to back
 const BOSSES=['juggernaut','ultron_prime','magneto','master_mold'];
-
 function spawnBoss(type){const d=ENEMY_TYPES[type];for(let k=0;k<6;k++){const pos=spawnPoint(d);if(pos){const e=spawnEnemy(type,pos[0],pos[1]);if(e)return e;}}return spawnEnemy(type,Math.max(20,Math.min(W-20,pl_.x+180)),Math.max(30,pl_.y-120));}
-
 defineMode('bossrush',{name:'Boss Rush',sub:'any map · four bosses',
   desc:'Juggernaut, Ultron Prime, Magneto and Master Mold, one after another. Heal between fights. 3 lives.',
   setup(s){s.lives=3;s.idx=-1;s.phase='break';s.timer=160;s.boss=null;banner('BOSS RUSH','four of the worst · one at a time');},

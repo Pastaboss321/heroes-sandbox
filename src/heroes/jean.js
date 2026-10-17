@@ -15,7 +15,6 @@ import { ACT } from './xmen.js';
 import { hand, mouse, pl_, toggleFly } from '../player.js';
 import { damageCone, damageEnemies, damageLine, enemies, hitEnemy, nearestEnemy } from '../enemies/core.js';
 
-
 const SPR_JEAN=[
 "....LHHHh....",
 "...LHHHHHh...",
@@ -39,12 +38,10 @@ const SPR_JEAN=[
 "..OOO...OOo..",
 "..OOO...OOo..",
 "..ooo...ooo.."];
-
 const PAL_JEAN={L:rgb(242,98,54),H:rgb(198,44,28),h:rgb(126,24,16),f:rgb(236,190,158),F:rgb(188,138,110),e:rgb(255,190,110),D:rgb(178,26,36),d:rgb(106,12,20),P:rgb(232,66,66),O:rgb(240,186,58),o:rgb(166,116,28),k:rgb(56,6,12)};
 
 // animation rig entry (see render/rig.js)
 ANIM.jean={leg:13,mid:6,armC:'PDd',tipC:'OOo',aw:2,al:5,fs:2,sh:[10,7],hide:rect(10,11,7,12),blink:'e',lid:'f',cape:'Hh'};
-
 const JEAN_POWERS=[
  {n:'Telekinesis',tk:{r:12,range:0,tether:true,throwMul:1.7}},
  {n:'Psi Bolts',fn:(a,p,use)=>{if(!use(9))return;ST.cd=14;fxWord(a.h.x,a.h.y-12,'VREEE!',.8,'#ff9ad8',true);for(let k=0;k<3;k++)shots.push({x:a.h.x,y:a.h.y,vx:a.dx*4+(R()-.5)*3,vy:a.dy*4+(R()-.5)*3,type:'psi',life:160,col:[255,120,210],ecol:[255,120,210],boom:6,home:true,delay:k*3});}},
@@ -69,7 +66,6 @@ const JEAN_POWERS=[
        for(const b of bodies){const dx=b.x-cx,dy=b.y-cy,d=Math.hypot(dx,dy)||1;if(d<140){b.vx+=dx/d*8;b.vy+=dy/d*8-3;}}flash(cx,cy,160,[255,150,50],14);ST.shake=22;}
      flash(cx,cy,30+k*4,[255,120,40],2);return++k<26;});}},
 ];
-
 JEAN_POWERS.push(
  {n:'Levitate Crowd',fn:(a,p,use)=>{if(!use(28))return;ST.cd=50;const cx=mouse.wx,cy=mouse.wy,list=enemies.filter(e=>Math.hypot(e.x-cx,e.y-cy)<90);let k=0;fxWord(cx,cy-30,'HNNNN...',1,'#ff9ad8',true);
    ACT.push(()=>{k++;for(const e of list){if(e.hp<=0)continue;if(k<40){e.vy=-1.6;e.vx*=.8;e.frozen=Math.max(e.frozen||0,2);if(ST.frame%3===0)spawn(e.x,e.y,(R()-.5),(R()-.5),rgb(255,120,210),10,0,1,0,1);}else{e.vy=9;e.frozen=0;e.mem.slam=true;}}
@@ -84,7 +80,6 @@ JEAN_POWERS.push(
        let shot=0;for(let n=0;n<ST.np;n++){const dx=px[n]-cx,dy=py[n]-cy,d=Math.hypot(dx,dy);if(d<60){const tx=mouse.wx-px[n],ty=mouse.wy-py[n],td=Math.hypot(tx,ty)||1;pvx[n]=tx/td*8;pvy[n]=ty/td*8;pg[n]|=2;shot++;}}
        if(shot)fxWord(cx,cy-20,'FWAAM!',1.2,'#ff9ad8',true);damageLine(cx,cy,mouse.wx,mouse.wy,10,Math.min(60,shot*.4));return false;});}}},
 );
-
 JEAN_POWERS.push(
  {n:'Phoenix Wings',fn:(a,p,use)=>{if(p.wings>0||!use(40))return;p.wings=360;ST.cd=40;if(!p.fly)toggleFly(true);fxWord(p.x,p.y-ST.PH-12,'SKREEEE!',1.4,'#ffb340',true);fxBurst(p.x,p.y-ST.PH/2,50,'#ffb340');flash(p.x,p.y-ST.PH/2,60,[255,150,50],10);}},
  {n:'Telekinetic Rip',fn:(a,p,use)=>{if(!use(40))return;ST.cd=70;const cx=mouse.wx|0,cy=mouse.wy|0,r=20;let n=0;
@@ -94,7 +89,6 @@ JEAN_POWERS.push(
      if(k<35){b.tx=cx;b.ty=cy-60;return true;}
      b.held=false;b.vx=0;b.vy=12;b.va=(R()-.5)*.05;b.thrown=true;b.safeP=ST.frame+30;fxWord(cx,cy,'SLAM!',1.5,'#ff9ad8',true);return false;});}},
 );
-
 JEAN_POWERS.push(
  // take over an enemy's mind: for ten seconds it fights for you, then the link snaps
  {n:'Puppet Master',fn:(a,p,use)=>{const e=nearestEnemy(mouse.wx,mouse.wy,50);if(!e||e.def.title||e.ally>0){if(ST.frame-(p.denyT||-99)>20){p.denyT=ST.frame;fxWord(mouse.wx,mouse.wy-10,e&&e.def.title?'TOO STRONG':'NO MIND HERE',.8,'#ff9ad8',true);snd('deny',p.x,p.y);}return;}

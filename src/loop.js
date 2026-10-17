@@ -11,6 +11,7 @@ import { updParticles } from './world/particles.js';
 import { SPAWN, updDecoy, updDrones, updFx, updJets, updPins, updShots, updStasis, updStorm, updStrikes, updTelekinesis, updTherm, updVortex, updWaves } from './heroes/powers.js';
 import { ACT } from './heroes/xmen.js';
 import { updSlide } from './heroes/iceman.js';
+import { updWave2 } from './heroes/wave2.js';
 import { mouse, pl_, pressed, updCamera, updPlayer } from './player.js';
 import { cast } from './heroes/index.js';
 import { enemies, spawnQ, updEnemies } from './enemies/core.js';
@@ -20,12 +21,8 @@ import { MAPDEFS, mapSel } from './maps/index.js';
 import { $ } from './modes/core.js';
 import { useTool } from './ui/spawn.js';
 
-
-
 const waveTEl=document.getElementById('waveT'),scoreNEl=document.getElementById('scoreN'),scoreSEl=document.getElementById('scoreS'),waveEl=document.getElementById('wave'),hpEl=document.getElementById('hp'),enEl=document.getElementById('en'),fpsEl=document.getElementById('fps'),modeEl=document.getElementById('mode');
-
 let last=performance.now(),acc=0,fpsT=0,fpsN=0;
-
 export function tick(){
   ST.shieldOn=false;
   updCamera();
@@ -36,7 +33,7 @@ export function tick(){
   const world=!(ST.slowT>0&&(ST.slowT--&1))&&!SPAWN.pause; // Tactical Focus runs the world at half speed; the spawn menu can freeze it
   updPlayer();updShots(world);
   if(world){updDrones();updVortex();updStrikes();updStorm();updEnemies();updJets();}
-  updPins();updTherm();updDecoy();
+  updPins();updTherm();updDecoy();if(world)updWave2();
   for(let n=ACT.length-1;n>=0;n--)if(ACT[n]()===false)ACT.splice(n,1);
   if(world)updSlide();
   if(ST.MODE&&ST.MODE.update){ST.MODE.update(ST.MS);ST.MS.t++;}
@@ -48,7 +45,6 @@ export function tick(){
   updFx();updWaves();
   for(const k in pressed)pressed[k]=false;
 }
-
 export function loop(now){
   const dt=Math.min(100,now-last);last=now;acc+=dt;
   const a=performance.now();

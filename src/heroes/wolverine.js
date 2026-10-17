@@ -12,7 +12,6 @@ import { ACT, clawSlash, slashFx } from './xmen.js';
 import { carve, hand } from '../player.js';
 import { damageEnemies, damageLine, enemies, hitEnemy } from '../enemies/core.js';
 
-
 const SPR_WOLV=[
 "..kk.....kk..",
 "...kkYYYkk...",
@@ -34,12 +33,10 @@ const SPR_WOLV=[
 "..VBb...VBb..",
 "..BBb...BBb..",
 "..bbbb..bbbb."];
-
 const PAL_WOLV={k:rgb(18,18,24),Y:rgb(232,186,36),y:rgb(168,118,20),L:rgb(255,228,112),B:rgb(34,56,140),b:rgb(18,28,80),V:rgb(72,106,204),w:rgb(250,250,250),f:rgb(214,162,124),F:rgb(148,98,70),h:rgb(40,30,24),c:rgb(222,228,238),r:rgb(150,24,24),R:rgb(214,56,46)};
 
 // animation rig entry (see render/rig.js)
 ANIM.wolverine={leg:14,mid:6,armC:'LYy',tipC:'VBb',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,12,7,13),blink:'w',lid:'k',claws:'c'};
-
 const WOLV_POWERS=[
  {n:'Claw Fury',fn:(a,p,use)=>{if(!use(3))return;if(!p.clawT||ST.frame-p.clawT>30)fxWord(a.h.x,a.h.y-14,'SNIKT!',1.1,'#f3e9d2',true);else if(R()<.3)fxWord(a.h.x+a.dx*14,a.h.y-8,R()<.5?'SHKK!':'SKRITCH!',.75,'#f3e9d2');p.clawT=ST.frame;clawSlash(a,p);ST.cd=7;}},
  {n:'Berserker Rage',fn:(a,p,use)=>{if(p.rage>0||!use(30))return;p.rage=300;ST.cd=30;fxWord(p.x,p.y-ST.PH-10,'RRAAAGH!',1.5,'#e23b2e',true);fxBurst(p.x,p.y-ST.PH/2,40,'#e23b2e');ST.shake+=8;flash(p.x,p.y-ST.PH/2,40,[255,60,40],10);}},
@@ -51,7 +48,6 @@ const WOLV_POWERS=[
    damageLine(a.h.x,a.h.y,X,Y,6,2.5);if(ST.frame%18===0)fxWord(X,Y-8,'KRRRSSH!',.8,'#f3e9d2',true);ST.shake=Math.max(ST.shake,2.5);}},
  {n:'Healing Factor',fn:(a,p,use)=>{if(p.hp>=ST.CH.hp||!use(.5))return;p.hp=Math.min(ST.CH.hp,p.hp+1.6);if(ST.frame%3===0)spawn(p.x+(R()-.5)*8,p.y-R()*ST.PH,0,-.7,R()<.5?rgb(255,220,120):rgb(255,255,220),20,0,1,0);if(ST.frame%40===0)fxWord(p.x,p.y-ST.PH-8,'HNNGH!',.8,'#ffc93c',true);}},
 ];
-
 WOLV_POWERS.push(
  {n:'Rising Slash',fn:(a,p,use)=>{if(!use(12))return;ST.cd=30;p.vy=-6.2;p.ground=false;p.pounce=true;fxWord(p.x,p.y-ST.PH-8,'SHKRAKK!',1.1,'#f3e9d2',true);let k=0;
    ACT.push(()=>{const h={x:p.x+p.face*3,y:p.y-ST.PH*.6};clawSlash({h,dx:p.face*.3,dy:-1},p);for(const e of enemies)if(Math.abs(e.x-p.x)<14&&Math.abs(e.y-(p.y-ST.PH/2))<20){e.vy=-5;}return++k<10&&!p.ground;});}},
@@ -59,14 +55,12 @@ WOLV_POWERS.push(
    ACT.push(()=>{const an=k*.9,h={x:p.x,y:p.y-ST.PH/2};clawSlash({h,dx:Math.cos(an),dy:Math.sin(an)},p);p.face=Math.cos(an)<0?-1:1;return++k<14;});}},
  {n:'Feral Senses',fn:(a,p,use)=>{if(ST.senseT>0||!use(20))return;ST.senseT=600;ST.cd=30;fxWord(p.x,p.y-ST.PH-8,'*SNIFF*',1,'#ffc93c',true);rings.push({x:p.x,y:p.y-ST.PH/2,r:4,vr:6,life:20,c:[255,200,80]});}},
 );
-
 WOLV_POWERS.push(
  {n:'Fastball Special',fn:(a,p,use)=>{if(!use(28))return;ST.cd=60;const dx=a.dx,dy=a.dy;let k=0;fxWord(p.x,p.y-ST.PH-10,'FASTBALL SPECIAL!',1.4,'#ffc93c',true);p.fly=false;ST.shake+=6;
    ACT.push(()=>{p.vx=dx*8;p.vy=dy*8;const hx=p.x+dx*8,hy=p.y-ST.PH/2+dy*8;carve(hx,hy,7,dx*6,dy*6);damageEnemies(hx,hy,12,30,dx*6,dy*6);if(k%2===0){afters.push({x:p.x,y:p.y,ang:Math.atan2(dx,-dy),face:p.face,life:12});slashFx(hx,hy,Math.atan2(dy,dx));}
      if(++k>=26){explode(hx|0,hy|0,12,{self:true,col:[255,220,80],word:'SNIKT!!'});p.vx*=.3;p.vy=Math.min(p.vy,0);return false;}return true;});}},
  {n:'Adamantium Skeleton',fn:(a,p,use)=>{if(p.metal>0||!use(35))return;p.metal=300;ST.cd=40;fxWord(p.x,p.y-ST.PH-10,'KLANNNG!',1.4,'#d8e4ff',true);flash(p.x,p.y-ST.PH/2,40,[220,230,255],8);rings.push({x:p.x,y:p.y-ST.PH/2,r:4,vr:3,life:12,c:[220,230,255]});}},
 );
-
 WOLV_POWERS.push(
  // a frenzy of dashes from foe to foe, a claw strike on each
  {n:'Berserker Barrage',fn:(a,p,use)=>{const pool=enemies.filter(e=>e.hp>0&&!e.grabbed&&Math.hypot(e.x-p.x,e.y-p.y)<220),list=[];let cx=p.x,cy=p.y;

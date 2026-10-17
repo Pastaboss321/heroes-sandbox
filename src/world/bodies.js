@@ -10,7 +10,6 @@ import { snd } from '../sfx.js';
 import { inStasis } from '../heroes/powers.js';
 import { hurt, mouse, pl_ } from '../player.js';
 
-
 export function makeBody(list,n,held){
   if(n<10||bodies.length>=150){ for(let k=0;k<n;k++){const i=list[k];t[i]=RUBBLE;pin[i]=0;wake(i);} return null; }
   if(n>1200&&ST.MODE&&ST.MODE.onCollapse&&!ST.genMode)ST.MODE.onCollapse(n,ST.MS);
@@ -29,8 +28,7 @@ export function makeBody(list,n,held){
   }
   return b;
 }
-
-function finishBody(lm,lc,lw,lh,cx,cy,x,y,a,n,held){
+export function finishBody(lm,lc,lw,lh,cx,cy,x,y,a,n,held){
   // edge cells are enough for collision
   const ex=[],ey=[];let rmax=1,ds=0;
   let gl2=0,st2=0;
@@ -39,7 +37,6 @@ function finishBody(lm,lc,lw,lh,cx,cy,x,y,a,n,held){
   const b={x,y,a,vx:0,vy:0,va:(R()-.5)*.004,n,lw,lh,lm,lc,cx,cy,ex:Float32Array.from(ex),ey:Float32Array.from(ey),rmax,held,age:0,rest:0,w:lw,h:lh,dens:Math.max(1,ds/n),gen:0,hitP:-99,glassy:gl2>n*.5,st:st2/n};
   bodies.push(b); return b;
 }
-
 // a heavy chunk moving fast smashes through whatever it hits instead of stopping dead.
 // returns the speed it loses, or 0 if what it hit is too strong.
 function crush(b,x,y,a,v,ux,uy){
@@ -59,7 +56,6 @@ function crush(b,x,y,a,v,ux,uy){
   ST.shake=Math.max(ST.shake,Math.min(9,cost*.03));
   return dv;
 }
-
 // a hard landing breaks a big chunk along jagged cracks into smaller chunks that bounce and tumble on
 function fracture(b,impact){
   impact=Math.min(impact,10);
@@ -94,7 +90,6 @@ function fracture(b,impact){
   flash(b.x,b.y+b.rmax*.5,b.rmax*1.2,[255,230,190],5);
   if(b.thrown&&impact>4)explode(b.x,b.y,Math.min(12,impact*1.3|0),{fire:.1});
 }
-
 function bodyHitPose(b,x,y,a){
   const c=Math.cos(a),s=Math.sin(a),ex=b.ex,ey=b.ey;
   for(let k=0;k<ex.length;k++){
@@ -104,22 +99,18 @@ function bodyHitPose(b,x,y,a){
   }
   return false;
 }
-
 export function bodyHit(b,ox,oy){return bodyHitPose(b,b.x+ox,b.y+oy,b.a);}
-
 function contacts(b){
   const c=Math.cos(b.a),s=Math.sin(b.a);let n=0,sum=0,mn=1e9,mxx=-1e9;
   for(let k=0;k<b.ex.length;k++){const X=Math.round(b.x+b.ex[k]*c-b.ey[k]*s),Y=Math.round(b.y+b.ex[k]*s+b.ey[k]*c)+1;
     if(X<0||X>=W||Y<0)continue;if(Y>=H||KIND[t[Y*W+X]]===S||KIND[t[Y*W+X]]===P){n++;sum+=X;if(X<mn)mn=X;if(X>mxx)mxx=X;}}
   return{n,avg:n?sum/n:0,min:mn,max:mxx};
 }
-
 export function bodyAt(b,X,Y){ // local material under a world point
   const c=Math.cos(b.a),s=Math.sin(b.a),dx=X-b.x,dy=Y-b.y;
   const lx=Math.round(dx*c+dy*s+b.cx),ly=Math.round(-dx*s+dy*c+b.cy);
   return(lx<0||ly<0||lx>=b.lw||ly>=b.lh)?0:b.lm[ly*b.lw+lx];
 }
-
 export function updBodies(){
   for(let n=bodies.length-1;n>=0;n--){
     const b=bodies[n]; b.age++;
@@ -176,12 +167,10 @@ export function updBodies(){
     else if(b.y>H+80){ bodies.splice(n,1); }
   }
 }
-
 function debrisBurst(b,power,cnt){
   const c=Math.cos(b.a),s=Math.sin(b.a);
   for(let k=0;k<cnt;k++){const e=R()*b.ex.length|0;const X=b.x+b.ex[e]*c-b.ey[e]*s,Y=b.y+b.ex[e]*s+b.ey[e]*c;spawn(X,Y-1,(R()-.5)*power,-R()*power,rgb(160,150,135),50,0,0,1);}
 }
-
 function landBody(b,impact){
   impact*=1+Math.min(2.5,b.h/80); // heavy, tall chunks hit harder
   if(impact>4.5&&b.n>=100&&b.gen<2&&!b.held&&bodies.length<140){fracture(b,impact);return;}
@@ -221,5 +210,4 @@ function landBody(b,impact){
   if(impact>1.8){snd(b.glassy?'glass':'crumble',b.x,b.y,{size:Math.min(2,Math.sqrt(b.n)/40),v:Math.min(1,impact/4),gap:.06});ST.shake=Math.min(22,ST.shake+Math.min(12,impact*Math.sqrt(b.n)/35)); rings.push({x:b.x,y:b.y+b.lh/2,r:3,vr:2+impact*.35,life:18,c:[190,180,160]});}
   if(thrown)explode(b.x,b.y,Math.min(12,impact*1.3|0),{fire:.1});
 }
-
 export function dust(X,Y){if(X<0||X>=W||Y<0||Y>=H)return;const i=Y*W+X;if(t[i]!==0)return;setc(i,SMOKE);const v=(R()*20)|0;col[i]=rgb(150+v,135+v,115+v);life[i]=70+R()*80;}

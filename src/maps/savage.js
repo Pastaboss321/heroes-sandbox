@@ -8,12 +8,9 @@ import { spawn } from '../world/particles.js';
 import { fxWord } from '../render/fx.js';
 import { snd } from '../sfx.js';
 
-
-
 // ---- Savage Land: a prehistoric jungle hidden in Antarctica. A live volcano with a lava lake, a waterfall
 // off a plateau, a ruined step pyramid, a tar pit and a buried dinosaur.
 const SAV={VX:820,CX:1300,src:0,pool:[0,0,0],vtop:196};
-
 function jungleTree(x,gy){
   const h=46+R()*40|0,tw=3;fill(x,gy-h,x+tw,gy+4,WOOD);tint(x,gy-h,x+tw,gy,96,70,44,10);
   const r=10+R()*6|0,cx=x+1,cy=gy-h-2;
@@ -22,9 +19,7 @@ function jungleTree(x,gy){
   fill(x,gy-h,x+tw,gy-h+r,WOOD);
   for(let v=0;v<4;v++){const vx=cx+(R()-.5)*r*2.4|0;let y=cy;while(y<cy+r*2&&t[y*W+vx]===LEAF)y++;const len=8+R()*18|0;if(t[(y-1)*W+vx]!==LEAF)continue;for(let k=0;k<len;k++){if(t[(y+k)*W+vx])break;setc((y+k)*W+vx,LEAF);col[(y+k)*W+vx]=rgb(40+R()*20,120+R()*30,40);}}
 }
-
 function fern(x,gy){for(let k=-6;k<=6;k++){const hh=Math.round(7-Math.abs(k)*.9);for(let y=0;y<hh;y++){const X=x+k+(k<0?-(y>>2):(y>>2));sxy(X,gy-1-y,LEAF);if(X>=0&&X<W&&gy-1-y>=0)col[(gy-1-y)*W+X]=rgb(46+R()*24,136+R()*40,40);}}}
-
 export function genSavageLand(){
   clearAll();
   const s=R()*100,GY=372,VX=SAV.VX,VTOP=GY-176,CR=22,CX=SAV.CX;
@@ -75,7 +70,6 @@ export function genSavageLand(){
   for(let y=H-40;y>GY;y--)for(let x=0;x<W;x+=2){const i=y*W+x;if(t[i]===0&&KIND[t[i+W]]===S&&R()<.006){for(let k=0;k<3;k++){const j=i-k*W;t[j]=NEON;col[j]=k===2?rgb(120,255,230):rgb(70,170,160);}}}
   ST.SPAWNX=150;
 }
-
 export function ambSavage(){ // the waterfall keeps falling, the volcano keeps smoking
   for(let k=0;k<7;k++){const x=W-30+(R()*6|0),y=SAV.src+1,i=y*W+x;if(t[i]===0)setc(i,WATER);}
   const [a,b,y0]=SAV.pool,cx=SAV.CX,ty=SAV.src;

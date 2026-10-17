@@ -15,7 +15,6 @@ import { ACT, iceAt } from './xmen.js';
 import { boxHit, mouse, pl_, toggleFly } from '../player.js';
 import { damageEnemies, damageLine, enemies, hitEnemy, nearestEnemy } from '../enemies/core.js';
 
-
 const SPR_STORM=[
 "...wWWWWw....",
 "..wWWOOOWWw..",
@@ -39,12 +38,10 @@ const SPR_STORM=[
 "..GKK...KKk..",
 "..GKK...KKk..",
 "..kkk...kkk.."];
-
 const PAL_STORM={W:rgb(240,242,250),w:rgb(168,176,196),O:rgb(232,186,60),s:rgb(108,70,44),S:rgb(74,46,28),e:rgb(255,255,255),K:rgb(30,30,38),k:rgb(14,14,20),G:rgb(72,74,94),C:rgb(24,24,32),c:rgb(50,50,64),o:rgb(160,118,30)};
 
 // animation rig entry (see render/rig.js)
 ANIM.storm={leg:13,mid:6,armC:'GKk',tipC:'ssS',aw:2,al:5,fs:2,sh:[10,7],hide:rect(10,11,7,12),blink:'e',lid:'s',cape:'Cc'};
-
 const STORM_POWERS=[
  {n:'Lightning Lash',fn:(a,p,use)=>{if(!use(.8))return;lightning(a,{c:[245,248,255],g:[160,190,255],f:[205,220,255],spark:()=>pickC([200,220,255])});}},
  {n:'Thunderbolt',fn:(a,p,use)=>{if(!use(24))return;ST.cd=36;const x=mouse.wx,y=mouse.wy;let k=0;ACT.push(()=>{if(k%7===0)lightningStrike(x+(R()-.5)*(k?50:0),y,k?9:15);return++k<21;});}},
@@ -74,7 +71,6 @@ const STORM_POWERS=[
      for(let n=0;n<6;n++)spawn(cx+(R()-.5)*200,ST.camY+R()*8,(R()-.5)*.4,.1,R()<.5?rgb(70,74,90):rgb(50,52,64),30,0,0,0,1);
      return++k<200;});}},
 ];
-
 STORM_POWERS.splice(0,STORM_POWERS.length,
  {n:'Chain Lightning',fn:(a,p,use)=>{if(!use(.8))return;lightning(a,{c:[245,248,255],g:[160,190,255],f:[205,220,255],spark:()=>pickC([200,220,255])});
    let e=nearestEnemy(a.h.x+a.dx*Math.min(a.d,200),a.h.y+a.dy*Math.min(a.d,200),60);const hitL=new Set();let lx=a.h.x+a.dx*Math.min(a.d,200),ly=a.h.y+a.dy*Math.min(a.d,200);
@@ -107,7 +103,6 @@ STORM_POWERS.splice(0,STORM_POWERS.length,
      if(ST.frame%14===0){const e=nearestEnemy(cx,cy,100);if(e){zap(cx,cy,e.x,e.y,[245,248,255],[150,190,255]);hitEnemy(e,14,0,0);flash(e.x,e.y,14,[150,190,255],3);}}
      return true;});}},
 );
-
 STORM_POWERS.push(
  {n:'Lightning Rider',fn:(a,p,use)=>{if(!use(30))return;ST.cd=40;const x0=p.x,y0=p.y;let lx=x0,ly=y0;const dx=mouse.wx-x0,dy=mouse.wy-y0,d=Math.max(1,Math.hypot(dx,dy));
    for(let k=1;k<=d;k++){const x=x0+dx*k/d,y=y0+dy*k/d;if(boxHit(x,y))break;lx=x;ly=y;}
@@ -121,7 +116,6 @@ STORM_POWERS.push(
      for(let n=0;n<ST.np;n++)if(Math.abs(px[n]-cx)<r&&Math.abs(py[n]-cy)<r)pvx[n]+=dir*.25;
      return++k<300;});}},
 );
-
 STORM_POWERS.push(
  // a column of air slams straight down: flyers are driven into the ground, fire and smoke blown out
  {n:'Downburst',fn:(a,p,use)=>{if(!use(30))return;ST.cd=50;const cx=mouse.wx,w=42;let k=0;fxWord(cx,ST.camY+40,'FWOOOOMP!',1.3,'#d8e4ff',true);

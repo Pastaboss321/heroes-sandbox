@@ -1,10 +1,8 @@
 // Material table (MATS), material ids and per-material lookup arrays; colour helpers rgb/cl/mkcol and R = Math.random.
 import '../state.js'; // evaluation order: runs after state.js
 
-
 // ================= materials =================
 export const E=0,P=1,L=2,G=3,S=4,F=5;
-
 export const MATS=[
   // name, kind, density, flammability, hardness, r,g,b, variation
   ['empty',   E,0, 0,  0, 0,0,0,0],
@@ -33,20 +31,13 @@ export const MATS=[
   ['neon',    S,20,0,  1, 255,60,220,30],
   ['ice',     S,9, 0,  2, 186,228,250,14],
   ['snow',    P,4, 0,  0, 236,242,250,6],
+  ['web',     S,2, .35,0, 236,236,240,6],
 ];
-
-export const EMPTY=0,SAND=1,DIRT=2,STONE=3,CONC=4,STEEL=5,GLASS=6,WOOD=7,LEAF=8,GRASS=9,WATER=10,OIL=11,ACID=12,LAVA=13,FIRE=14,SMOKE=15,STEAM=16,ASH=17,EMBER=18,GFIRE=19,RUBBLE=20,PROPANE=21,OBSID=22,NEON=23,ICE=24,SNOW=25;
-
+export const EMPTY=0,SAND=1,DIRT=2,STONE=3,CONC=4,STEEL=5,GLASS=6,WOOD=7,LEAF=8,GRASS=9,WATER=10,OIL=11,ACID=12,LAVA=13,FIRE=14,SMOKE=15,STEAM=16,ASH=17,EMBER=18,GFIRE=19,RUBBLE=20,PROPANE=21,OBSID=22,NEON=23,ICE=24,SNOW=25,WEB=26;
 export const NM=MATS.length;
-
 export const KIND=new Uint8Array(NM),DENS=new Uint8Array(NM),FLAM=new Float32Array(NM),HARD=new Uint8Array(NM);
-
 MATS.forEach((m,i)=>{KIND[i]=m[1];DENS[i]=m[2];FLAM[i]=m[3];HARD[i]=m[4];});
-
 export const rgb=(r,g,b)=>((255<<24)|((b&255)<<16)|((g&255)<<8)|(r&255))>>>0;
-
 export const cl=v=>v<0?0:v>255?255:v|0;
-
 export function mkcol(m){const d=MATS[m];const v=(Math.random()*2-1)*d[8];return rgb(cl(d[5]+v),cl(d[6]+v),cl(d[7]+v));}
-
 export const R=Math.random;
