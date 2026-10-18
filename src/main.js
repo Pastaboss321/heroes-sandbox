@@ -3045,7 +3045,14 @@ function scaleChunk(list,n,f){let mx=W,my=H,Mx=0,My=0;for(let k=0;k<n;k++){const
   const W2=Math.max(2,Math.round(lw*f)),H2=Math.max(2,Math.round(lh*f)),lm=new Uint8Array(W2*H2),lc=new Uint32Array(W2*H2);let cnt=0,sx=0,sy=0;
   for(let y=0;y<H2;y++)for(let x=0;x<W2;x++){const X=Math.min(lw-1,x/f|0),Y=Math.min(lh-1,y/f|0),m=src[Y*lw+X];if(!m)continue;lm[y*W2+x]=m;lc[y*W2+x]=sc[Y*lw+X];cnt++;sx+=x;sy+=y;}
   if(cnt<6)return null;const b=finishBody(lm,lc,W2,H2,sx/cnt,sy/cnt,mx+lw/2,my+lh/2,0,cnt,false);smashOverlap(b);return b;}
-function solidCells(cx,cy,r,ground){let n=0;for(let y=-r;y<=r;y++)for(let x=-r;x<=r;x++){if(x*x+y*y>r*r)continue;const X=cx+x|0,Y=cy+y|0;if(X<0||X>=W||Y<0||Y>=H-44)continue;const i=Y*W+X;if((KIND[t[i]]===S||KIND[t[i]]===P)&&(ground||!gnd[i])){q[n++]=i;markDirty(i);}}return n;}
+// the solid cells in a circle, but only from ONE piece: the piece (rid) of the solid cell nearest the centre.
+// Debris that landed against a building, or a heap of separate chunks, comes away as just the piece you aimed at.
+// Cells with no piece id (natural terrain, freshly painted) fall back to everything in the circle.
+function solidCells(cx,cy,r,ground){
+  let sr=0,sd=1e9;for(let y=-r;y<=r;y++)for(let x=-r;x<=r;x++){const d=x*x+y*y;if(d>r*r||d>=sd)continue;const X=cx+x|0,Y=cy+y|0;if(X<0||X>=W||Y<0||Y>=H-44)continue;const i=Y*W+X;if(KIND[t[i]]===S&&(ground||!gnd[i])){sd=d;sr=rid[i];}}
+  let n=0;for(let y=-r;y<=r;y++)for(let x=-r;x<=r;x++){if(x*x+y*y>r*r)continue;const X=cx+x|0,Y=cy+y|0;if(X<0||X>=W||Y<0||Y>=H-44)continue;const i=Y*W+X,k=KIND[t[i]];
+    if(!(ground||!gnd[i]))continue;if(k===S?(!sr||rid[i]===sr):(k===P&&!sr)){q[n++]=i;markDirty(i);}}
+  return n;}
 const SPIDEY_POWERS=[
  // sticky web pellets: a hit enemy is wrapped up, a wall gets a splat of web
  {n:'Web Shot',fn:(a,p,use)=>{if(!use(4))return;cd=9;shots.push({x:a.h.x,y:a.h.y,vx:a.dx*7,vy:a.dy*7,type:'web',life:90,grav:.03,col:[236,236,242],
@@ -3773,9 +3780,9 @@ function grabRegion(cx,cy,r){
   for(let y=(s/W)|0;y<H;y++){const m=t[y*W+sx0];if(KIND[m]!==S)continue;if(NAT[m]){gl=y;break;}
     let a=sx0,b=sx0;while(a>0&&BLDS(t[y*W+a-1])&&sx0-a<220)a--;while(b<W-1&&BLDS(t[y*W+b+1])&&b-sx0<220)b++;if(b-a>200){gl=y;break;}}
   if(((s/W)|0)>=gl)return 0;
-  const id=++vgen;let h=0,n=0;q[n++]=s;vis[s]=id;
+  const id=++vgen,sr=rid[s];let h=0,n=0;q[n++]=s;vis[s]=id; // only the piece grabbed: never the wreckage piled against it
   while(h<n){const i=q[h++],x=i%W;if(n>GRABCAP)return 0;
-    for(const j of [x>0?i-1:-1,x<W-1?i+1:-1,i-W,i+W]){if(j<0||j>=N||vis[j]===id||((j/W)|0)>=gl)continue;const m=t[j];if(KIND[m]!==S||gnd[j])continue;vis[j]=id;q[n++]=j;}}
+    for(const j of [x>0?i-1:-1,x<W-1?i+1:-1,i-W,i+W]){if(j<0||j>=N||vis[j]===id||((j/W)|0)>=gl)continue;const m=t[j];if(KIND[m]!==S||gnd[j]||(sr&&rid[j]!==sr))continue;vis[j]=id;q[n++]=j;}}
   for(let k=0;k<n;k++)markDirty(q[k]);
   return n;
 }
