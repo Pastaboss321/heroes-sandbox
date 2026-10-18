@@ -87,6 +87,7 @@ const PHYS={
     budget:.7},           // no new dust once the particle pool is this full (leaves room for debris grains)
   part:{grav:.15, drag:.99, dragHeavy:.9}, // debris grains and sparks
   flake:{grav:.012, drag:.985, sway:.006},  // snow and ash: settles to ~0.8 cells/tick with a little side-to-side sway
+  grab:{reach:2.6},       // grab powers tear off a chunk up to tk radius x this from the grab point, not a whole building
   mix:{                   // how destruction splits between intact chunks, loose rubble and dust
     rubble:.01,           // share of rubble (flying grains and cells broken in place) that stays as loose sand; the rest vanishes into dust
     rimRubble:.02,        // share of cracked crater-rim cells that stay as loose rubble (rest blow away)
@@ -3771,7 +3772,7 @@ function grabBody(cx,cy,r){let best=null,bd=1e9;
   return best;}
 // the whole connected structure under the grab point (a building, a tree, a car...), unless it is the landscape itself
 const GRABCAP=30000;
-function grabRegion(cx,cy,r){
+function grabRegion(cx,cy,r,maxR=1e9){ // maxR: tear off only a chunk this far from where it was grabbed
   let s=-1,sd=1e9;
   for(let y=-r;y<=r;y++)for(let x=-r;x<=r;x++){const X=cx+x,Y=cy+y,d=x*x+y*y;if(d>r*r||X<0||X>=W||Y<0||Y>=H-1)continue;const m=t[Y*W+X];if(KIND[m]===S&&!gnd[Y*W+X]&&d<sd){sd=d;s=Y*W+X;}}
   if(s<0)return 0;
@@ -3780,9 +3781,10 @@ function grabRegion(cx,cy,r){
   for(let y=(s/W)|0;y<H;y++){const m=t[y*W+sx0];if(KIND[m]!==S)continue;if(NAT[m]){gl=y;break;}
     let a=sx0,b=sx0;while(a>0&&BLDS(t[y*W+a-1])&&sx0-a<220)a--;while(b<W-1&&BLDS(t[y*W+b+1])&&b-sx0<220)b++;if(b-a>200){gl=y;break;}}
   if(((s/W)|0)>=gl)return 0;
-  const id=++vgen,sr=rid[s];let h=0,n=0;q[n++]=s;vis[s]=id; // only the piece grabbed: never the wreckage piled against it
+  const id=++vgen,sr=rid[s],sx=s%W,sy=(s/W)|0,ph=R()*6.283;let h=0,n=0;q[n++]=s;vis[s]=id;
+  const inR=j=>{if(maxR>=1e9)return true;const dx=j%W-sx,dy=((j/W)|0)-sy,a=Math.atan2(dy,dx),lim=maxR*(.78+.22*Math.sin(a*5+ph)+.08*Math.sin(a*11));return dx*dx+dy*dy<=lim*lim;}; // ragged, torn edge // only the piece grabbed: never the wreckage piled against it
   while(h<n){const i=q[h++],x=i%W;if(n>GRABCAP)return 0;
-    for(const j of [x>0?i-1:-1,x<W-1?i+1:-1,i-W,i+W]){if(j<0||j>=N||vis[j]===id||((j/W)|0)>=gl)continue;const m=t[j];if(KIND[m]!==S||gnd[j]||(sr&&rid[j]!==sr))continue;vis[j]=id;q[n++]=j;}}
+    for(const j of [x>0?i-1:-1,x<W-1?i+1:-1,i-W,i+W]){if(j<0||j>=N||vis[j]===id||((j/W)|0)>=gl)continue;const m=t[j];if(KIND[m]!==S||gnd[j]||(sr&&rid[j]!==sr)||!inR(j))continue;vis[j]=id;q[n++]=j;}}
   for(let k=0;k<n;k++)markDirty(q[k]);
   return n;
 }
@@ -3804,7 +3806,7 @@ function updTelekinesis(){
     if(ge){heldE=ge;ge.grabbed=true;pl_.en-=15;rings.push({x:ge.x,y:ge.y,r:ge.def.w,vr:-1,life:12,c:CH.glow});fxWord(ge.x,ge.y-ge.def.h/2-6,'GOTCHA!',1,'#ff9ad8',true);}
     else if(fb){fb.held=true;fb.thrown=false;fb.topple=0;held=fb;pl_.en-=15;held.vy=-2;held.tk=tk;held.overhead=!!tk.overhead;held.lift=0;rings.push({x:fb.x,y:fb.y,r:fb.rmax,vr:-1,life:14,c:CH.glow});shake+=4;}
     else{
-    n=grabRegion(cx,cy,r);
+    n=grabRegion(cx,cy,r,r*PHYS.grab.reach);
     if(!n)for(let y=-r;y<=r;y++)for(let x=-r;x<=r;x++){if(x*x+y*y>r*r*(0.75+R()*.3))continue;const X=cx+x,Y=cy+y;if(X<0||X>=W||Y<0||Y>=H-1)continue;const i=Y*W+X,m=t[i];if(m&&(KIND[m]===S||KIND[m]===P)){q[n++]=i;markDirty(i);}}
     if(n>=12){pl_.en-=15;held=makeBody(q,n,true);if(held){held.vy=-2;held.tk=tk;held.overhead=!!tk.overhead;held.lift=0;if(held.overhead){fxWord(cx,cy-10,'RRRIIP!',1.2,'#bff07a',true);pl_.landF=8;}rings.push({x:cx,y:cy,r:r,vr:-.6,life:14,c:CH.glow});shake+=4;for(let k=0;k<40;k++){const a=R()*6.283;spawn(cx+Math.cos(a)*r,cy+Math.sin(a)*r,(R()-.5)*2,-R()*2,rgb(140,130,120),30,0,0,1);}}}}
   }
