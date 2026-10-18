@@ -72,11 +72,11 @@ const PHYS={
     friction:.25,         // share of sideways speed lost per ground contact
     minBounceV:1.2,       // below this downward speed a chunk stops bouncing and slides to rest
     roll:.04,             // how strongly ground speed turns into spin (tumbling)
-    max:90,               // live explosion chunks allowed at once; past it blasts make dust only
-    minR:4,               // explosions smaller than this radius make no chunks (dust only)
-    perR:.9,              // chunks per unit of blast radius above minR
-    perBoom:16,           // most chunks one explosion can make
-    size:[4,8],           // chunk blob radius range, cells
+    max:120,              // live explosion chunks allowed at once; past it blasts make dust only
+    minR:3,               // explosions smaller than this radius make no chunks (dust only)
+    perR:1.2,             // chunks per unit of blast radius above minR
+    perBoom:22,           // most chunks one explosion can make
+    size:[4,9],           // chunk blob radius range, cells
     speed:.3},            // launch speed per unit of blast radius
   dust:{                  // light dust motes: no grid collision, cheap
     grav:.035, drag:.94,
@@ -88,10 +88,12 @@ const PHYS={
   part:{grav:.15, drag:.99, dragHeavy:.9}, // debris grains and sparks
   flake:{grav:.012, drag:.985, sway:.006},  // snow and ash: settles to ~0.8 cells/tick with a little side-to-side sway
   mix:{                   // how destruction splits between intact chunks, loose rubble and dust
-    rubble:.03,           // share of rubble (flying grains and cells broken in place) that stays as loose sand; the rest vanishes into dust
-    rimRubble:.06,        // share of cracked crater-rim cells that stay as loose rubble (rest blow away)
-    landCrumble:.12,       // scales how much of a landing chunk crumbles to rubble (1 = old behaviour)
-    ringChunks:.5,        // big chunks broken off the crater wall per unit of blast radius
+    rubble:.01,           // share of rubble (flying grains and cells broken in place) that stays as loose sand; the rest vanishes into dust
+    rimRubble:.02,        // share of cracked crater-rim cells that stay as loose rubble (rest blow away)
+    landCrumble:.06,       // scales how much of a landing chunk crumbles to rubble (1 = old behaviour)
+    ringChunks:.7,        // big chunks broken off around an impact, per unit of radius
+    ringMinR:4,           // smaller impacts break off no big chunks
+    ringMax:14,           // most big chunks one impact can break off
     grey:.6},             // how far rubble colour is pulled toward grey concrete, so walls do not turn into neon sand
   powder:{maxV:5}, liquid:{maxV:4},        // fastest fall, cells per tick
 };
@@ -298,14 +300,14 @@ function dropCluster(list,n){
     else if(R()<.5)dust(x,y);
     if(bgB[i]&&R()<.5){bg[i]=bgD[i];bgB[i]=0;}
     markDirty(i);t[i]=0;pin[i]=0;wake(i);};
-  if(n<=26){for(let k=0;k<n;k++)dust1(list[k]);return;}
+  if(n<10){for(let k=0;k<n;k++)dust1(list[k]);return;} // only specks crumble; anything bigger falls as a rock
   // mark membership so neighbour counts only see this cluster
   const id=++ggen;for(let k=0;k<n;k++)vis2[list[k]]=id;
   let k2=0;
   for(let k=0;k<n;k++){const i=list[k],m=t[i];let c=0;
     if(vis2[i-1]===id)c++;if(vis2[i+1]===id)c++;if(i>=W&&vis2[i-W]===id)c++;if(vis2[i+W]===id)c++;
     const fragile=m===LEAF||m===GLASS||m===GRASS;
-    if(c<=1||(fragile&&R()<.45)||R()<.04)dust1(i);else list[k2++]=i;}
+    if(c<=1||(fragile&&R()<.3)||R()<.01)dust1(i);else list[k2++]=i;}
   if(k2>0){const b=makeBody(list,k2,false);if(b){b.vy=Math.max(b.vy,.4);b.va+=(R()-.5)*.01;}}
   shake=Math.min(22,shake+Math.min(6,Math.sqrt(n)/12));
 }
@@ -1428,15 +1430,22 @@ function blastDebris(cx,cy,r){
       b.vx=dx/d*v;b.vy=dy/d*v-1-R()*1.5;b.va=(R()-.5)*.2;
     }
   }
-  if(r>=6&&bodies.length<140){const K=Math.min(10,Math.round(r*PHYS.mix.ringChunks*(.7+R()*.6)));
-    for(let k=0;k<K&&bodies.length<140;k++){const a=R()*6.283,d=r*(1.1+R()*.4),rc=6+R()*Math.min(8,r/2);
-      const n0=solidCells(cx+Math.cos(a)*d,cy+Math.sin(a)*d,rc|0,false);let n=0;
-      for(let j=0;j<n0;j++)if(KIND[t[q[j]]]===S)q[n++]=q[j]; // solid cells only, no loose powder
-      if(n<14)continue;
-      const b=makeBody(q,n,false);if(b){b.chunk=true;b.vx+=Math.cos(a)*(.8+R());b.vy+=Math.sin(a)*(.8+R())-1;}}}
+  ringChunks(cx,cy,r,false);
   const nd=Math.min(D.max,r*r*D.perR2|0);
   for(let k=0;k<nd;k++){const a=R()*6.283,d=R()*r*1.1,sp=.4+R()*(1+r*.12);
     spawnDust(cx+Math.cos(a)*d,cy+Math.sin(a)*d,Math.cos(a)*sp,Math.sin(a)*sp-.6-R()*.8,dustCol(exN?exC[R()*exN|0]:rgb(150,140,125)));}
+}
+// big intact chunks broken off around an impact and flung outward (blast push comes from makeBody).
+// ground=true also tears slabs out of the street and terrain (ground slams)
+function ringChunks(cx,cy,r,ground){
+  const M=PHYS.mix;if(r<M.ringMinR||bodies.length>=145)return;const K=Math.min(M.ringMax,Math.round(r*M.ringChunks*(.7+R()*.6)));
+  for(let k=0;k<K&&bodies.length<145;k++){const a=ground?Math.PI*(.15+R()*.7):R()*6.283,d=r*(ground?.35+R()*.45:1.1+R()*.4),rc=(ground?4:6)+R()*Math.min(8,r/2);
+    const n0=solidCells(cx+Math.cos(a)*d,cy+Math.sin(a)*d,rc|0,ground);let n=0;
+    for(let j=0;j<n0;j++)if(KIND[t[q[j]]]===S)q[n++]=q[j]; // solid cells only, no loose powder
+    if(n<14)continue;
+    const b=makeBody(q,n,false);if(!b)continue;b.chunk=true;
+    if(ground){b.vx+=(b.x-cx)/(r||1)*2.5+(R()-.5);b.vy=-(3+R()*3.5);b.va=(R()-.5)*.15;}
+    else{b.vx+=Math.cos(a)*(.8+R());b.vy+=Math.sin(a)*(.8+R())-1;}}
 }
 function bgHit(cx,cy,r){
   for(let y=-r;y<=r;y++)for(let x=-r;x<=r;x++){if(x*x+y*y>r*r)continue;const X=cx+x|0,Y=cy+y|0;if(X<0||X>=W||Y<0||Y>=H)continue;const i=Y*W+X;if(!bgB[i])continue;
@@ -3545,7 +3554,7 @@ function quake(x,y,o={}){
     if(KIND[m]===S&&m!==STEEL&&R()<(1-d/r)*.9/(1+HARD[m]*.15)){if(R()<.25&&Y<=y+3){spawn(X,Y,xx*.07+(R()-.5),-2-R()*3.5*(1-d/r),col[i],90,RUBBLE,0);t[i]=0;}else crumble(i);markDirty(i);wake(i);}
     else if((KIND[m]===P||KIND[m]===L)&&R()<.35*(1-d/r)){spawn(X,Y,(R()-.5)*2,-2-R()*3.5,col[i],80,m,0);t[i]=0;wake(i);}
   }
-  explode(x,y+2,7,{fire:.15,green,col:o.col,self:true});
+  explode(x,y+2,7,{fire:.15,green,col:o.col,self:true});ringChunks(x,y+4,r*.6,true);
   damageEnemies(x,y,r*1.3,45,0,-4);
   for(let k=0;k<3;k++)rings.push({x,y,r:4+k*4,vr:2.4+k*.6,life:18+k*3,c:gc});
   for(let k=0;k<120;k++){const a=Math.PI+R()*Math.PI;spawn(x,y,Math.cos(a)*5,Math.sin(a)*3.5,green?gcol():pickC(gc),20+R()*25,0,1,1);}
