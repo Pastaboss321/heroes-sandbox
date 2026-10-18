@@ -1954,31 +1954,33 @@ const PAL_SUE={Y:rgb(238,208,124),y:rgb(196,160,82),f:rgb(236,196,166),F:rgb(190
 const PAL_TORCH={'*':rgb(255,250,220),e:rgb(255,255,255),Y:rgb(255,214,90),O:rgb(255,140,40),o:rgb(214,70,20)};
 const PAL_THING={k:rgb(48,20,10),d:rgb(128,56,22),r:rgb(172,82,34),R:rgb(218,118,50),l:rgb(244,162,88),L:rgb(255,204,136),c:rgb(130,205,255),B:rgb(62,108,172),b:rgb(38,68,122),N:rgb(24,36,66),W:rgb(240,244,250)};
 // ---- Venom: hulking black symbiote, white eyes and spider, a mouthful of fangs
-const SPR_VENOM=[
-"....kkkkkkk....",
-"...kKLLKKLKk...",
-"..kKwwKKKwwKk..",
-"..kwwwwKwwwwk..",
-"..kKwwKKKwwKk..",
-"..kKKKKKKKKKk..",
-"..ktttttttttk..",
-"..kmrrrrrrrmk..",
-"...ktttttttk...",
-"kKLKKkkkkkKKLKk",
-"kKLKKwKKKwKKLKk",
-"KKKKKKwwwKKKKKK",
-"KLKKwKwwwKwKKLK",
-"KKKkKKKwKKKkKKK",
-"KLKkwKKKKKwkKLK",
-"KKKkKKKKKKKkKKK",
-"kKKkkKKKKKkkKKk",
-"...kKKK.KKKk...",
-"...kKKK.KKKk...",
-"...kKLK.KLKk...",
-"..kKKKk.kKKKk..",
-"..kKLKk.kKLKk..",
-".kKKKKk.kKKKKk.",
-".kkkkkk.kkkkkk."];
+const SPR_VENOM=[ // hunched brute: small head, huge shoulders, long clawed arms
+"......kkkkk......",
+".....kwwKwwk.....",
+"....kKwwKwwKk....",
+"....ktrtrtrtk....",
+"....kKtttttKk....",
+"..kkkKKKKKKKkkk..",
+".kKLKKKKKKKKKLKk.",
+"kKLKKKwKKKwKKKLKk",
+"kKKKKKKwwwKKKKKKk",
+"kKLKKwKwwwKwKKLKk",
+"kKKk.KKKwKKK.kKKk",
+"kKLk.KwKKKwK.kLKk",
+"kKKk.KKKKKKK.kKKk",
+"kKLk..KKKKK..kLKk",
+"kKKk..KKKKK..kKKk",
+"kKKKk.KKKKK.kKKKk",
+"KLKKk.KK.KK.kKKLK",
+"kkwkk.KK.KK.kkwkk",
+"......KK.KK......",
+".....kKK.KKk.....",
+".....kKL.LKk.....",
+"....kKKK.KKKk....",
+"....kKLK.KLKk....",
+"...kKKKK.KKKKk...",
+"...kKKKk.kKKKk...",
+"..kkkkk...kkkkk.."];
 const PAL_VENOM={k:rgb(10,10,16),K:rgb(30,30,44),L:rgb(78,82,110),w:rgb(244,244,255),t:rgb(232,230,220),r:rgb(196,40,70),m:rgb(60,10,22)};
 const GLOWCH={e:1,'*':1,'@':1,V:1,'+':1};
 // ---- procedural animation rig. The hero sprite is re-posed every frame before drawing:
@@ -2008,7 +2010,7 @@ const ANIM={
   juggernaut:{leg:17,mid:7,armC:'fRF',tipC:'fFf',aw:3,al:8,fs:4,sh:[12,10],hide:rect(11,14,10,16),blink:null},
   antman:{leg:13,mid:6,armC:'RRr',tipC:'kkk',aw:2,al:5,fs:2,sh:[10,7],hide:rect(10,11,7,12),blink:null},
   storm:{leg:13,mid:6,armC:'GKk',tipC:'ssS',aw:2,al:5,fs:2,sh:[10,7],hide:rect(10,11,7,12),blink:'e',lid:'s',cape:'Cc'},
-  venom:{leg:17,mid:7,armC:'LKk',tipC:'KKk',aw:3,al:8,fs:4,sh:[12,10],hide:rect(11,14,9,16),blink:null},
+  venom:{leg:18,mid:8,armC:'LKk',tipC:'KKk',aw:3,al:9,fs:4,sh:[14,7],hide:rect(13,16,6,17),blink:null},
   reed:{leg:14,mid:6,armC:'BBb',tipC:'fFF',aw:2,al:7,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null},
   sue:{leg:14,mid:6,armC:'BBb',tipC:'fFF',aw:2,al:5,fs:2,sh:[10,7],hide:rect(10,11,7,12),blink:null},
   torch:{leg:14,mid:6,armC:'YOo',tipC:'**O',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null},
@@ -2016,7 +2018,7 @@ const ANIM={
 };
 const PP=8; // padding around the posed sprite for limbs that reach out
 const ARM_UP=new Set(['Fire Rain','Comet Strike','Pile Driver','Force Geyser','Lift & Slam','Conjure Chaos','Chaos Unleashed','Gravity Hex','Ward of Vishanti','No More','Giant-Man','Downburst','Heat Wave','Icicle Drop','Mjolnir Pin','Ice Golem','Telekinetic Rip','Blizzard','Phoenix Wings','Storm Call','Lightning Call','Thunderbolt','Tornado','Hailstorm','Phoenix Force','Ice Wall','Ball Lightning','Conductor Strike','Flash Flood','Eye of the Storm','Bifrost','God Blast']);
-const ARM_BOTH=new Set(['Symbiote Roar','Thrash','We Are Venom','Force Burst','Force Nova','Crushing Bubble','Hammer Fist','Rock Slam','Supernova','Negative Zone Rift','Thunder Clap','Hex Sphere','Crimson Crush','Mirror Shatter','Magnetic Implosion','Hex Storm','Transmute','Elemental Inversion','Reweave','Crimson Bands','Mirror Fold','Banish','Pym Burst','Chaos Field','EMP Burst','Not Today','Stealth Mode','Adamantium Skeleton','Mystic Shield','Thunderclap','Gale Force','Psychic Wave','Frost Nova','Mind Shield','Levitate Crowd','Debris Storm','Gamma Roar','Energy Shield','Avalanche']);
+const ARM_BOTH=new Set(['Roar','Thrash','We Are Venom','Force Burst','Force Nova','Crushing Bubble','Hammer Fist','Rock Slam','Supernova','Negative Zone Rift','Thunder Clap','Hex Sphere','Crimson Crush','Mirror Shatter','Magnetic Implosion','Hex Storm','Transmute','Elemental Inversion','Reweave','Crimson Bands','Mirror Fold','Banish','Pym Burst','Chaos Field','EMP Burst','Not Today','Stealth Mode','Adamantium Skeleton','Mystic Shield','Thunderclap','Gale Force','Psychic Wave','Frost Nova','Mind Shield','Levitate Crowd','Debris Storm','Gamma Roar','Energy Shield','Avalanche']);
 const ARM_VISOR=new Set(['Annihilation Sweep','Bad Luck','Time Loop','Spider-Sense','Tactical Focus','Blackbird Strafe','Puppet Master','Optic Cage','Uncontrolled Blast','Optic Blast','Concussive Burst','Ricochet Shot','Full Power','Optic Sweep','Optic Barrage','Leg Sweep','Visor Overload']);
 function armMode(p){
   if(p.ball)return'clap';
@@ -2164,7 +2166,7 @@ function updPlayer(){
   if(p.metal>0&&!p.ground&&p.vy>3)carve(p.x,p.y+2,4,0,p.vy,H); // adamantium cannonball through the floor
   if(p.wings>0){damageEnemies(p.x,p.y-PH/2,10,3,0,0,true);for(let k=0;k<4;k++){const side=k&1?1:-1,u=R(),wx=p.x-p.face*2+side*(4+u*16),wy=p.y-PH*.7-Math.sin(u*3)*6+u*4;spawn(wx,wy,side*.4-p.vx*.2,-.3,R()<.5?rgb(255,170,50):rgb(255,90,30),12,R()<.02?FIRE:0,1,0,1);}}
   if(p.thrustF>0)p.thrustF--; if(senseT>0)senseT--; if(p.spin>0)p.spin--; if(p.eye>0)p.eye--;
-  if(p.biomassT>0&&--p.biomassT===0&&!(p.wav>0))p.sizeT=1; // Venom's devoured bulk fades
+  if(p.bm>0&&--p.biomassT<=0){p.bm--;p.biomassT=1200;venomSize(p);} // Venom sheds a level of biomass every 20 s
   if(p.dodge>0)p.dodge--; if(p.stealth>0)p.stealth--; if(p.sense>0)p.sense--; if(p.shell>0)p.shell--;
   if(p.surge>0){p.surge--;damageEnemies(p.x,p.y-PH/2,PW+6,1.2,p.face*1.5,-.5);if(frame%2===0)spawn(p.x+(R()-.5)*14,p.y-R()*PH,(R()-.5)*.5,-.8,rgb(255,40+R()*40|0,30),12,0,1,0,1);}
   if(p.ant>0){p.ant--;p.fly=true;if(p.ant===0){p.fly=false;fxWord(p.x,p.y-PH-6,'BYE, ANT-THONY',.7,'#ff6b5c',true);}}
@@ -2193,7 +2195,8 @@ function updPlayer(){
   if(p.fly&&shiftH&&p.boost>0)p.boost=Math.max(p.boost,2);
   if(!CH.fly&&shiftH&&p.charge>0)p.charge=Math.max(p.charge,2);
   if(!p.fly)p.boost=0;
-  if(p.fly){
+  if(p.blob){blobMove(p,ax,ay);}
+  else if(p.fly){
     // free flight: velocity eases toward input direction; light easing on release = glide → hover
     let dx=ax,dy=ay;const mag=Math.hypot(dx,dy);if(mag>0){dx/=mag;dy/=mag;}
     const boosting=p.boost>0, spd=FS*(boosting?BOOST:1)*(p.wings>0?1.7:1);
@@ -3498,59 +3501,94 @@ const THING_POWERS=[
 ];
 // ================= Venom: the symbiote hunts like the creature from Carrion =================
 // tendrils: wavering black ropes from the body to a point
+// Venom's size: blob form is small enough to squeeze through gaps; each devoured victim adds bulk
+function venomSize(p){p.sizeT=p.wav>0?1.45:(p.blob?.7:1)+(p.bm||0)*.11;}
+// The Carrion form: a writhing mass that clings to any surface within its tendrils' reach and crawls in every
+// direction (walls, ceilings), crushing weak material it squeezes through; loose in the air, it falls
+function blobMove(p,ax,ay){
+  const sz=p.size||1,cx=p.x,cy=p.y-PH/2,reach=16+12*sz;
+  if(frame%6===0||!p.blobA){p.blobA=[];for(let k=0;k<14;k++){const an=k/14*6.283+R()*.3,r=ray(cx,cy,Math.cos(an),Math.sin(an),reach*1.5);if(r.hit)p.blobA.push([r.x,r.y]);}}
+  // it only holds on when the mass is actually touching something (no hovering in mid-air)
+  let grip=0;const gr=6+6*sz;for(let k=0;k<12&&!grip;k++){const an=k/12*6.283;for(const d of [gr,gr+4])if(solidAt(cx+Math.cos(an)*d,cy+Math.sin(an)*d)){grip=1;break;}}
+  let dx=ax,dy=ay;const mag=Math.hypot(dx,dy);if(mag>0){dx/=mag;dy/=mag;}
+  const spd=2.7*(.85+.15*sz)*(keys.ShiftLeft||keys.ShiftRight?1.7:1);
+  if(grip>0){p.vx+=(dx*spd-p.vx)*.22;p.vy+=(dy*spd-p.vy)*.22;if(!mag){p.vx*=.75;p.vy*=.75;}}
+  else{p.vx+=dx*.08;p.vy=Math.min(6,p.vy+.32);}
+  if(ax)p.face=ax;p.ang=0;p.airF=0;
+  // tendrils: anchored ones to the surfaces it grips, plus a couple feeling the air
+  const sh=p.blobA.slice(0,7);for(const [x,y] of sh)tendril(cx,cy,x+(R()-.5)*2,y+(R()-.5)*2,1,3);
+  for(let k=0;k<2;k++){const an=frame*.05+k*3.1,l=10+6*Math.sin(frame*.1+k);tendril(cx,cy,cx+Math.cos(an)*l*sz,cy+Math.sin(an)*l*sz,1,4);}
+  // it squeezes through and smashes weak stuff; once it has fed it tears through walls too
+  const sp=Math.hypot(p.vx,p.vy);
+  if(sp>1.4&&frame%2===0){const r=4+3*sz|0,fx=cx+p.vx/sp*(r+3),fy=cy+p.vy/sp*(r+3);
+    for(let y=-r;y<=r;y++)for(let x=-r;x<=r;x++){if(x*x+y*y>r*r)continue;const X=fx+x|0,Y=fy+y|0;if(X<0||X>=W||Y<0||Y>=H-44)continue;const i=Y*W+X,m=t[i];if(!m||KIND[m]!==S)continue;
+      if(m===GLASS||m===LEAF||m===WOOD||m===WEB||((p.bm||0)>=2&&m!==STEEL&&m!==OBSID&&!gnd[i]&&R()<.3)){if(R()<.3)spawn(X,Y,p.vx*.4+(R()-.5),p.vy*.4-R(),col[i],50,m===GLASS?0:RUBBLE,m===GLASS?1:0);if(bgB[i]){bg[i]=bgD[i];bgB[i]=0;}setc(i,EMPTY);}}}
+  // anything in reach gets snatched at by a tendril
+  if(frame%10===0){const e=nearestEnemy(cx,cy,40+20*sz);if(e){tendril(cx,cy,e.x,e.y,4,6);hitEnemy(e,5+3*(p.bm||0),(cx-e.x)*.05,(cy-e.y)*.05);}}
+}
+// the Carrion form, drawn: a dark heaving mass with a pair of white eyes and a fanged mouth
+function drawBlob(p){const sz=p.size||1,cx=p.x,cy=p.y-PH/2,R0=5+5*sz,dk=rgb(18,18,28),md=rgb(40,40,60),hl=rgb(90,92,126),ink=rgb(6,6,10);
+  for(let y=-R0-3;y<=R0+3;y++)for(let x=-R0-3;x<=R0+3;x++){const a=Math.atan2(y,x),rr=R0*(.84+.1*Math.sin(a*5+frame*.21)+.07*Math.sin(a*9-frame*.33)),d=Math.hypot(x,y);if(d>rr+1)continue;
+    pix(cx+x,cy+y,d>rr?ink:(x+y<-R0*.7&&d>rr-3?hl:(d>rr-2?md:dk)));}
+  const f=p.face||1,ex=cx+f*R0*.3,ey=cy-R0*.3;
+  for(const o of [-1,1])for(let k=0;k<3;k++)pix(ex+o*2+f*k*.6,ey-k*.4*o*f,rgb(244,244,255),rgb(110,110,160));
+  for(let k=-3;k<=3;k++){pix(ex+f*k,ey+3,rgb(196,40,70));if(k%2===0)pix(ex+f*k,ey+2,rgb(232,230,220));}
+}
 function tendril(x0,y0,x1,y1,life=2,wig=6){const n=Math.max(3,Math.hypot(x1-x0,y1-y0)/10|0),pts=[],nx=-(y1-y0),ny=x1-x0,L=Math.hypot(nx,ny)||1;
   for(let k=0;k<=n;k++){const f=k/n,w=Math.sin(f*Math.PI)*Math.sin(f*7+frame*.4)*wig;pts.push([x0+(x1-x0)*f+nx/L*w,y0+(y1-y0)*f+ny/L*w]);}
   beams.push({pts,life,c:[44,44,64],g:[70,70,120]});}
 const VC=[150,150,200];
 const VENOM_POWERS=[
+ // switch between the hulking Venom and the Carrion form: a crawling mass that clings to walls and ceilings
+ {n:'Symbiote Form',fn:(a,p,use)=>{if(!use(4))return;cd=20;p.blob=!p.blob;p.blobA=null;venomSize(p);if(p.blob){p.vy=0;}
+   fxWord(p.x,p.y-PH-8,p.blob?'*SHLLLRRK*':'WE ARE VENOM',1,'#c8c8ff',true);snd(p.blob?'rip':'roar',p.x,p.y,{pitch:p.blob?.7:1.2});
+   for(let k=0;k<24;k++){const an=R()*6.283;spawn(p.x,p.y-PH/2,Math.cos(an)*2.5,Math.sin(an)*2.5,rgb(30,30,46),24,0,0,1);}}},
  // a tendril whipped out at the cursor: tears a line through the block and cracks the end open
- {n:'Tendril Lash',fn:(a,p,use)=>{if(!use(6))return;cd=14;const L=Math.min(130,Math.max(30,a.d)),x=a.h.x+a.dx*L,y=a.h.y+a.dy*L;tendril(a.h.x,a.h.y,x,y,6);
-   for(let k=14;k<L;k+=7)carve(a.h.x+a.dx*k,a.h.y+a.dy*k,3,a.dx*4,a.dy*4);explode(x|0,y|0,8,{self:true,col:VC,word:'THWAK!'});damageLine(a.h.x,a.h.y,x,y,5,14);snd('slash',x,y);}},
+ {n:'Tendril Lash',fn:(a,p,use)=>{if(!use(6))return;cd=14;const L=Math.min(140,Math.max(30,a.d)),x=a.h.x+a.dx*L,y=a.h.y+a.dy*L;tendril(a.h.x,a.h.y,x,y,6);
+   for(let k=14;k<L;k+=7)carve(a.h.x+a.dx*k,a.h.y+a.dy*k,3,a.dx*4,a.dy*4);explode(x|0,y|0,8+(p.bm||0),{self:true,col:VC,word:'THWAK!'});damageLine(a.h.x,a.h.y,x,y,5,14);snd('slash',x,y);}},
  // hold: tendrils seize a chunk of building or an enemy, swing it around, let go to fling it
- {n:'Tendril Grab',tk:{r:12,range:160,tether:true,throwMul:1.6}},
- // reach out, drag the nearest victim in and consume it: health back, and the symbiote grows
- {n:'Devour',fn:(a,p,use)=>{const e=nearestEnemy(mouse.wx,mouse.wy,90)||nearestEnemy(p.x,p.y,160);if(!e||e.def.title){fxWord(p.x,p.y-PH-6,'NOTHING TO EAT',.8,'#c8c8ff',true);return;}if(!use(20))return;cd=40;let k=0;
+ {n:'Tendril Grab',tk:{r:12,range:170,tether:true,throwMul:1.7}},
+ // drag a victim in and consume it: health back and a level of biomass (bigger, stronger, tears through walls)
+ {n:'Devour',fn:(a,p,use)=>{const e=nearestEnemy(mouse.wx,mouse.wy,90)||nearestEnemy(p.x,p.y,170);if(!e||e.def.title){fxWord(p.x,p.y-PH-6,'NOTHING TO EAT',.8,'#c8c8ff',true);return;}if(!use(16))return;cd=36;let k=0;
    fxWord(e.x,e.y-14,'GET OVER HERE',.9,'#c8c8ff',true);snd('rip',e.x,e.y);
-   ACT.push(()=>{k++;if(e.hp<=0||!enemies.includes(e))return false;const hx=p.x,hy=p.y-PH*.7;tendril(hx,hy,e.x,e.y,1,4);e.vx=(hx-e.x)*.25;e.vy=(hy-e.y)*.25;e.frozen=2;
-     if(Math.hypot(hx-e.x,hy-e.y)<14||k>30){hitEnemy(e,9999,0,0);p.hp=Math.min(CH.hp,p.hp+CH.hp*.15);p.sizeT=Math.min(1.45,(p.sizeT||1)+.12);p.biomassT=900;
-       for(let j=0;j<20;j++)spawn(hx+(R()-.5)*10,hy+(R()-.5)*10,(R()-.5)*3,(R()-.5)*3,R()<.4?rgb(196,40,70):rgb(40,40,60),24,0,0,1);fxWord(hx,hy-18,'*CRUNCH*',1.1,'#ff6b8a',true);snd('punch',hx,hy);return false;}return true;});}},
- // the whole mass hurls itself through walls toward the cursor
- {n:'Biomass Surge',fn:(a,p,use)=>{if(!use(18))return;cd=36;const dx=a.dx,dy=a.dy;let k=0;p.ground=false;fxWord(p.x,p.y-PH-8,'SKRAAAH!',1.1,'#c8c8ff',true);snd('roar',p.x,p.y,{pitch:1.3});
-   ACT.push(()=>{k++;p.vx=dx*7.5;p.vy=dy*7.5;p.script=2;carve(p.x+dx*6,p.y-PH/2+dy*6,9*(p.size||1),dx*5,dy*5);damageEnemies(p.x,p.y-PH/2,16,10,dx*7,dy*7-2);
-     if(k%2===0)tendril(p.x,p.y-PH/2,p.x+dx*20+(R()-.5)*20,p.y-PH/2+dy*20+(R()-.5)*20,2);if(k>=20){explode(p.x|0,p.y-PH/2|0,11,{self:true,col:VC});p.vx*=.3;p.vy*=.3;return false;}return true;});}},
- // tendrils anchor onto the surface at the cursor and haul the mass there, smashing in on arrival
- {n:'Tendril Swing',fn:(a,p,use)=>{const r=ray(a.h.x,a.h.y,a.dx,a.dy,220);if(!r.hit){fxWord(p.x,p.y-PH-6,'NOTHING TO GRAB',.7,'#c8c8ff',true);return;}if(!use(10))return;cd=24;const tx=r.x,ty=r.y;let k=0;p.ground=false;snd('whoosh',p.x,p.y);
-   ACT.push(()=>{k++;const dx=tx-p.x,dy=ty-(p.y-PH/2),d=Math.hypot(dx,dy)||1;tendril(p.x,p.y-PH/2,tx,ty,1,5);tendril(p.x+3,p.y-PH/2,tx+(R()-.5)*8,ty+(R()-.5)*8,1,8);
-     p.vx=dx/d*Math.min(8,d*.3+3);p.vy=dy/d*Math.min(8,d*.3+3);p.script=2;if(d<12||k>40){explode(tx|0,ty|0,9,{self:true,col:VC});damageEnemies(tx,ty,18,18,dx/d*5,-3);p.vx*=.4;p.vy*=.4;return false;}return true;});}},
- // a bone spike fired on a tendril: pierces everything in a line, then rips back dragging wreckage with it
+   ACT.push(()=>{k++;if(e.hp<=0||!enemies.includes(e))return false;const hx=p.x,hy=p.y-PH*.6;tendril(hx,hy,e.x,e.y,1,4);tendril(hx,hy,e.x+(R()-.5)*6,e.y+(R()-.5)*6,1,7);e.vx=(hx-e.x)*.25;e.vy=(hy-e.y)*.25;e.frozen=2;
+     if(Math.hypot(hx-e.x,hy-e.y)<14||k>30){hitEnemy(e,9999,0,0);p.hp=Math.min(CH.hp,p.hp+CH.hp*.15);p.bm=Math.min(4,(p.bm||0)+1);p.biomassT=1200;venomSize(p);
+       for(let j=0;j<24;j++)spawn(hx+(R()-.5)*10,hy+(R()-.5)*10,(R()-.5)*3,(R()-.5)*3,R()<.4?rgb(196,40,70):rgb(40,40,60),24,0,0,1);fxWord(hx,hy-18,'*CRUNCH* BIOMASS '+p.bm,1.1,'#ff6b8a',true);snd('punch',hx,hy);return false;}return true;});}},
+ // the whole mass rams toward the cursor, bursting through walls (bigger = further, harder)
+ {n:'Biomass Charge',fn:(a,p,use)=>{if(!use(18))return;cd=36;const dx=a.dx,dy=a.dy;let k=0;p.ground=false;fxWord(p.x,p.y-PH-8,'SKRAAAH!',1.1,'#c8c8ff',true);snd('roar',p.x,p.y,{pitch:1.3});const bm=p.bm||0;
+   ACT.push(()=>{k++;p.vx=dx*7.5;p.vy=dy*7.5;p.script=2;carve(p.x+dx*6,p.y-PH/2+dy*6,8+bm*1.5,dx*5,dy*5);damageEnemies(p.x,p.y-PH/2,16,10+bm*3,dx*7,dy*7-2);
+     if(k%2===0)tendril(p.x,p.y-PH/2,p.x+dx*20+(R()-.5)*20,p.y-PH/2+dy*20+(R()-.5)*20,2);if(k>=18+bm*3){explode(p.x|0,p.y-PH/2|0,11+bm*2,{self:true,col:VC});p.vx*=.3;p.vy*=.3;return false;}return true;});}},
+ // a bone spike fired on a tendril: pierces everything in a line, then rips back dragging wreckage and enemies to him
  {n:'Spike Harpoon',fn:(a,p,use)=>{if(!use(16))return;cd=30;let x=a.h.x,y=a.h.y;for(let s2=0;s2<300;s2++){x+=a.dx;y+=a.dy;const X=x|0,Y=y|0;if(X<1||X>=W-1||Y>=H-44||Y<-SKY)break;if(Y<0)continue;const i=Y*W+X,m=t[i];if(m&&KIND[m]!==G&&KIND[m]!==F){if(R()<.3)spawn(X,Y,a.dx*3,a.dy*3-1,col[i],40,KIND[m]===S?RUBBLE:m,0);setc(i,EMPTY);}}
    damageLine(a.h.x,a.h.y,x,y,4,40);tendril(a.h.x,a.h.y,x,y,8,3);fxWord(a.h.x+a.dx*30,a.h.y-10,'SHUNK!',1,'#c8c8ff',true);snd('snikt',a.h.x,a.h.y);
    for(const b of bodies)if(!b.held&&Math.hypot(b.x-x,b.y-y)<b.rmax+50){b.vx+=(p.x-b.x)*.04;b.vy+=(p.y-b.y)*.04-2;b.thrown=true;b.safeP=frame+40;}
    for(const e of enemies){const u=((e.x-a.h.x)*a.dx+(e.y-a.h.y)*a.dy);if(u>0&&u<300&&Math.abs((e.x-a.h.x)*a.dy-(e.y-a.h.y)*a.dx)<8){e.vx+=-a.dx*6;e.vy+=-a.dy*6-2;}}}},
- // the roar: a shockwave that stuns everything around and shakes buildings to pieces
- {n:'Symbiote Roar',fn:(a,p,use)=>{if(!use(26))return;cd=50;const cx=p.x,cy=p.y-PH*.7;fxWord(cx,cy-30,'SKREEEEEE!',1.4,'#ff6b8a',true);snd('screech',cx,cy,{pitch:.6});shockFx(cx,cy,1.3);
+ // the roar: stuns everything around and shakes chunks off the buildings
+ {n:'Roar',fn:(a,p,use)=>{if(!use(26))return;cd=50;const cx=p.x,cy=p.y-PH*.7;fxWord(cx,cy-30,'SKREEEEEE!',1.4,'#ff6b8a',true);snd('screech',cx,cy,{pitch:.6});shockFx(cx,cy,1.3);
    for(let j=0;j<10;j++){const an=j/10*6.283,d=34+R()*20;explode(cx+Math.cos(an)*d|0,cy+Math.sin(an)*d|0,6,{self:true,quiet:true,col:VC});}ringChunks(cx,cy,22,false);
    for(const e of enemies){const d=Math.hypot(e.x-cx,e.y-cy);if(d<160){e.frozen=Math.max(e.frozen||0,80);hitEnemy(e,10,(e.x-cx)/(d||1)*5,-3);}}
    for(const b of bodies){const dx=b.x-cx,dy=b.y-cy,d=Math.hypot(dx,dy)||1;if(d<150){b.vx+=dx/d*5;b.vy+=dy/d*5-2;b.thrown=true;}}}},
- // spit globs of biomass: they gum up whatever they hit, then burst
- {n:'Biomass Spit',fn:(a,p,use)=>{if(!use(10))return;cd=18;for(let j=-1;j<=1;j++){const an=Math.atan2(a.dy,a.dx)+j*.12;shots.push({x:a.h.x,y:a.h.y,vx:Math.cos(an)*5.5,vy:Math.sin(an)*5.5-.6,grav:.08,type:'goo',life:120,col:[60,60,90],ecol:VC,boom:6,
+ // spit webs of biomass: they cocoon what they hit, then burst
+ {n:'Web Cocoon',fn:(a,p,use)=>{if(!use(10))return;cd=18;for(let j=-1;j<=1;j++){const an=Math.atan2(a.dy,a.dx)+j*.12;shots.push({x:a.h.x,y:a.h.y,vx:Math.cos(an)*5.5,vy:Math.sin(an)*5.5-.6,grav:.08,type:'goo',life:120,col:[60,60,90],ecol:VC,boom:6,
    onHit:s2=>{explode(s2.x|0,s2.y|0,7,{self:true,col:VC});for(const e of enemies)if(Math.hypot(e.x-s2.x,e.y-s2.y)<26)e.webbed=Math.max(e.webbed||0,150);for(let k=0;k<10;k++)spawn(s2.x,s2.y,(R()-.5)*3,-R()*2,rgb(40,40,60),40,0,0,1);}});}snd('splash',a.h.x,a.h.y,{v:.5});}},
- // thrash: a storm of tendrils lashing in every direction, gouging out a sphere around him
+ // thrash: tendrils lashing in every direction, gouging out a sphere around him
  {n:'Thrash',fn:(a,p,use)=>{if(!use(22))return;cd=40;let k=0;fxWord(p.x,p.y-PH-8,'THRASH!',1.1,'#c8c8ff',true);
-   ACT.push(()=>{k++;const cx=p.x,cy=p.y-PH/2,R2=30*(p.size||1);for(let j=0;j<3;j++){const an=R()*6.283,x=cx+Math.cos(an)*R2,y=cy+Math.sin(an)*R2;tendril(cx,cy,x,y,2,7);carve(x,y,5,Math.cos(an)*4,Math.sin(an)*4);}
+   ACT.push(()=>{k++;const cx=p.x,cy=p.y-PH/2,R2=(30+(p.bm||0)*5)*(p.size||1);for(let j=0;j<3;j++){const an=R()*6.283,x=cx+Math.cos(an)*R2,y=cy+Math.sin(an)*R2;tendril(cx,cy,x,y,2,7);carve(x,y,5,Math.cos(an)*4,Math.sin(an)*4);}
      damageEnemies(cx,cy,R2+8,3,0,0,true);if(k%5===0){shake=Math.max(shake,4);snd('whoosh',cx,cy,{v:.4});}return k<36;});}},
+ // parasite: a tendril burrows into an enemy and takes it over; it turns on its friends
+ {n:'Parasite',fn:(a,p,use)=>{const e=nearestEnemy(mouse.wx,mouse.wy,60)||nearestEnemy(p.x,p.y,150);if(!e||e.def.title||e.ally>0){fxWord(p.x,p.y-PH-6,'NO HOST',.8,'#c8c8ff',true);return;}if(!use(28))return;cd=50;
+   e.ally=600;e.frozen=0;tendril(p.x,p.y-PH/2,e.x,e.y,14,6);fxWord(e.x,e.y-e.def.h/2-8,'INFESTED',1.1,'#c8c8ff',true);snd('psi',e.x,e.y,{pitch:.5});
+   for(let k=0;k<14;k++)spawn(e.x+(R()-.5)*e.def.w,e.y+(R()-.5)*e.def.h,(R()-.5)*1.5,-R(),rgb(30,30,46),26,0,0,1);}},
  // squeeze into the ground and tunnel toward the cursor, then erupt in a burst of street
  {n:'Burrow',fn:(a,p,use)=>{if(!use(26))return;cd=55;const tx=mouse.wx;let k=0,x=p.x,y=p.y+10;fxWord(p.x,p.y-PH-6,'*SHLRRK*',1,'#c8c8ff',true);snd('crumble',p.x,p.y);
    ACT.push(()=>{k++;const dir=Math.sign(tx-x)||1;x+=dir*4;const gy=groundBelow(x|0,y-20);y=gy+8;carve(x,y,6,dir*2,0);p.x=x;p.y=gy+30;p.vx=p.vy=0;p.script=3;p.stealth=Math.max(p.stealth||0,2);
      if(k%3===0)spawn(x,gy-1,(R()-.5)*2,-1-R()*2,rgb(120,110,100),30,0,0,1);damageEnemies(x,gy,14,1.5,0,-2);
      if(Math.abs(tx-x)<6||k>70){p.y=gy;p.vy=-6;explode(x|0,gy|0,14,{self:true,col:VC,word:'ERUPT!'});ringChunks(x,gy+4,20,true);damageEnemies(x,gy,40,40,0,-6);p.stealth=0;if(boxHit(p.x,p.y))punchOut(p);return false;}return true;});}},
- // fade into the dark: enemies lose track until he strikes
- {n:'Symbiote Cloak',fn:(a,p,use)=>{if(p.stealth>0||!use(24))return;cd=30;p.stealth=360;p.lastSeen={x:p.x,y:p.y-PH/2};fxWord(p.x,p.y-PH-6,'...',1,'#c8c8ff',true);snd('psi',p.x,p.y,{pitch:.5});}},
  // WE ARE VENOM: the symbiote swells to full size and tendrils tear at everything around it
- {n:'We Are Venom',fn:(a,p,use)=>{if(p.wav>0||!use(50))return;cd=150;p.wav=420;p.sizeT=1.45;fxWord(p.x,p.y-PH-16,'WE ARE VENOM!',1.6,'#ff6b8a',true);snd('roar',p.x,p.y,{pitch:.55});shake=22;
-   ACT.push(()=>{if(--p.wav<=0){if(!(p.biomassT>0))p.sizeT=1;return false;}const cx=p.x,cy=p.y-PH/2;
-     if(p.wav%6===0){const e=nearestEnemy(cx,cy,140);let tx,ty;if(e&&R()<.6){tx=e.x;ty=e.y;hitEnemy(e,14,(e.x-cx)*.03,-2);}else{const an=R()*6.283,d=50+R()*70;tx=cx+Math.cos(an)*d;ty=cy+Math.sin(an)*d;}
-       tendril(cx,cy,tx,ty,5,8);explode(tx|0,ty|0,7,{self:true,quiet:true,col:VC});}
+ {n:'We Are Venom',fn:(a,p,use)=>{if(p.wav>0||!use(50))return;cd=150;p.wav=420;venomSize(p);fxWord(p.x,p.y-PH-16,'WE ARE VENOM!',1.6,'#ff6b8a',true);snd('roar',p.x,p.y,{pitch:.55});shake=22;
+   ACT.push(()=>{if(--p.wav<=0){venomSize(p);return false;}const cx=p.x,cy=p.y-PH/2;
+     if(p.wav%5===0){const e=nearestEnemy(cx,cy,150);let tx,ty;if(e&&R()<.6){tx=e.x;ty=e.y;hitEnemy(e,14,(e.x-cx)*.03,-2);}else{const an=R()*6.283,d=50+R()*80;tx=cx+Math.cos(an)*d;ty=cy+Math.sin(an)*d;}
+       tendril(cx,cy,tx,ty,5,8);explode(tx|0,ty|0,8,{self:true,quiet:true,col:VC});}
      if(p.wav%3===0)spawn(cx+(R()-.5)*16,cy+(R()-.5)*20,(R()-.5),-R(),rgb(30,30,46),20,0,0,1);return true;});}},
 ];
 const CHARS=[
@@ -3570,7 +3608,7 @@ const CHARS=[
  {id:'ultron',name:'Ultron',spr:SPR_ULTRON,pal:PAL_ULTRON,pw:7,ph:19,fly:true,fs:3.1,boost:2.2,run:1.9,jump:4.4,hp:360,armor:.6,glow:[255,50,40],cape:null,thrust:()=>R()<.6?rgb(255,80,60):rgb(255,200,180),powers:ULTRON_POWERS},
  {id:'magneto',name:'Magneto',spr:SPR_MAGNETO,pal:PAL_MAGNETO,pw:7,ph:19,fly:true,fs:3.0,boost:2.0,run:1.8,jump:4.4,hp:330,armor:.75,glow:[200,120,255],cape:null,thrust:()=>pickC([210,140,255]),powers:MAG_POWERS},
  {id:'storm',name:'Storm',spr:SPR_STORM,pal:PAL_STORM,pw:7,ph:19,fly:true,fs:3.2,boost:2.2,run:1.9,jump:4.6,hp:330,armor:.75,glow:[210,230,255],cape:null,thrust:()=>R()<.6?rgb(225,235,255):rgb(160,190,255),powers:STORM_POWERS},
- {id:'venom',name:'Venom',spr:SPR_VENOM,pal:PAL_VENOM,pw:9,ph:22,fly:false,fs:2.4,boost:1,run:2.3,jump:5.6,hp:520,armor:.5,glow:VC,cape:null,thrust:()=>pickC([60,60,90]),tetherC:[44,44,64],tetherG:[80,80,130],powers:VENOM_POWERS},
+ {id:'venom',name:'Venom',spr:SPR_VENOM,pal:PAL_VENOM,pw:9,ph:23,fly:false,fs:2.4,boost:1,run:2.3,jump:5.6,hp:520,armor:.5,glow:VC,cape:null,thrust:()=>pickC([60,60,90]),tetherC:[44,44,64],tetherG:[80,80,130],powers:VENOM_POWERS},
  {id:'reed',name:'Mr. Fantastic',spr:SPR_REED,pal:PAL_REED,pw:7,ph:19,fly:false,fs:2.6,boost:1,run:2.1,jump:5.2,hp:320,armor:.75,glow:F4C,cape:null,thrust:()=>pickC(F4C),powers:REED_POWERS},
  {id:'sue',name:'Invisible Woman',spr:SPR_SUE,pal:PAL_SUE,pw:7,ph:19,fly:false,fs:2.6,boost:1,run:2.0,jump:5.0,hp:310,armor:.75,glow:SUEC,cape:null,thrust:()=>pickC(SUEC),powers:SUE_POWERS},
  {id:'torch',name:'Human Torch',spr:SPR_TORCH,pal:PAL_TORCH,pw:7,ph:19,fly:true,fs:3.4,boost:2.4,run:1.9,jump:4.6,hp:300,armor:.8,glow:FC,cape:null,thrust:()=>R()<.6?rgb(255,150+R()*90|0,40):rgb(255,240,180),powers:TORCH_POWERS},
@@ -3579,13 +3617,13 @@ const CHARS=[
 CH=CHARS[0];
 const HERO_UI={juggernaut:'#7a2a1e',ultron:'#8a909e',magneto:'#5a2470',spidey:'#c8282f',wanda:'#a8183a',strange:'#2a52a0',antman:'#8a1c1c',doom:'#2f8f4e',hulk:'#6aa84f',thor:'#3a6fd8',iron:'#c23a2b',wolverine:'#e8b21f',cyclops:'#1f3c8a',iceman:'#7cc8f0',jean:'#c42a3a',storm:'#2a2a33',venom:'#1c1c28',reed:'#4f86b8',sue:'#7fb2d8',torch:'#e8731f',thing:'#d0702c'};
 const HERO_DARK=new Set(['hulk','wolverine','iceman','sue']);
-const MOVE_TAG={juggernaut:'UNSTOPPABLE',spidey:'WEB-SWINGS',antman:'SHRINKS & GROWS',hulk:'GAMMA LEAPS',wolverine:'CLIMBS WALLS',cyclops:'OPTIC THRUST',iceman:'ICE SLIDES',venom:'TENDRILS',reed:'STRETCHES',sue:'FORCE FIELDS',torch:'FLAME ON',thing:'ROCK SOLID'};
+const MOVE_TAG={juggernaut:'UNSTOPPABLE',spidey:'WEB-SWINGS',antman:'SHRINKS & GROWS',hulk:'GAMMA LEAPS',wolverine:'CLIMBS WALLS',cyclops:'OPTIC THRUST',iceman:'ICE SLIDES',venom:'CRAWLS WALLS',reed:'STRETCHES',sue:'FORCE FIELDS',torch:'FLAME ON',thing:'ROCK SOLID'};
 function setChar(i){
   const p=pl_, prevH=PH, hpF=p.hp/CH.hp;
   CH=CHARS[(i+CHARS.length)%CHARS.length];p.hp=hpF*CH.hp;SZ=1;RW.length=0;SPR=CH.spr;SPC=CH.pal;SW=SPR[0].length;SH=SPR.length;PW=CH.pw;PH=CH.ph;
   if(!CH.fly)p.fly=false;
   if(held){held.held=false;held=null;}
-  TSL.length=0;Object.assign(p,{slip:null,wav:0,biomassT:0,size:1,sizeT:1,ant:0,web:null,sense:0,ceil:0,shell:0,surge:0,jcharge:0,script:0,ball:0,tow:null,grip:null,cling:0,crouch:0,stealth:0,grit:0,sprint:0,ang:0});
+  TSL.length=0;Object.assign(p,{slip:null,wav:0,biomassT:0,bm:0,blob:false,blobA:null,size:1,sizeT:1,ant:0,web:null,sense:0,ceil:0,shell:0,surge:0,jcharge:0,script:0,ball:0,tow:null,grip:null,cling:0,crouch:0,stealth:0,grit:0,sprint:0,ang:0});
   cur=0;cd=0;buildPowerBar();
   if(boxHit(p.x,p.y))punchOut(p);
   rings.push({x:p.x,y:p.y-PH/2,r:2,vr:2.5,life:16,c:CH.glow},{x:p.x,y:p.y-PH/2,r:12,vr:-.6,life:16,c:CH.glow});flash(p.x,p.y-PH/2,40,CH.glow,10);
@@ -4541,7 +4579,7 @@ function render(){
   const p=pl_;
   if(CH.cape&&p.hist.length>3){const yo=PH-5;for(let k=1;k<Math.min(8,p.hist.length);k++){const [hx,hy]=p.hist[k];const wv=Math.sin(frame*.3+k)*1.2;pix(hx-p.face*(2+k*.4),hy-yo+k*.6+wv,k<4?CH.cape[0]:CH.cape[1]);pix(hx-p.face*(2+k*.4),hy-yo+1+k*.6+wv,CH.cape[1]);}}
   if(p.ant>0)drawSprite(p.x,p.y+5,0,p.face,false,(frame>>2)&1?FANT_A:FANT_B,FANT_PAL);
-  if(p.slip)drawSlip(p.slip);else drawSprite(p.x,p.y+PP*SZ,p.ang,p.face,false,posePlayer(p),p.metal>0?metalPal():null,p.hurtF,p.stealth>0,SZ);
+  if(p.slip)drawSlip(p.slip);else if(p.blob)drawBlob(p);else drawSprite(p.x,p.y+PP*SZ,p.ang,p.face,false,posePlayer(p),p.metal>0?metalPal():null,p.hurtF,p.stealth>0,SZ);
   const h=hand();
   if(CH.id==='thor'&&!p.tow&&!pins.length&&!shots.some(s=>s.type==='hammer'||s.type==='pin')){for(let yy=0;yy<3;yy++)pix(h.x,h.y+yy,rgb(110,80,50));for(let yy=-2;yy<0;yy++)for(let xx=-1;xx<=1;xx++)pix(h.x+xx,h.y+yy,rgb(160,166,176));}
   else if(CH.id!=='hulk')pix(h.x,h.y,glowRGB(),glowRGB());
