@@ -16,7 +16,7 @@ import { zap } from '../heroes/powers.js';
 //      another city hanging upside down from the heavens, ruins floating loose, the streets cratered and burning
 export function genIncursion(){
   genCity();
-  const GY=330, GB=143+(GY-143)*.5|0;
+  const GY=330+(ST.GYO|0), GB=143+(GY-143)*.5|0;
   makeFar([92,18,40],[236,96,62],()=>{
     for(let x=0;x<ST.FW;){const w=8+R()*24|0,h=30+R()*120|0;for(let y=0;y<h;y++)for(let xx=x;xx<x+w&&xx<ST.FW;xx++)ST.far[y*ST.FW+xx]=(xx%4===1&&y%6===3&&R()<.25)?rgb(255,170,110):y>h-3?rgb(255,120,90):rgb(70,22,44);x+=w+2+(R()*6|0);} // the other city, upside down, its broken edge glowing
     for(let k=0;k<70;k++){let x=R()*ST.FW;const y0=20+R()*120|0,L=40+R()*140|0;for(let y=y0;y<Math.min(H,y0+L);y++){x+=Math.sin(y*.05+k)*.35;if(R()<.85&&x>=0&&x<ST.FW)ST.far[y*ST.FW+(x|0)]=R()<.3?rgb(255,150,120):rgb(150,60,80);}} // strands pulled between the two cities

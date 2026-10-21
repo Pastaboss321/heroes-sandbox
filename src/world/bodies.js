@@ -197,7 +197,7 @@ function debrisBurst(b,power,cnt){
 function landBody(b,impact){
   impact*=1+Math.min(1,b.h/120); // heavy, tall chunks hit harder (was up to 3.5x, which shattered slow landings)
   if(impact>PHYS.body.fractureV&&b.n>=100&&b.gen<2&&!b.held&&bodies.length<140){fracture(b,impact);return;}
-  ST.bgen++;
+  ST.bgen=(ST.bgen%65535)+1; // bm is 16-bit
   const c=Math.cos(b.a),s=Math.sin(b.a),hw=b.lw/2+2,hh=b.lh/2+2;
   const ext=Math.ceil(Math.abs(hw*c)+Math.abs(hh*s))+2, eyt=Math.ceil(Math.abs(hw*s)+Math.abs(hh*c))+2;
   const ccx=b.x+((b.lw/2-b.cx)*c-(b.lh/2-b.cy)*s), ccy=b.y+((b.lw/2-b.cx)*s+(b.lh/2-b.cy)*c);

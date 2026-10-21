@@ -121,7 +121,7 @@ export let stk, rid;
 export function supportCheck(init){
   // hooks next to fresh damage let go: generated floating pieces only hang until touched
   while(unq.length){const s0=unq.pop();for(const j0 of [s0,s0-1,s0+1,s0-W,s0+W]){if(j0<0||j0>=N||pin[j0]!==2)continue;
-    let h=0,tl=0;q[tl++]=j0;pin[j0]=0;while(h<tl){const i=q[h++];for(const j of [i-1,i+1,i-W,i+W])if(j>=0&&j<N&&pin[j]===2){pin[j]=0;q[tl++]=j;}}}}
+    let h=0,tl=0;q[tl++]=j0;pin[j0]=0;while(h<tl){const i=q[h++];for(const j of [i-1,i+1,i-W,i+W])if(j>=0&&j<N&&pin[j]===2){pin[j]=0;if(tl<q.length)q[tl++]=j;}}}}
   const boxes=[];if(ST.dx1>=0)boxes.push([ST.dx0,ST.dy0,ST.dx1,ST.dy1]);if(ST.dfar&&ST.dfar.length){for(const b of ST.dfar)boxes.push(b);ST.dfar=[];}
   if(!boxes.length){if(!init)sweepBg();return;}
   ST.lastBoxes=boxes; // debug: GAME.ST.lastBoxes
@@ -207,4 +207,4 @@ function flood(s,init){
   }
 }
 // per cell arrays follow the world size
-onWorldResize(()=>{vis=new Uint32Array(N);q=new Int32Array(N);bm=new Uint32Array(N);pin=new Uint8Array(N);gnd=new Uint8Array(N);str=new Uint8Array(N).fill(10);vis2=new Uint32Array(N);stk=new Int32Array(N);rid=new Int32Array(N);ob[0]=W;ob[1]=-1;ob[2]=H;ob[3]=-1;ST.vgen=0;ggen=0;gstart=0;});
+onWorldResize(()=>{vis=new Uint32Array(N);const QN=Math.min(N,1<<20);q=new Int32Array(QN);bm=new Uint16Array(N);pin=new Uint8Array(N);gnd=new Uint8Array(N);str=new Uint8Array(N).fill(10);vis2=new Uint32Array(N);stk=new Int32Array(QN);rid=new Int32Array(N);ob[0]=W;ob[1]=-1;ob[2]=H;ob[3]=-1;ST.vgen=0;ggen=0;gstart=0;});

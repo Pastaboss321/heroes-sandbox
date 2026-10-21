@@ -5,10 +5,11 @@ import { H, W, bg, bgD, setc, sxy } from '../world/grid.js';
 import { clearAll, disc, fill, makeFar, tint } from './gen.js';
 import { building, car, cityUnder, glassTower } from './city.js';
 import { avengersTower, baxterBuilding, dailyBugle, sanctum } from './landmarks.js';
+import { cathedral, construction, harbor, plaza, stadium, tenements, trainyard } from './districts.js';
 
 export function genNYC(){
   clearAll();
-  const GY=340, GB=143+(GY-143)*.5|0, RX=300;
+  const GY=340+(ST.GYO|0), GB=143+(GY-143)*.5|0, RX=300;
   makeFar([30,20,48],[230,120,80],()=>{
     for(let k=0;k<200;k++){const x=R()*ST.FW|0,y=R()*(GB-140)|0;ST.far[y*ST.FW+x]=rgb(230,210,230);}
     // dense, tall skyline in three layers
@@ -41,9 +42,16 @@ export function genNYC(){
   for(let x=0;x<RX+40;x++){const y=cab(x)|0;fill(x,y,x+1,y+2,STEEL);if(x%5===0&&!(x>=T1&&x<T1+18)&&!(x>=T2&&x<T2+18))fill(x,y+2,x+1,dY,STEEL);}
   for(let k=0;k<3;k++)car(20+k*90+R()*30|0,dY,[230,190,30]);
   // Manhattan
-  let x=RX+116;const placed={};
-  while(x<W-30){
+  let x=RX+116;const placed={},end=W>4000?W-540:W-30;
+  while(x<end){
     const r=R();
+    if(!placed.site&&x>W*.25&&r<.15){placed.site=1;x=construction(x,GY);}
+    else if(!placed.church&&x>W*.42&&r<.15){placed.church=1;x=cathedral(x,GY);}
+    else if(!placed.yard&&x>W*.6&&r<.15){placed.yard=1;x=trainyard(x,GY);}
+    else if(!placed.stadium&&x>W*.82&&r<.2){placed.stadium=1;x=stadium(x,GY);}
+    else if(r<.06){x=tenements(x,GY);}
+    else if(r<.08){x=plaza(x,GY);}
+    else
     if(!placed.sanctum&&x>W*.16){placed.sanctum=1;x=sanctum(x,GY);} // the landmarks, spread along the island
     else if(!placed.baxter&&x>W*.34){placed.baxter=1;x=baxterBuilding(x,GY);}
     else if(!placed.avengers&&x>W*.52){placed.avengers=1;x=avengersTower(x,GY);}
@@ -52,13 +60,14 @@ export function genNYC(){
     else if(!placed.park&&x>650&&r<.18){placed.park=1;x=centralPark(x,GY);}
     else if(!placed.step&&x>420&&r<.32){placed.step=1;x=steppedTower(x,GY);}
     else if(!placed.deco&&x>420&&r<.46){placed.deco=1;x=decoTower(x,GY);}
-    else{const w=34+R()*36|0,h=150+R()*170|0,x1=Math.min(W-2,x+w),top=Math.max(30,GY-h);
+    else{const w=34+R()*36|0,h=150+R()*(R()<.3?GY-190:170)|0,x1=Math.min(end,x+w),top=Math.max(30,GY-h);
       if(R()<.35)glassTower(x,x1,top,GY);else{building(x,x1,top,GY);if(R()<.6)waterTower(x+6+R()*(w-20)|0,top-4);}
       x=x1;}
     const gap=10+R()*14|0;
     if(gap>19&&x+gap<W)car(x+2,GY,[230,190,30]);
     x+=gap;
   }
+  if(W>4000)harbor(Math.max(x,end),GY); // the Hudson piers
   ST.SPAWNX=RX+130;
 }
 export function waterTower(x,top){

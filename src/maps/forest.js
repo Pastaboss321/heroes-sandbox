@@ -14,12 +14,13 @@ export function genForest(){
     for(let k=0;k<12;k++){const cx=R()*ST.FW|0,cy=20+R()*80|0;for(let y=-5;y<=5;y++)for(let x=-18;x<=18;x++)if(x*x/324+y*y/25<1&&cy+y>=0)ST.far[(cy+y)*ST.FW+((cx+x+ST.FW)%ST.FW)]=rgb(240,245,250);}
   });
   const hm=[];
-  const mt=300+R()*1000|0; // mountain
+  const mts=[];for(let mx=300+R()*600;mx<W-200;mx+=1200+R()*900)mts.push([mx,130+R()*80]); // a mountain every ~1.5 screens
+  const mt=mts[0][0]|0; // the first one has the waterfall cave
   for(let x=0;x<W;x++){
-    const m=Math.exp(-(((x-mt)/150)**2))*170;
+    let m=0;for(const [mx,mh] of mts)m=Math.max(m,Math.exp(-(((x-mx)/150)**2))*mh);
     hm[x]=300+Math.sin(x*.009+s)*28+Math.sin(x*.031+s*2)*12+Math.sin(x*.11+s)*3-m|0;
   }
-  const lakes=[]; for(let k=0;k<2;k++){let pc;do{pc=100+R()*(W-200)|0;}while(Math.abs(pc-mt)<200||lakes.some(l=>Math.abs(l-pc)<200));lakes.push(pc);
+  const lakes=[]; for(let k=0;k<Math.max(2,W/1400|0);k++){let pc;do{pc=100+R()*(W-200)|0;}while(Math.abs(pc-mt)<200||lakes.some(l=>Math.abs(l-pc)<200));lakes.push(pc);
     for(let x=pc-60;x<pc+60;x++){const d=(x-pc)/60;hm[x]+=(1-d*d)*34|0;}}
   for(let x=0;x<W;x++){
     const h=hm[x], st=h+24+Math.sin(x*.07+s)*8|0;

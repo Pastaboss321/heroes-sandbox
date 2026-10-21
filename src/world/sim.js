@@ -49,9 +49,9 @@ function updPowder(i,m,x,y){
 }
 // lava keeps its chunk awake (it melts, ignites and slowly crusts over), except deep inside a settled pool:
 // boxed in by lava and inert solids it can neither flow nor react, so long underground lava seas can sleep
-const inertL=m=>m===LAVA||m===OBSID||m===STONE||m===DIRT||m===CONC||m===STEEL||m===BONE||m===VIBR||m===GOLD;
+const inertL=m=>m===0||m===LAVA||m===OBSID||m===STONE||m===DIRT||m===CONC||m===STEEL||m===BONE||m===VIBR||m===GOLD;
 function updLiquid(i,m,x,y){
-  if(m===LAVA){ if(y<=0||y>=H-1||!(inertL(t[i-1])&&inertL(t[i+1])&&inertL(t[i+W])&&(t[i-W]===0||inertL(t[i-W])))){wake(i); if(reactLava(i))return;} if(R()<.55)return; }
+  if(m===LAVA){ if(y<=0||y>=H-1||!(inertL(t[i-1])&&inertL(t[i+1])&&inertL(t[i+W])&&inertL(t[i-W]))){wake(i); if(reactLava(i))return;} if(R()<.55)return; }
   else if(m===ACID){ if(reactAcid(i))return; }
   if(y<H-1){
     const j=i+W, tj=t[j];
@@ -67,7 +67,11 @@ function updLiquid(i,m,x,y){
   }
   const d=R()<.5?-1:1; let best=-1; const reach=m===LAVA?2:5;
   for(let s=1;s<=reach;s++){const nx=x+d*s;if(nx<0||nx>=W)break;const j=i+d*s;if(canSink(m,t[j]))best=j;else break;}
-  if(best>=0)swap(i,best);
+  // spread sideways freely toward a drop, or across a dry floor; on top of a pool only now and then, so a
+  // pool's last partial row settles instead of random-walking forever (which kept whole lava seas awake)
+  if(best>=0){const drop=y<H-1&&canSink(m,t[best+W]),onLiq=y<H-1&&KIND[t[i+W]]===L;
+    const pushed=x-d>=0&&x-d<W&&KIND[t[i-d]]===L; // on a dry floor, only the edge of a puddle with liquid behind it spreads: films thin out and stop
+    if(drop||(!onLiq&&pushed&&R()<.5)||onLiq&&R()<(m===LAVA?.01:.03))swap(i,best);}
 }
 function updGas(i,m,x,y){
   wake(i);

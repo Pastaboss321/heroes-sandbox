@@ -18,7 +18,9 @@ function buildMenu(){
   const fixed=MODES[SEL.mode].map;
   $('maps').innerHTML='';for(const id in MAPDEFS)mk($('maps'),'chip',[['span','',MAPDEFS[id].name.toUpperCase()]],fixed?fixed===id:SEL.map===id,()=>{SEL.map=id;buildMenu();},fixed&&fixed!==id);
 }
-export function playFromMenu(){startRun(SEL.mode,SEL.hero,SEL.map);}
+// worlds are big: put up a card first so the browser paints it before the (blocking) generation
+export function playFromMenu(){loading(true);setTimeout(()=>{try{startRun(SEL.mode,SEL.hero,SEL.map);}finally{loading(false);}},40);}
+export function loading(on){let el=document.getElementById('loading');if(!el){el=document.createElement('div');el.id='loading';el.innerHTML='<b>BUILDING THE WORLD...</b><span>EVERY PIXEL IS SIMULATED</span>';document.body.appendChild(el);}el.classList.toggle('on',on);}
 export function showMenu(){ST.GS='menu';ST.MODE=null;ST.MS=null;resetSpawn();document.body.classList.remove('sandbox');bossBar(null);buildMenu();overlay('menu');}
 $('play').onclick=playFromMenu;
 $('resume').onclick=resumeRun;

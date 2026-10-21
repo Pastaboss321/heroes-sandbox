@@ -183,3 +183,5 @@
   .pw.k-hold{border-left:6px solid var(--cyan);} .pw.k-move{border-left:6px solid #8dffb0;}
   .pw.k-ult{background:#2a2016;color:var(--yel);border-color:var(--yel);} .pw.k-ult i{color:#fff;}
   .pw.k-ult.on{background:var(--yel);color:var(--ink);}
+  #loading{position:fixed;inset:0;z-index:30;display:none;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:rgba(10,8,20,.85);pointer-events:none;}
+  #loading.on{display:flex;} #loading b{font:56px Bangers,Impact,sans-serif;letter-spacing:4px;color:var(--yel);-webkit-text-stroke:2px var(--ink);text-shadow:5px 5px 0 var(--ink);transform:rotate(-2deg);} #loading span{font:700 12px 'Chakra Petch',sans-serif;letter-spacing:3px;color:var(--cyan);}

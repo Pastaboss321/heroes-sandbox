@@ -28,12 +28,13 @@ export function cityUnder(GY){
   for(let y=H-34;y<H-4;y++)for(let x=0;x<W;x++){const i=y*W+x;if(t[i]===0||y>H-20&&R()<.8)setc(i,y>H-24?LAVA:EMPTY);}
   fill(0,H-4,W,H,OBSID);
   for(let y=H-60;y>GY+80;y--)for(let x=0;x<W;x++){const i=y*W+x;if(t[i]===0&&t[i+W]===STONE&&R()<.01)disc(x,y-2,3,R()<.15?ACID:WATER);}
-  SURF.fill(GY+40); ST.PIN2=[GY,GY+8];
+  SURF.fill(GY+40); ST.PIN2=[GY,GY+8]; ST.streetY=GY;
   bgD.set(bg);
 }
+import { cathedral, construction, harbor, plaza, stadium, tenements, trainyard } from './districts.js';
 export function genCity(){
   clearAll();
-  const GY=330, GB=143+(GY-143)*.5|0;
+  const GY=330+(ST.GYO|0), GB=143+(GY-143)*.5|0;
   makeFar([10,8,26],[90,46,64],()=>{
     // stars + moon + two skyline layers
     for(let k=0;k<500;k++){const x=R()*ST.FW|0,y=R()*(GB-60)|0;ST.far[y*ST.FW+x]=rgb(200,200,220);}
@@ -45,16 +46,23 @@ export function genCity(){
   cityUnder(GY);
   // districts left→right
   let x=6;
-  const zones=[];
-  while(x<W-40){
+  const zones=[],end=W>4000?W-540:W-40; // long maps end in the harbour
+  const once=(id,at)=>!zones.includes(id)&&x>W*at; // the big districts, each once, spread along the map
+  while(x<end){
     const r=R();
-    if(r<.09&&!zones.includes('park')){ zones.push('park'); x=park(x,GY); }
+    if(once('stadium',.3)&&r<.2){ zones.push('stadium'); x=stadium(x,GY); }
+    else if(once('site',.15)&&r<.2){ zones.push('site'); x=construction(x,GY); }
+    else if(once('yard',.5)&&r<.2&&x<end-320){ zones.push('yard'); x=trainyard(x,GY); }
+    else if(once('church',.62)&&r<.2){ zones.push('church'); x=cathedral(x,GY); }
+    else if(once('plaza',.75)&&r<.2){ zones.push('plaza'); x=plaza(x,GY); }
+    else if(r<.07){ x=tenements(x,GY); }
+    else if(r<.09&&!zones.includes('park')){ zones.push('park'); x=park(x,GY); }
     else if(r<.17&&!zones.includes('gas')){ zones.push('gas'); x=gasStation(x,GY); }
     else if(r<.25&&!zones.includes('bridge')&&x<W-320){ zones.push('bridge'); x=bridge(x,GY); }
     else if(r<.33&&!zones.includes('crane')){ zones.push('crane'); x=crane(x,GY); }
     else if(r<.5){ x=houseRow(x,GY); }
     else {
-      const w=40+R()*50|0, h=70+R()*(r>.85?240:150)|0, x1=Math.min(W-2,x+w);
+      const w=40+R()*50|0, h=70+R()*(r>.85?(GY-80):170)|0, x1=Math.min(end,x+w);
       R()<.3?glassTower(x,x1,Math.max(40,GY-h),GY):building(x,x1,Math.max(40,GY-h),GY);
       x=x1;
     }
@@ -63,6 +71,7 @@ export function genCity(){
     else if(x+gap<W){const r2=R();if(r2<.35){fill(x+2,GY-7,x+12,GY,STEEL);tint(x+2,GY-7,x+12,GY,40,90,50,8);fill(x+3,GY-6,x+11,GY-1,ASH);}else if(r2<.7){for(let k=0;k<1+(R()*3|0);k++){const cy=GY-6*(k+1);fill(x+2,cy,x+8,cy+6,WOOD);tint(x+2,cy,x+8,cy+6,160,120,70,12);}}else{fill(x+4,GY-30,x+5,GY,STEEL);fill(x+4,GY-30,x+9,GY-29,STEEL);fill(x+8,GY-29,x+10,GY-27,GLASS);}}
     x+=gap;
   }
+  if(W>4000)harbor(Math.max(x,end),GY);
 }
 export const BLD=[];
 export function building(x0,x1,top,GY){

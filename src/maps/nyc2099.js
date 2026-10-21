@@ -10,7 +10,7 @@ import { spawn } from '../world/particles.js';
 // a violet smog sky full of traffic lanes, and steady acid-free rain.
 export function genNYC2099(){
   genNYC();
-  const GY=340;
+  const GY=340+(ST.GYO|0);
   makeFar([8,4,24],[118,26,100],()=>{
     for(let k=0;k<160;k++){const x=R()*ST.FW|0,y=R()*(H*.3)|0;ST.far[y*ST.FW+x]=rgb(200,190,255);}
     for(const [base,c,lit,hmax] of [[190,rgb(42,22,72),.12,250],[230,rgb(28,14,50),.22,220],[270,rgb(16,8,30),.35,190]]){

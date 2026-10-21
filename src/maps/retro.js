@@ -44,7 +44,7 @@ function baxter(x0,GY){ // the Baxter Building: the tallest tower on the skyline
 }
 export function genRetro(){
   clearAll();
-  const GY=340, GB=143+(GY-143)*.5|0;
+  const GY=340+(ST.GYO|0), GB=143+(GY-143)*.5|0;
   makeFar([138,196,224],[252,214,186],()=>{
     for(let y=-22;y<=22;y++)for(let x=-22;x<=22;x++)if(x*x+y*y<484){const X=(ST.FW*.7|0)+x;ST.far[(70+y)*ST.FW+X]=rgb(255,242,204);}
     for(const [base,c,lit] of [[GB-30,rgb(212,184,208),.08],[GB+10,rgb(178,160,204),.25]]){
