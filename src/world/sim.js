@@ -10,12 +10,12 @@ export function step(){
   const tmp=ST.act; ST.act=ST.nxt; ST.nxt=tmp; ST.nxt.fill(0);
   // long maps: chunks more than a screen away from the view only step every third tick (they stay awake
   // meanwhile), so the cost follows the camera rather than the width of the world
-  const near0=((ST.camX-VW)/CS)|0, near1=((ST.camX+VW*2)/CS)|0, farTick=ST.frame%3===0;
+  const near0=((ST.camX-VW)/CS)|0, near1=((ST.camX+VW*2)/CS)|0, fr=ST.frame%3; // far columns take turns, so no tick pays for all of them
   for(let y=H-1;y>=0;y--){
     const rowA=(y>>5)*CW, ltr=((ST.frame+y)&1)===0;
     for(let q=0;q<CW;q++){
       const cx=ltr?q:CW-1-q; if(!ST.act[rowA+cx])continue;
-      if(!farTick&&(cx<near0||cx>near1)){ST.nxt[rowA+cx]=1;continue;}
+      if((cx<near0||cx>near1)&&cx%3!==fr){ST.nxt[rowA+cx]=1;continue;}
       const xs=cx*CS, xe=xs+CS>W?W:xs+CS;
       for(let k=xs;k<xe;k++){
         const x=ltr?k:xe-1-(k-xs), i=y*W+x, m=t[i];

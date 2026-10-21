@@ -44,7 +44,8 @@ export function tick(){
   if(ST.MODE&&ST.MODE.update){ST.MODE.update(ST.MS);ST.MS.t++;}
   const md=MAPDEFS[mapSel.value];if(md&&md.amb&&world)md.amb();
   const t0=performance.now();
-  if(world){updStasis();step();updBodies();if(ST.frame%4===0)supportCheck(false);}
+  if(world){updStasis();const a1=performance.now();step();const a2=performance.now();updBodies();const a3=performance.now();if(ST.frame%4===0)supportCheck(false);const a4=performance.now();
+    const pf=ST.prof||(ST.prof={step:0,bodies:0,support:0,max:0,maxAt:''});pf.step=a2-a1;pf.bodies=a3-a2;pf.support=a4-a3;const mx=Math.max(pf.step,pf.bodies,pf.support);if(mx>pf.max){pf.max=mx;pf.maxAt=mx===pf.step?'step':mx===pf.bodies?'bodies':'support';}}
   ST.simMs=ST.simMs*.95+(performance.now()-t0)*.05;
   if(world)updParticles();
   updFx();updWaves();

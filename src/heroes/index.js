@@ -31,14 +31,15 @@ import { CHAR_THING } from './thing.js';
 import { CHAR_VENOM } from './venom.js';
 import { CHAR_PANTHER } from './panther.js';
 import { CHAR_CAP, CHAR_MARVEL, CHAR_SURFER } from './cosmic.js';
+import { CHAR_POOL, CHAR_RIDER } from './wave4.js';
 import { aoeCost } from './aoe.js';
 import { buildPowerBar, pwDiv } from '../ui/hud.js';
 
-export const CHARS=[CHAR_DOOM,CHAR_HULK,CHAR_THOR,CHAR_IRON,CHAR_WOLVERINE,CHAR_CYCLOPS,CHAR_ICEMAN,CHAR_JEAN,CHAR_SPIDEY,CHAR_WANDA,CHAR_STRANGE,CHAR_ANTMAN,CHAR_JUGGERNAUT,CHAR_ULTRON,CHAR_MAGNETO,CHAR_STORM,CHAR_VENOM,CHAR_REED,CHAR_SUE,CHAR_TORCH,CHAR_THING,CHAR_PANTHER,CHAR_CAP,CHAR_MARVEL,CHAR_SURFER]; // entries live in src/heroes/<hero>.js
+export const CHARS=[CHAR_DOOM,CHAR_HULK,CHAR_THOR,CHAR_IRON,CHAR_WOLVERINE,CHAR_CYCLOPS,CHAR_ICEMAN,CHAR_JEAN,CHAR_SPIDEY,CHAR_WANDA,CHAR_STRANGE,CHAR_ANTMAN,CHAR_JUGGERNAUT,CHAR_ULTRON,CHAR_MAGNETO,CHAR_STORM,CHAR_VENOM,CHAR_REED,CHAR_SUE,CHAR_TORCH,CHAR_THING,CHAR_PANTHER,CHAR_CAP,CHAR_MARVEL,CHAR_SURFER,CHAR_RIDER,CHAR_POOL]; // entries live in src/heroes/<hero>.js
 ST.CH=CHARS[0];
-export const HERO_UI={juggernaut:'#7a2a1e',ultron:'#8a909e',magneto:'#5a2470',spidey:'#c8282f',wanda:'#a8183a',strange:'#2a52a0',antman:'#8a1c1c',doom:'#2f8f4e',hulk:'#6aa84f',thor:'#3a6fd8',iron:'#c23a2b',wolverine:'#e8b21f',cyclops:'#1f3c8a',iceman:'#7cc8f0',jean:'#c42a3a',storm:'#2a2a33',venom:'#1c1c28',reed:'#4f86b8',sue:'#7fb2d8',torch:'#e8731f',thing:'#d0702c',panther:'#2a2236',cap:'#2c4aa0',marvel:'#c8282f',surfer:'#9aa4b8'};
+export const HERO_UI={juggernaut:'#7a2a1e',ultron:'#8a909e',magneto:'#5a2470',spidey:'#c8282f',wanda:'#a8183a',strange:'#2a52a0',antman:'#8a1c1c',doom:'#2f8f4e',hulk:'#6aa84f',thor:'#3a6fd8',iron:'#c23a2b',wolverine:'#e8b21f',cyclops:'#1f3c8a',iceman:'#7cc8f0',jean:'#c42a3a',storm:'#2a2a33',venom:'#1c1c28',reed:'#4f86b8',sue:'#7fb2d8',torch:'#e8731f',thing:'#d0702c',panther:'#2a2236',cap:'#2c4aa0',marvel:'#c8282f',surfer:'#9aa4b8',rider:'#e8731f',pool:'#9a1c24'};
 export const HERO_DARK=new Set(['hulk','wolverine','iceman','sue','surfer']);
-export const MOVE_TAG={juggernaut:'UNSTOPPABLE',spidey:'WEB-SWINGS',antman:'SHRINKS & GROWS',hulk:'GAMMA LEAPS',wolverine:'CLIMBS WALLS',cyclops:'OPTIC THRUST',iceman:'ICE SLIDES',venom:'CRAWLS WALLS',reed:'STRETCHES',sue:'FORCE FIELDS',torch:'FLAME ON',thing:'ROCK SOLID',panther:'CUTS ANYTHING',cap:'SHIELD RICOCHETS',marvel:'BINARY FLIGHT',surfer:'RIDES THE BOARD'};
+export const MOVE_TAG={juggernaut:'UNSTOPPABLE',spidey:'WEB-SWINGS',antman:'SHRINKS & GROWS',hulk:'GAMMA LEAPS',wolverine:'CLIMBS WALLS',cyclops:'OPTIC THRUST',iceman:'ICE SLIDES',venom:'CRAWLS WALLS',reed:'STRETCHES',sue:'FORCE FIELDS',torch:'FLAME ON',thing:'ROCK SOLID',panther:'CUTS ANYTHING',cap:'SHIELD RICOCHETS',marvel:'BINARY FLIGHT',surfer:'RIDES THE BOARD',rider:'HELLFIRE CHAIN',pool:'KATANAS & JOKES'};
 export function setChar(i){
   const p=pl_, prevH=ST.PH, hpF=p.hp/ST.CH.hp;
   ST.CH=CHARS[(i+CHARS.length)%CHARS.length];p.hp=hpF*ST.CH.hp;ST.SZ=1;RW.length=0;ST.SPR=ST.CH.spr;ST.SPC=ST.CH.pal;ST.SW=ST.SPR[0].length;ST.SH=ST.SPR.length;ST.PW=ST.CH.pw;ST.PH=ST.CH.ph;

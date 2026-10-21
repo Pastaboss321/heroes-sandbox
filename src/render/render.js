@@ -23,6 +23,7 @@ import { bctx, blur, buf, circle, ctx, cv, gaddS, gbuf, gctx, gimg, glc, img, li
 import { drawComics } from './comic.js';
 import { drawAxe, drawHammer, drawSlip, drawSprite } from './sprites.js';
 import { groundBelow } from '../ui/spawn.js';
+import { drawChain } from '../heroes/wave4.js';
 
 const flick=new Float32Array(256);
 const SPACE_ROW=new Uint32Array(VH);
@@ -143,6 +144,7 @@ export function render(){
     if(T.cat==='enemies'){const d=ENEMY_TYPES[T.id];if(d){const hw=d.w/2+1,hh=d.h/2+1;for(let k=-hw;k<=hw;k+=2){pix(x+k,y-hh,c,c);pix(x+k,y+hh,c,c);}for(let k=-hh;k<=hh;k+=2){pix(x-hw,y+k,c,c);pix(x+hw,y+k,c,c);}}}
     else if(T.cat==='objects'){const gy=SPAWN.snap?groundBelow(x,y):y;for(let k=-8;k<=8;k++)pix(x+k,gy,c,c);for(let yy=y;yy<gy;yy+=3)pix(x,yy,c,0);}
     else circle(x,y,SPAWN.brush+.5,c,0);}
+  drawChain(pix); // Ghost Rider's chain
   // area-size preview: a ring at the cursor for a moment after Z / X
   if(ST.aoeShow>0&&ST.GS==='play'){const r=24*ST.aoeK,a=Math.min(1,ST.aoeShow/20),c=rgb(255*a,220*a,110*a);for(let k=0,n=Math.max(24,r*5|0);k<n;k++){if((k+(ST.frame>>1))%4===0)continue;const an=k/n*6.283;pix(mouse.wx+Math.cos(an)*r,mouse.wy+Math.sin(an)*r,c,c);}}
   // Knull's dark: everything but a pool of light around the hero sinks to black
