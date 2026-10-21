@@ -67,12 +67,12 @@ function pileHolds(j,vm,id){
 // Only used on small dirty boxes (useProbe): a whole-map pass is cheaper as ordinary floods, which mark
 // everything they prove. The path a probe walks is marked as proven too (mk), so later probes and floods
 // that touch it stop there.
-let useProbe=false,pathN=0;const PATH=new Int32Array(1400);
+let useProbe=false,pathN=0;const PATH=new Int32Array(2400);
 function downToBedrock(s,sameGnd){const g0=gnd[s],mk=sameGnd?vis:vis2,lo=sameGnd?vstart:gstart;let i=s;pathN=0;
-  for(let n=0;n<1400;n++){const y=(i/W)|0;PATH[pathN++]=i;if(y>=H-1||(y>=H-40&&gnd[i])||(n>0&&mk[i]>=lo)){const id=sameGnd?++ST.vgen:++ggen;for(let k=0;k<pathN;k++)mk[PATH[k]]=id;return true;}const j=i+W;
+  for(let n=0;n<2400;n++){const y=(i/W)|0;PATH[pathN++]=i;if(y>=H-1||(y>=H-40&&gnd[i])||(n>0&&mk[i]>=lo)){const id=sameGnd?++ST.vgen:++ggen;for(let k=0;k<pathN;k++)mk[PATH[k]]=id;return true;}const j=i+W;
     if(KIND[t[j]]===S&&(!sameGnd||gnd[j]===g0)){i=j;continue;}
     let nx=-1;const x=i-y*W;
-    for(const sg of [-1,1]){for(let d=1;d<=24;d++){const X=x+sg*d;if(X<0||X>=W)break;const k=i+sg*d;if(KIND[t[k]]!==S||sameGnd&&gnd[k]!==g0)break;const kb=k+W;if(KIND[t[kb]]===S&&(!sameGnd||gnd[kb]===g0)){nx=kb;break;}}if(nx>=0)break;}
+    for(const sg of (n&1?[1,-1]:[-1,1])){for(let d=1;d<=96;d++){const X=x+sg*d;if(X<0||X>=W)break;const k=i+sg*d;if(KIND[t[k]]!==S||sameGnd&&gnd[k]!==g0)break;const kb=k+W;if(KIND[t[kb]]===S&&(!sameGnd||gnd[kb]===g0)){nx=kb;break;}}if(nx>=0)break;}
     if(nx<0)return false;i=nx;}
   return false;}
 function anchorFlood(s,init){
