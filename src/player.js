@@ -74,8 +74,8 @@ export function updPlayer(){
   const ax=((keys.KeyD?1:0)-(keys.KeyA?1:0))*(ST.mindT>0?-1:1), ay=(keys.KeyS?1:0)-((keys.KeyW||keys.Space)?1:0);
   const jumpP=pressed.KeyW||pressed.Space, jumpH=keys.KeyW||keys.Space, shiftP=pressed.ShiftLeft||pressed.ShiftRight, shiftH=keys.ShiftLeft||keys.ShiftRight;
   const FS=ST.CH.fs, BOOST=ST.CH.boost;
-  if(pressed.KeyF&&ST.CH.id!=='spidey')toggleFly(!p.fly);
-  if(ST.CH.id==='spidey'){ // F: shoot a web line at the cursor and swing on it; W/S reel in/out
+  if(pressed.KeyF&&!((ST.CH.id==='spidey'||ST.CH.webs)||ST.CH.webs))toggleFly(!p.fly);
+  if((ST.CH.id==='spidey'||ST.CH.webs)){ // F: shoot a web line at the cursor and swing on it; W/S reel in/out
     if(pressed.KeyF){const h=hand(),a=aimFrom(h),r=ray(h.x,h.y,a.dx,a.dy,180);if(r.hit){p.web={x:r.x,y:r.y,L:Math.max(14,Math.hypot(r.x-p.x,r.y-p.y+ST.PH/2))};snd('whoosh',r.x,r.y,{pitch:1.9,v:.4});}}
     if(!keys.KeyF&&p.web){p.web=null;p.grip=null;if(!p.ground)p.vy=Math.min(p.vy,p.vy-1);}}
   if(ST.CH.id==='cyclops')opticThrust(p,keys.KeyF,ax);
@@ -226,11 +226,11 @@ export function updPlayer(){
     my-=st;}
   if(!p.ground&&p.vy>=0&&boxHit(p.x,p.y+1))p.ground=true;
   }
-  if(ST.CH.id==='spidey'&&p.web){const w=p.web,dx=p.x-w.x,dy=p.y-ST.PH/2-w.y,d=Math.hypot(dx,dy)||1;
+  if((ST.CH.id==='spidey'||ST.CH.webs)&&p.web){const w=p.web,dx=p.x-w.x,dy=p.y-ST.PH/2-w.y,d=Math.hypot(dx,dy)||1;
     if(keys.KeyW)w.L=Math.max(12,w.L-1.8);if(keys.KeyS)w.L=Math.min(230,w.L+1.8);
     if(d>w.L){const nx=dx/d,ny=dy/d,tx=w.x+nx*w.L,ty=w.y+ny*w.L+ST.PH/2;if(!boxHit(tx,ty)){p.x=tx;p.y=ty;}const vn=p.vx*nx+p.vy*ny;if(vn>0){p.vx-=vn*nx;p.vy-=vn*ny;}p.ground=false;}
     p.grip={x:w.x,y:w.y};}
-  if(ST.CH.id==='spidey'&&!p.fly&&!p.web){ // crawl: stick to walls (W/S climb) and to ceilings (hold W)
+  if((ST.CH.id==='spidey'||ST.CH.webs)&&!p.fly&&!p.web){ // crawl: stick to walls (W/S climb) and to ceilings (hold W)
     const s=(keys.KeyD?1:0)-(keys.KeyA?1:0),touch=k=>boxHit(p.x+k*1.5,p.y-4)&&boxHit(p.x+k*1.5,p.y-ST.PH+4);
     if(!p.ground&&s&&touch(s)){p.cling=s;}else if(p.cling&&(p.ground||!touch(p.cling)))p.cling=0;
     if(p.cling){p.vy=keys.KeyW?-2.3:keys.KeyS?2.3:-.42;p.vx=0;if(pressed.Space){p.vx=-p.cling*4.4;p.vy=-5.4;p.face=-p.cling;p.cling=0;}}

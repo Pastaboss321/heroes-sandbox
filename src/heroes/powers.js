@@ -302,7 +302,7 @@ export function updShots(world=true){
   for(let n=shots.length-1;n>=0;n--){
     const s=shots[n];
     if(s.k==null)s.k=s.owner==='enemy'?1:ST.aoeK;ST.aoeC=s.k; // a shot keeps the area size it was fired with
-    if(s.type==='shield')continue; // Captain America's shield flies itself (heroes/cosmic.js)
+    if(s.type==='shield'||s.type==='ring')continue; // Captain America's shield and Shang-Chi's rings fly themselves (cosmic.js, wave5.js)
     if(s.delay>0){s.delay--;const h=hand();s.x=h.x;s.y=h.y;continue;}
     if(ST.stasis&&inStasis(s.x,s.y))continue; // frozen mid-flight
     if(!world&&s.owner==='enemy')continue; // Tactical Focus: enemy fire crawls

@@ -25,6 +25,7 @@ import { $ } from './modes/core.js';
 import { useTool } from './ui/spawn.js';
 import { updTravel } from './world/travel.js';
 import { updCapShields } from './heroes/cosmic.js';
+import { updRings } from './heroes/wave5.js';
 
 const waveTEl=document.getElementById('waveT'),scoreNEl=document.getElementById('scoreN'),scoreSEl=document.getElementById('scoreS'),waveEl=document.getElementById('wave'),hpEl=document.getElementById('hp'),enEl=document.getElementById('en'),fpsEl=document.getElementById('fps'),modeEl=document.getElementById('mode');
 let last=performance.now(),acc=0,fpsT=0,fpsN=0;
@@ -42,7 +43,7 @@ export function tick(){
   const world=!(ST.slowT>0&&(ST.slowT--&1))&&!SPAWN.pause; // Tactical Focus runs the world at half speed; the spawn menu can freeze it
   updPlayer();if(!pl_.slip){TSL.push({x:pl_.x,y:pl_.y,hp:pl_.hp,face:pl_.face});if(TSL.length>300)TSL.shift();}updShots(world);ST.aoeC=ST.aoeK;ST.pctx=true;updSummons();
   if(world){updDrones();updVortex();updStrikes();updStorm();ST.aoeC=1;ST.pctx=false;updEnemies();ST.pctx=true;ST.aoeC=ST.aoeK;updJets();}
-  updPins();updTherm();updDecoy();if(world)updWave2();updCapShields();
+  updPins();updTherm();updDecoy();if(world)updWave2();updCapShields();updRings();
   for(let n=ACT.length-1;n>=0;n--)if(ACT[n]()===false)ACT.splice(n,1);
   if(world)updSlide();
   while(ST.blastQ.length){const [bx,by]=ST.blastQ.pop();explode(bx|0,by|0,7,{fire:.6,self:true,col:[255,150,50]});} // WILDFIRE combos
