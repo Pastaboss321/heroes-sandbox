@@ -2,14 +2,15 @@
 import '../render/look.js'; // evaluation order: runs after render/look.js
 import { ST } from '../state.js';
 import { R, cl, rgb } from '../world/materials.js';
-import { H, VW, W, bg, col, life, setc, stamp, sxy, t, vel } from '../world/grid.js';
+import { H, VW, W, bg, col, life, onWorldResize, setc, stamp, sxy, t, vel } from '../world/grid.js';
 import { bodies } from '../world/support.js';
 import { BLD } from './city.js';
 
 // ================= map generation =================
 // far, FW: shared state (ST in state.js)
  export const PAR=.35;
- export const SURF=new Int16Array(W);
+ export let SURF=new Int16Array(W);
+ onWorldResize(()=>{SURF=new Int16Array(W);});
  // PIN2: shared state (ST in state.js)
 export function fill(x0,y0,x1,y1,m,p=1){for(let y=Math.max(0,y0|0);y<Math.min(H,y1|0);y++)for(let x=Math.max(0,x0|0);x<Math.min(W,x1|0);x++)if(p>=1||R()<p)setc(y*W+x,m);}
 export function disc(cx,cy,r,m,p=1){for(let y=-r;y<=r;y++)for(let x=-r;x<=r;x++)if(x*x+y*y<=r*r&&(p>=1||R()<p))sxy(cx+x|0,cy+y|0,m);}

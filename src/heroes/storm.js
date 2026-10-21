@@ -1,6 +1,7 @@
 // Storm: sprite, palette, rig entry, powers and roster entry.
 import './jean.js'; // evaluation order: runs after heroes/jean.js
 import { ST } from '../state.js';
+import { groundBelow } from '../ui/spawn.js';
 import { ACID, EMPTY, F, FLAM, G, GLASS, HARD, ICE, KIND, L, P, R, RUBBLE, S, SAND, SNOW, STEAM, STEEL, WATER, rgb } from '../world/materials.js';
 import { H, N, VH, W, col, markDirty, setc, t, wake } from '../world/grid.js';
 import { ignite } from '../world/sim.js';
@@ -46,7 +47,7 @@ const STORM_POWERS=[
  {n:'Lightning Lash',fn:(a,p,use)=>{if(!use(.8))return;lightning(a,{c:[245,248,255],g:[160,190,255],f:[205,220,255],spark:()=>pickC([200,220,255])});}},
  {n:'Thunderbolt',fn:(a,p,use)=>{if(!use(24))return;ST.cd=36;const x=mouse.wx,y=mouse.wy;let k=0;ACT.push(()=>{if(k%7===0)lightningStrike(x+(R()-.5)*(k?50:0),y,k?9:15);return++k<21;});}},
  {n:'Tornado',fn:(a,p,use)=>{if(!use(40))return;ST.cd=60;let tx=mouse.wx,life=380;fxWord(tx,mouse.wy-50,'WHOOOOSH!',1.4,'#d8e4ff',true);
-   ACT.push(()=>{tx+=Math.sign(mouse.wx-tx)*Math.min(.9,Math.abs(mouse.wx-tx)*.02);let gy=Math.max(0,ST.camY|0);while(gy<H-1&&(t[gy*W+(tx|0)]===0||KIND[t[gy*W+(tx|0)]]===G||KIND[t[gy*W+(tx|0)]]===F))gy++;
+   ACT.push(()=>{tx+=Math.sign(mouse.wx-tx)*Math.min(.9,Math.abs(mouse.wx-tx)*.02);let gy=groundBelow(tx|0,mouse.wy+45);
      const top=gy-90;
      for(let n=0;n<14;n++){const h=R(),y=gy-h*90,w=5+h*22,an=ST.frame*.3+R()*6.283;spawn(tx+Math.cos(an)*w,y,-Math.sin(an)*2.5,-1.2-R(),R()<.6?rgb(200,205,215):rgb(150,155,170),14,0,0,0,1);}
      for(let n=0;n<240;n++){const h=R(),y=(gy-h*90)|0,w=5+h*22,x=(tx+(R()*2-1)*w)|0;if(x<1||x>=W-1||y<1||y>=H-1)continue;const i=y*W+x,m=t[i];if(!m)continue;

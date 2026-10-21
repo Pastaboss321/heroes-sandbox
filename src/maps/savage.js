@@ -22,6 +22,7 @@ function jungleTree(x,gy){
 function fern(x,gy){for(let k=-6;k<=6;k++){const hh=Math.round(7-Math.abs(k)*.9);for(let y=0;y<hh;y++){const X=x+k+(k<0?-(y>>2):(y>>2));sxy(X,gy-1-y,LEAF);if(X>=0&&X<W&&gy-1-y>=0)col[(gy-1-y)*W+X]=rgb(46+R()*24,136+R()*40,40);}}}
 export function genSavageLand(){
   clearAll();
+  SAV.VX=Math.round(W*.36);SAV.CX=Math.round(W*.86); // the volcano and the plateau cliff scale with the map
   const s=R()*100,GY=372,VX=SAV.VX,VTOP=GY-176,CR=22,CX=SAV.CX;
   makeFar([96,176,170],[250,212,150],()=>{
     for(const [amp,base,c] of [[70,170,[110,128,132]],[46,214,[72,108,90]]])for(let x=0;x<ST.FW;x++){const hh=base-Math.abs(Math.sin(x*.011+s))*amp-Math.sin(x*.037+s*2)*amp*.25|0;for(let y=Math.max(0,hh);y<H;y++)ST.far[y*ST.FW+x]=rgb(c[0]-(y-hh)/7,c[1]-(y-hh)/7,c[2]-(y-hh)/8);}

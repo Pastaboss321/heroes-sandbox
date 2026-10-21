@@ -5,16 +5,31 @@ import { DENS, EMBER, F, FIRE, G, GFIRE, KIND, L, R, S, SMOKE, STEAM, mkcol } fr
 import { NAT, gnd, obAdd, pin, rid, unq } from './support.js';
 
 // ================= world size =================
-export const W=1600, H=640, N=W*H, VW=480, VH=270;
-export const CS=32, CW=Math.ceil(W/CS), CHN=Math.ceil(H/CS);
+// Each map picks its own size (MAPDEFS[...].w/h); setWorld() reallocates every per-cell array and tells
+// the modules that keep their own per-cell or per-column arrays (onWorldResize). Every module imports
+// these as live bindings, so they always see the current world.
+export const VW=480, VH=270, CS=32;
+export let W=1600, H=640, N=W*H, CW=Math.ceil(W/CS), CHN=Math.ceil(H/CS);
 
 // ================= grid =================
-export const t=new Uint8Array(N), col=new Uint32Array(N), life=new Uint8Array(N), stamp=new Uint8Array(N), vel=new Uint8Array(N);
-export const bg=new Uint32Array(N), bgD=new Uint32Array(N), bgB=new Uint8Array(N); // bgD: backdrop with no structures; bgB: pixel belongs to a structure's backdrop
+export let t, col, life, stamp, vel;
+export let bg, bgD, bgB; // bgD: backdrop with no structures; bgB: pixel belongs to a structure's backdrop
 export const BACK=255; // chunk cell that is backdrop wall (drawn, no collision)           // 0 = open sky (parallax layer shows)
-ST.act=new Uint8Array(CW*CHN);ST.nxt=new Uint8Array(CW*CHN);
+// hooks live on ST so a module may register before or after this one has run; a hook registered after
+// the first allocation runs at once
+export function onWorldResize(f){(ST.rsz||(ST.rsz=[])).push(f);if(ST.worldN)f();}
+export function setWorld(w,h){
+  if(t&&w===W&&h===H)return false;
+  W=w;H=h;N=W*H;CW=Math.ceil(W/CS);CHN=Math.ceil(H/CS);
+  t=new Uint8Array(N);col=new Uint32Array(N);life=new Uint8Array(N);stamp=new Uint8Array(N);vel=new Uint8Array(N);
+  bg=new Uint32Array(N);bgD=new Uint32Array(N);bgB=new Uint8Array(N);
+  ST.act=new Uint8Array(CW*CHN);ST.nxt=new Uint8Array(CW*CHN);
+  ST.dx0=W;ST.dy0=H;ST.dx1=-1;ST.dy1=-1;          // dirty box for support checks
+  ST.worldN=N;for(const f of ST.rsz||[])f();
+  return true;
+}
+setWorld(1600,640);
 // clock, frame, genMode: shared state (ST in state.js)
-ST.dx0=W;ST.dy0=H;          // dirty box for support checks
 export const booms=[];                         // deferred explosions (chain reactions)
 export function wake(i){
   const x=i%W,y=(i/W)|0,cx=x>>5,cy=y>>5;

@@ -2,7 +2,7 @@
 import '../enemies/bosses.js'; // evaluation order: runs after enemies/bosses.js
 import { ST } from '../state.js';
 import { rgb } from '../world/materials.js';
-import { H, VH, VW, W } from '../world/grid.js';
+import { H, VH, VW, W, onWorldResize } from '../world/grid.js';
 
 // ================= render =================
 export const cv=document.getElementById('view'),ctx=cv.getContext('2d');
@@ -21,10 +21,9 @@ blur.width=VW/2;
 blur.height=VH/2;
 export const bctx=blur.getContext('2d');
 export const mm=document.createElement('canvas');
-mm.width=W/8;
-mm.height=H/8;
 export const mctx=mm.getContext('2d');
-export const mimg=mctx.createImageData(W/8,H/8),mbuf=new Uint32Array(mimg.data.buffer);
+export let mimg,mbuf;
+onWorldResize(()=>{mm.width=Math.ceil(W/8);mm.height=Math.ceil(H/8);mimg=mctx.createImageData(mm.width,mm.height);mbuf=new Uint32Array(mimg.data.buffer);});
 // scale, ox, oy, CX, CY, GL: shared state (ST in state.js)
 export function resize(){cv.width=innerWidth;cv.height=innerHeight;ST.scale=Math.max(1,Math.min(innerWidth/VW,innerHeight/VH));ST.ox=(innerWidth-VW*ST.scale)/2|0;ST.oy=(innerHeight-VH*ST.scale)/2|0;
   vig.width=cv.width;vig.height=cv.height;const g=vctx.createRadialGradient(cv.width/2,cv.height/2,Math.min(cv.width,cv.height)*.35,cv.width/2,cv.height/2,Math.max(cv.width,cv.height)*.72);

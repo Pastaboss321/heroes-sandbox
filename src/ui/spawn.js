@@ -18,6 +18,7 @@ import { SPAWN, lightningStrike, surfaceY } from '../heroes/powers.js';
 import { freezeArea, iceAt } from '../heroes/xmen.js';
 import { mouse, spawnPlayer } from '../player.js';
 import { ENEMY_TYPES, clearEnemies, eHit, spawnEnemy } from '../enemies/core.js';
+import { spawnTitan } from '../enemies/titans.js';
 
 // ================= spawn menu (sandbox): place enemies, objects and terrain =================
 // spawnUI, slowTk: shared state (ST in state.js)
@@ -68,7 +69,7 @@ const TOOLS=[
 ];
 export function buildSpawnUI(){
   const tabs=[
-    {id:'enemies',label:'ENEMIES',items:Object.keys(ENEMY_TYPES).map(k=>{const d=ENEMY_TYPES[k];return{id:k,cat:'enemies',kind:'place',label:d.label||(d.title?prettyName(d.title.toLowerCase()):prettyName(k)),icon:iconSprite(d.sprite,d.pal),tip:d.title?'boss':''};})},
+    {id:'enemies',label:'ENEMIES',items:Object.keys(ENEMY_TYPES).filter(k=>k!=='titan_part').map(k=>{const d=ENEMY_TYPES[k];return{id:k,cat:'enemies',kind:'place',label:d.label||(d.title?prettyName(d.title.toLowerCase()):prettyName(k)),icon:d.titan?iconRects([['#14110f',1,1,14,14],['#c88cff',3,3,10,10],['#ffc93c',6,5,4,3]]):iconSprite(d.sprite,d.pal),tip:d.titan?'TITAN · three phases':d.title?'boss':''};})},
     {id:'objects',label:'OBJECTS',items:OBJS.map(o=>Object.assign({cat:'objects',kind:'place'},o))},
     {id:'terrain',label:'TERRAIN',items:TERRAIN.map(m=>({id:'m'+m,cat:'terrain',kind:'paint',mat:m,label:prettyName(MATS[m][0]),icon:iconMat(m)}))},
     {id:'tools',label:'TOOLS',items:TOOLS.map(o=>Object.assign({cat:'tools'},o))},
@@ -80,7 +81,7 @@ export function buildSpawnUI(){
     onBrush:n=>{SPAWN.brush=n;},onSnap:on=>{SPAWN.snap=on;}});
 }
 export function resetSpawn(){Object.assign(SPAWN,{tool:null,pause:false,slow:false,god:false,inf:false,peace:false,latch:false});if(ST.spawnUI){ST.spawnUI.close();ST.spawnUI.select(null);for(const id of ['pause','slow','god','inf','peace'])ST.spawnUI.setToggle(id,false);}}
-export function groundBelow(x,y){x=Math.max(0,Math.min(W-1,x|0));let yy=Math.max(2,y|0);for(let k=0;k<200&&yy>2&&solidAt(x,yy-1);k++)yy--;return surfaceY(x,yy,H);}
+export function groundBelow(x,y){x=Math.max(0,Math.min(W-1,x|0));if(y<0)return y;let yy=Math.max(2,y|0);for(let k=0;k<200&&yy>2&&solidAt(x,yy-1);k++)yy--;const g=surfaceY(x,yy,H);return g-y>260?y:g;}
 export function placeStruct(fn,x,gy){const x0=Math.max(0,x-150),x1=Math.min(W,x+150),y0=Math.max(0,gy-260),y1=Math.min(H,gy+16);
   ST.CAPT=[];try{fn(x,gy);}finally{var cells=ST.CAPT;ST.CAPT=null;}
   const r=rcount.length;let n=0;for(const i of cells)if(KIND[t[i]]===S){rid[i]=r;str[i]=15;n++;}rcount.push(n);
@@ -91,7 +92,7 @@ function paintDisc(cx,cy,r,m){const k=KIND[m];
     if(k===S){if(cur!==m)setc(i,m);}
     else{if(cur&&KIND[cur]!==G&&KIND[cur]!==F)continue;if(R()<(k===L?.7:k===P?.6:.45))setc(i,m);}}}
 export function useTool(){const T=SPAWN.tool;if(!T||ST.GS!=='play')return;const x=mouse.wx|0,y=mouse.wy|0,first=!SPAWN.latch;SPAWN.latch=true;
-  if(T.cat==='enemies'){if(!first)return;const d=ENEMY_TYPES[T.id];if(!d)return;let yy=y;for(let k=0;k<80&&d.w<=16&&eHit({def:d},x,yy);k++)yy--;
+  if(T.cat==='enemies'){if(!first)return;const d=ENEMY_TYPES[T.id];if(!d)return;if(d.titan){const e=spawnTitan(T.id,x);if(e)snd('boss',x,y,{v:.9});return;}let yy=y;for(let k=0;k<80&&d.w<=16&&eHit({def:d},x,yy);k++)yy--;
     const e=spawnEnemy(T.id,x,yy);if(e)snd('place',x,y);else fxWord(x,y-10,'MAX ENEMIES',.7,'#e23b2e',true);return;}
   if(T.cat==='objects'){if(!first)return;const gy=SPAWN.snap?groundBelow(x,y):y;placeStruct(T.place,x,gy);snd('place',x,gy);rings.push({x,y:gy-6,r:3,vr:2,life:10,c:[255,201,60]});return;}
   const r=SPAWN.brush;

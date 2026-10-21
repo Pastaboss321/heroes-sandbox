@@ -57,7 +57,7 @@ const ULTRON_POWERS=[
  // a lance of red energy from orbit drills a shaft straight down through the cursor
  {n:'Orbital Lance',fn:(a,p,use)=>{if(!use(40))return;ST.cd=70;const x=mouse.wx|0;let k=0;fxWord(x,ST.camY+30,'TARGET ACQUIRED.',1,'#ff6b5c',true);snd('charge',x,mouse.wy,{pitch:.6});
    ACT.push(()=>{k++;if(k<30){if(k%4<2)beams.push({x0:x,y0:ST.camY,x1:x,y1:ST.camY+VH,life:1,w:0,c:[255,90,70],g:[160,20,20]});return true;}
-     const y=Math.max(0,ST.camY|0)+(k-30)*9;for(let yy=y;yy<y+9;yy+=3)explode(x+(R()-.5)*4|0,yy,7,{self:true,quiet:true,fire:.15,col:[255,60,40]});damageEnemies(x,y,16,20,0,4,true);
+     const y=(ST.camY|0)+(k-30)*9;for(let yy=y;yy<y+9;yy+=3)explode(x+(R()-.5)*4|0,yy,7,{self:true,quiet:true,fire:.15,col:[255,60,40]});damageEnemies(x,y,16,20,0,4,true);
      beams.push({x0:x,y0:ST.camY,x1:x,y1:y+9,life:2,w:3,c:[255,220,210],g:[255,30,20]});ST.shake=Math.max(ST.shake,8);if(k%6===0)snd('boom',x,y,{size:.8});return k<100&&y<H-44;});}},
  // an overload nova: arcs of electricity to everything nearby, robots get stunned
  {n:'Overload Pulse',fn:(a,p,use)=>{if(!use(35))return;ST.cd=60;const cx=p.x,cy=p.y-ST.PH/2;for(const e of enemies){const d=Math.hypot(e.x-cx,e.y-cy);if(d<120){zap(cx,cy,e.x,e.y,[255,200,190],[255,40,40]);hitEnemy(e,30*(1-d/160),0,-2);if(isMetal(e))e.frozen=Math.max(e.frozen||0,90);}}

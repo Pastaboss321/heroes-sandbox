@@ -130,6 +130,7 @@ ICE_POWERS.push(
    for(let k=0;k<40;k++)spawn(x+(R()-.5)*8,y-R()*ST.SH,(R()-.5)*2,-R()*2,R()<.5?rgb(230,250,255):rgb(150,210,250),18,0,1,0,1);for(let k=0;k<9;k++)iceAt(x-4+k,y);}},
  // grow icicles under the nearest ceiling (or out of a frost cloud), then drop them as falling ice
  {n:'Icicle Drop',fn:(a,p,use)=>{if(!use(26))return;ST.cd=45;const cx=mouse.wx|0,cy=mouse.wy|0,ics=[];
+   if(cy<20){for(let k=-3;k<=3;k++)shots.push({x:cx+k*8,y:ST.camY-6-R()*20,vx:0,vy:7,type:'shard',life:120,col:[200,240,255],grav:.1,boom:6});fxWord(cx,cy-30,'ICICLES!',1.1,'#bfe3ff',true);return;}
    for(let k=-3;k<=3;k++){const x=cx+k*8;if(x<3||x>=W-3)continue;let top=-1;for(let d=0;d<140;d++){const Y=cy-d;if(Y<2)break;const m=t[Y*W+x];if(m&&KIND[m]===S){top=Y+1;break;}}
      if(top<0)top=Math.max(3,(ST.camY|0)+4);const h=8+R()*7|0,cells=[];
      for(let yy=0;yy<h;yy++){const w=Math.round((1-yy/h)*1.8);for(let xx=-w;xx<=w;xx++){const X=x+xx,Y=top+yy;if(Y>=H-44)continue;const i=Y*W+X;if(t[i]!==0&&KIND[t[i]]!==G)continue;setc(i,ICE);const v=R()*30|0;col[i]=rgb(170+v,225+v/3,255);pin[i]=3;cells.push(i);}}

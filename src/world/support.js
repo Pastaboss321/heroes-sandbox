@@ -1,8 +1,8 @@
 // Structural support: anchor flood, support checks, back-wall orphan sweep, cluster flood into rigid bodies.
 import './sim.js'; // evaluation order: runs after world/sim.js
 import { ST } from '../state.js';
-import { CONC, DIRT, GLASS, GRASS, KIND, L, LEAF, NEON, NM, OBSID, P, R, RUBBLE, S, STEEL, STONE, WEB, WOOD } from './materials.js';
-import { H, N, W, bg, bgB, bgD, col, markDirty, t, vel, wake } from './grid.js';
+import { BONE, CONC, DIRT, GLASS, GOLD, GRASS, KIND, L, LEAF, NEON, NM, OBSID, P, R, RUBBLE, S, STEEL, STONE, VIBR, WEB, WOOD } from './materials.js';
+import { H, N, W, bg, bgB, bgD, col, markDirty, onWorldResize, t, vel, wake } from './grid.js';
 import { dust, makeBody } from './bodies.js';
 import { MP, crumble, spawn } from './particles.js';
 import { shade } from './destruction.js';
@@ -12,7 +12,7 @@ import { snd } from '../sfx.js';
 // Deep natural ground is "pinned" (bedrock-like). Anything not connected to pinned
 // ground, the world floor, or resting on loose debris breaks off as a rigid chunk
 // that falls, tips over its edge, and shatters on impact.
-export const vis=new Uint32Array(N), q=new Int32Array(N), bm=new Uint32Array(N), pin=new Uint8Array(N);
+export let vis, q, bm, pin;
  // vgen, bgen: shared state (ST in state.js)
 export const bodies=[];
  const CAP=40000;
@@ -32,8 +32,8 @@ LOAD[LEAF]=20;
 LOAD[GRASS]=120;
 export const NAT=new Uint8Array(NM);
 NAT[DIRT]=NAT[GRASS]=NAT[STONE]=NAT[OBSID]=1; // natural ground vs built structures
-export const gnd=new Uint8Array(N); // per cell: counts as ground (natural ground, plus streets/decks/tunnels wider than any building)
-export const str=new Uint8Array(N).fill(10); // per-structure strength (x0.1), set at generation for a 1.5x safety margin
+export let gnd; // per cell: counts as ground (natural ground, plus streets/decks/tunnels wider than any building)
+export let str; // per-structure strength (x0.1), set at generation for a 1.5x safety margin
 MASS[STEEL]=1.5;
 MASS[STONE]=1.2;
 MASS[OBSID]=1.2;
@@ -42,9 +42,10 @@ MASS[WOOD]=.5;
 MASS[LEAF]=.2;
 MASS[GRASS]=.3;
 LOAD[WEB]=160;
+LOAD[GOLD]=650;MASS[GOLD]=1.4;LOAD[VIBR]=1200;MASS[VIBR]=1.1;LOAD[BONE]=700;MASS[BONE]=1.1;NAT[BONE]=1; // the Celestial's skull is the ground of Knowhere
 MASS[WEB]=.05; // spider silk: featherweight and strong, so strands span gaps
 let collapses=0;
-const vis2=new Uint32Array(N), GCAP=150000;
+let vis2;const GCAP=150000;
  let ggen=0, gstart=0;
 const PCAP=8192, pcand=new Int32Array(PCAP), fcand=new Int32Array(PCAP);
 // loose debris under a structure only holds it up if the pile itself stands on something else.
@@ -97,7 +98,8 @@ function dropCluster(list,n){
   if(k2>0){const b=makeBody(list,k2,false);if(b){b.vy=Math.max(b.vy,.4);b.va+=(R()-.5)*.01;}}
   ST.shake=Math.min(22,ST.shake+Math.min(6,Math.sqrt(n)/12));
 }
-export const unq=[], stk=new Int32Array(N), rid=new Int32Array(N), rcount=[0];
+export const unq=[], rcount=[0];
+export let stk, rid;
  let vstart=0;
 // rid: which intact piece a cell belongs to (set at generation and when debris settles). Untouched pieces never topple.
 export function supportCheck(init){
@@ -183,3 +185,5 @@ function flood(s,init){
     const b=makeBody(q,k2,false); if(b)b.vy=.8;
   }
 }
+// per cell arrays follow the world size
+onWorldResize(()=>{vis=new Uint32Array(N);q=new Int32Array(N);bm=new Uint32Array(N);pin=new Uint8Array(N);gnd=new Uint8Array(N);str=new Uint8Array(N).fill(10);vis2=new Uint32Array(N);stk=new Int32Array(N);rid=new Int32Array(N);ob[0]=W;ob[1]=-1;ob[2]=H;ob[3]=-1;ST.vgen=0;ggen=0;gstart=0;});

@@ -8,12 +8,15 @@ import { afters, flash, fxBurst, fxWord, rings } from './render/fx.js';
 import { bgHit, explode, punchOut, shade } from './world/destruction.js';
 import { ANIM, aimLocal, armLen, armMode } from './render/rig.js';
 import { snd } from './sfx.js';
-import { GAMMA, SPAWN, pickC, quake } from './heroes/powers.js';
+import { GAMMA, SPAWN, pickC, quake, shockFx } from './heroes/powers.js';
 import { aimFrom, slashFx } from './heroes/xmen.js';
 import { PAL_DOOM, SPR_DOOM } from './heroes/doom.js';
 import { opticThrust } from './heroes/cyclops.js';
 import { iceSlideStep } from './heroes/iceman.js';
-import { ray } from './heroes/wave2.js';
+import { ray, solidCells } from './heroes/wave2.js';
+import { sliceBodies } from './world/slice.js';
+import { bodies, q } from './world/support.js';
+import { makeBody } from './world/bodies.js';
 import { damageEnemies, hitEnemy, nearestEnemy } from './enemies/core.js';
 
 ST.SPR=SPR_DOOM;ST.SPC=PAL_DOOM; // SZ: Ant-Man's current size (1 = normal)
@@ -40,7 +43,12 @@ export function carve(cx,cy,r,vx,vy,floorY=H){
     setc(i,EMPTY);}
 }
 function bore(p,sp){
-  const r=Math.min(9,6+(sp-ST.CH.fs)*.8);
+  const r=Math.min(9,6+(sp-ST.CH.fs)*.8),ux=p.vx/sp,uy=p.vy/sp,cy=p.y-ST.PH/2;
+  // MOLTYN-style ramming: chunks the hero flies through are severed along the flight line, and every few
+  // ticks the rock just ahead is torn out whole and thrown forward instead of vaporised
+  sliceBodies(p.x-ux*10,cy-uy*10,p.x+ux*14,cy+uy*14,{vx:p.vx,vy:p.vy,push:1.4});
+  if(ST.frame%5===0&&bodies.length<120){const n=solidCells(p.x+ux*(r+6),cy+uy*(r+6),r+1|0,true);let k=0;for(let j=0;j<n;j++)if(KIND[t[q[j]]]===S)q[k++]=q[j];
+    if(k>=24){const b=makeBody(q,k,false);if(b){b.chunk=true;b.vx=p.vx*.9+(R()-.5)*1.5;b.vy=p.vy*.9-1-R();b.va=(R()-.5)*.2;b.age=16;}}}
   carve(p.x+p.vx/sp*4,p.y-ST.PH/2+p.vy/sp*4,r,p.vx,p.vy);
   damageEnemies(p.x,p.y-ST.PH/2,r+6,3,p.vx*.5,p.vy*.5);
   if(ST.frame%3===0)ST.shake=Math.max(ST.shake,2.5);
@@ -51,6 +59,7 @@ export function hurt(d){
   if(p.shell>0)d*=.2; // Ultron's adamantium shell
   if(p.sense>0&&R()<.7){p.vx+=(R()<.5?-1:1)*2.2;for(let k=0;k<6;k++)spawn(p.x,p.y-ST.PH/2,(R()-.5)*3,(R()-.5)*3,rgb(240,240,250),8,0,1,0,1);if(ST.frame-(p.dodgeW||-99)>30){p.dodgeW=ST.frame;fxWord(p.x,p.y-ST.PH-6,'DODGED!',.7,'#f3e9d2',true);}return;}
   if(ST.SZ<.8)d*=.6;
+  if(ST.CH.id==='panther'){p.kin=Math.min(100,(p.kin||0)+d*(p.absorb>0?3:1.2));if(p.absorb>0){d*=.15;for(let k=0;k<3;k++)spawn(p.x+(R()-.5)*8,p.y-R()*ST.PH,(R()-.5)*2,-R()*2,rgb(180,120,255),10,0,1,0,1);}}
   if(SPAWN.god)return;
   if(ST.shieldOn){for(let k=0;k<4;k++)spawn(p.x+(R()-.5)*30,p.y-8+(R()-.5)*30,(R()-.5)*2,(R()-.5)*2,glowRGB(),10,0,1,0,1);return;}
   if(p.metal>0){for(let k=0;k<5;k++)spawn(p.x+(R()-.5)*8,p.y-R()*ST.PH,(R()-.5)*3,-R()*2,rgb(255,240,200),8,0,1,1);return;}
@@ -61,7 +70,7 @@ export function hurt(d){
 }
 export function updPlayer(){
   const p=pl_;
-  const ax=(keys.KeyD?1:0)-(keys.KeyA?1:0), ay=(keys.KeyS?1:0)-((keys.KeyW||keys.Space)?1:0);
+  const ax=((keys.KeyD?1:0)-(keys.KeyA?1:0))*(ST.mindT>0?-1:1), ay=(keys.KeyS?1:0)-((keys.KeyW||keys.Space)?1:0);
   const jumpP=pressed.KeyW||pressed.Space, jumpH=keys.KeyW||keys.Space, shiftP=pressed.ShiftLeft||pressed.ShiftRight, shiftH=keys.ShiftLeft||keys.ShiftRight;
   const FS=ST.CH.fs, BOOST=ST.CH.boost;
   if(pressed.KeyF&&ST.CH.id!=='spidey')toggleFly(!p.fly);
@@ -179,9 +188,10 @@ export function updPlayer(){
       if(p.buffer>0&&p.coyote>0){p.vy=-ST.CH.jump;p.buffer=0;p.coyote=0;p.ground=false;snd('jump',p.x,p.y,{v:hulk?.8:.4,heavy:hulk});if(hulk){ST.shake+=2;for(let k=0;k<16;k++)spawn(p.x+(R()-.5)*8,p.y,(R()-.5)*3,-R()*1.5,rgb(160,150,130),20,0,0,0,1);}}
       if(!jumpH&&p.vy<-1.5&&!p.leap&&!p.clapF)p.vy*=.6; // jump cut
       if(ST.CH.fly&&!p.ground&&jumpH&&p.vy>0){p.jumpHeldF++;if(p.jumpHeldF>10)toggleFly(true);}else p.jumpHeldF=0;
-      p.vy+=p.vy<0&&(jumpH||p.leap||p.clapF)?.24:.42;
+      p.vy+=(p.vy<0&&(jumpH||p.leap||p.clapF)?.24:.42)*(ST.gk||1); // per-map gravity: the Moon floats you
       if(p.slam)p.vy=Math.max(p.vy,8);
       p.vy=Math.min(p.slam?10:6.5,p.vy);
+      if(p.slam){if(p.slamY0==null)p.slamY0=p.y;if(p.y-p.slamY0>110&&ST.frame%2===0){spawn(p.x+(R()-.5)*6,p.y-ST.PH*.7,(R()-.5),-2-R()*2,R()<.5?rgb(255,220,140):rgb(255,120,40),14,0,1,0,1);if(ST.frame%20===0)fxWord(p.x,p.y-ST.PH-8,'INCOMING!',.8,'#ffc93c',true);}}else p.slamY0=null; // a slam started high up becomes a meteor dive
       if(p.cling){ // clinging: claws gouge the wall as he climbs
         p.vy=keys.KeyW?-1.8:keys.KeyS?2.4:.35;p.vx=0;p.airF=0;
         if(ST.frame%(keys.KeyW||keys.KeyS?3:8)===0){const X=p.x+p.cling*(ST.PW/2+1)|0;for(let c=-1;c<=1;c++){const Y=p.y-ST.PH*.62+c*2.5|0;if(X<0||X>=W||Y<0||Y>=H)continue;const i=Y*W+X,m=t[i];
@@ -228,7 +238,9 @@ export function updPlayer(){
   if(p.ground&&!wasGround&&!p.fly){
     p.landF=fallV>3?8:4;p.clapF=0;
     if(p.metal>0&&fallV>4)quake(p.x,p.y,{col:[200,206,216],r:24});
-    if(p.slam){p.slam=false;const o=Object.assign({},p.slamOpt||{});if(o.dive)o.r=Math.min(46,16+Math.max(0,p.y-p.diveY)*.16|0);quake(p.x,p.y,o);p.leap=false;}
+    if(p.slam){p.slam=false;const o=Object.assign({},p.slamOpt||{});if(o.dive)o.r=Math.min(46,16+Math.max(0,p.y-p.diveY)*.16|0);
+      const fall=p.slamY0!=null?p.y-p.slamY0:0;if(fall>110){o.r=Math.min(64,(o.r||36)+fall*.035|0);shockFx(p.x,p.y,1.4);ST.hitstop=Math.max(ST.hitstop,6);fxWord(p.x,p.y-30,'METEOR DROP!',1.4,'#ffc93c',true);}p.slamY0=null;
+      quake(p.x,p.y,o);p.leap=false;}
     else if(p.leap){p.leap=false;quake(p.x,p.y,{col:ST.CH.glow,r:p.leapPow!=null?18+p.leapPow*18|0:30});p.leapPow=null;}
     else if(fallV>(ST.CH.id==='hulk'?4.2:5.8))superLand(p,fallV);
     else snd('land',p.x,p.y,{v:Math.min(1,fallV/6)*(ST.CH.id==='hulk'?1:.5),heavy:ST.CH.id==='hulk'});

@@ -20,12 +20,28 @@ import { RW, ants, gzones, limbo, portals, tramps } from '../heroes/wave2.js';
 import { pl_, spawnPlayer } from '../player.js';
 import { clearEnemies } from '../enemies/core.js';
 import { ambRetro, genRetro } from './retro.js';
+import { ambAsgard, genAsgard } from './asgard.js';
+import { ambWakanda, genWakanda } from './wakanda.js';
+import { ambSakaar, genSakaar } from './sakaar.js';
+import { ambKnowhere, ambMoon, ambTitan, genKnowhere, genMoon, genTitan } from './space.js';
+import { ambDark, genDark } from './dark.js';
+import { setWorld } from '../world/grid.js';
 
 export const mapSel=document.getElementById('map');
-export const MAPDEFS={city:{name:'City',gen:genCity},nyc:{name:'New York',gen:genNYC},nyc2099:{name:'NYC 2099',gen:genNYC2099,amb:amb2099,rain:true},forest:{name:'Forest',gen:genForest},xmansion:{name:'X-Mansion',gen:genXMansion},
-  retro:{name:'Earth-828 NYC',gen:genRetro,amb:ambRetro},
-  incursion:{name:'Incursion NYC',gen:genIncursion,amb:ambIncursion},
-  savage:{name:'Savage Land',gen:genSavageLand,amb:ambSavage},arctic:{name:'Weapon X',gen:genArctic,amb:ambArctic,wind:true}};
+// w: world width (heroes are fast, so maps are long); grav: gravity multiplier; space: an off-world destination
+export const MAPDEFS={city:{name:'City',gen:genCity,w:3600},nyc:{name:'New York',gen:genNYC,w:4000},nyc2099:{name:'NYC 2099',gen:genNYC2099,amb:amb2099,rain:true,w:4000},forest:{name:'Forest',gen:genForest,w:3200},xmansion:{name:'X-Mansion',gen:genXMansion,w:2400},
+  retro:{name:'Earth-828 NYC',gen:genRetro,amb:ambRetro,w:3600},
+  incursion:{name:'Incursion NYC',gen:genIncursion,amb:ambIncursion,w:3600},
+  savage:{name:'Savage Land',gen:genSavageLand,amb:ambSavage,w:4000},arctic:{name:'Weapon X',gen:genArctic,amb:ambArctic,wind:true,w:3200},
+  wakanda:{name:'Wakanda',gen:genWakanda,amb:ambWakanda,w:4400},
+  asgard:{name:'Asgard',gen:genAsgard,amb:ambAsgard,w:4400,space:true},
+  sakaar:{name:'Sakaar',gen:genSakaar,amb:ambSakaar,w:4000,space:true,grav:.9},
+  knowhere:{name:'Knowhere',gen:genKnowhere,amb:ambKnowhere,w:3600,space:true,grav:.7},
+  titan:{name:'Titan',gen:genTitan,amb:ambTitan,w:4000,space:true,grav:.85},
+  moon:{name:'The Moon',gen:genMoon,amb:ambMoon,w:4400,space:true,grav:.4},
+  dark:{name:'Dark Dimension',gen:genDark,amb:ambDark,w:3600,space:true,grav:.8}};
+// the phone build keeps worlds shorter (memory)
+export const mapW=d=>{const w=d.w||1600;return window.HS_MOBILE?Math.max(1600,Math.round(w*.55/32)*32):w;};
 for(const id in MAPDEFS){const o=document.createElement('option');o.value=id;o.textContent=MAPDEFS[id].name;mapSel.appendChild(o);}
 function shadeWorld(){
   for(let x=0;x<W;x++){let depth=-1;
@@ -43,7 +59,8 @@ export function regen(){
   ants.length=0;tramps.length=0;gzones.length=0;limbo.length=0;portals.a=portals.b=null;RW.length=0;
   pins.length=0;therm.length=0;jets.length=0;waves.length=0;comics.length=0;ST.impactF=0;ST.hurtV=0;ST.decoy=null;ST.stasis=null;ST.slowT=0;ST.heatZ=null;
   Object.assign(pl_,{script:0,ball:0,tow:null,grip:null,cling:0,crouch:0,stealth:0,grit:0,dodge:0,sprint:0,leap:false,slam:false});ST.wave=0;ST.SPAWNX=50;booms.length=0;rings.length=0;flashes.length=0;beams.length=0;afters.length=0;
-  pin.fill(0);str.fill(10);rid.fill(0);rcount.length=1;ST.PIN2=null;ST.genMode=true;(MAPDEFS[mapSel.value]||MAPDEFS.city).gen();ST.genMode=false;
+  const def=MAPDEFS[mapSel.value]||MAPDEFS.city;setWorld(mapW(def),def.h||640);ST.gk=def.grav||1;
+  pin.fill(0);str.fill(10);rid.fill(0);rcount.length=1;ST.PIN2=null;ST.genMode=true;def.gen();ST.genMode=false;
   for(let i=0;i<N;i++)bgB[i]=bg[i]!==bgD[i]?1:0;
   // streets, decks and tunnel shells: built runs wider than any building act as ground, so buildings stand on them
   for(let i=0;i<N;i++)gnd[i]=NAT[t[i]];

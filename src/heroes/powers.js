@@ -10,8 +10,10 @@ import { MP, crumble, gcol, pvx, pvy, px, py, solidAt, spawn } from '../world/pa
 import { afters, beams, flash, flashes, fxBurst, fxImpact, fxWord, rings } from '../render/fx.js';
 import { bgHit, explode, ringChunks } from '../world/destruction.js';
 import { iceAt } from './xmen.js';
-import { SKY, carve, glowRGB, hand, hurt, mouse, pl_ } from '../player.js';
+import { SKY, boxHit, carve, glowRGB, hand, hurt, mouse, pl_ } from '../player.js';
 import { damageCone, damageEnemies, damageLine, enemies, enemyAt, hitEnemy, nearestEnemy } from '../enemies/core.js';
+import { AOE_MAXR } from './aoe.js';
+import { sliceLine } from '../world/slice.js';
 
 // ================= powers =================
 // A power is {n:name, fn(a,p,use)} (a = aim from the hand, use(cost) spends energy) or
@@ -35,11 +37,17 @@ export function shieldAs(cols,reflect){ST.shieldC=cols;shield();
 export const pins=[],therm=[],jets=[],waves=[];
 // decoy, stasis, slowT, heatZ, caPulse, AI_T, AI_TE, AI_ALLY: shared state (ST in state.js)
 export function surfaceY(x,y0,maxD=200){x=Math.max(0,Math.min(W-1,x|0));let y=Math.max(0,y0|0);const y1=Math.min(H-1,y+maxD);for(;y<y1;y++){const m=t[y*W+x];if(m&&KIND[m]!==G&&KIND[m]!==F&&KIND[m]!==L)break;}return y;}
-export function grabbable(x,y,r){let b=null,bd=r;for(const e of enemies){if(e.hp<=0||e.grabbed||e.def.title||e.def.w>20)continue;const d=Math.hypot(e.x-x,e.y-y)-e.def.w/2;if(d<bd){bd=d;b=e;}}return b;}
+// the ground under (x,y) if it is within maxD, otherwise y itself: aimed effects land in the open sky
+// instead of travelling all the way down to the street
+export function groundNear(x,y,maxD=120){x=x|0;if(x<0||x>=W)return y;const y1=Math.min(H-1,(y|0)+maxD);for(let yy=Math.max(0,y|0);yy<y1;yy++){const m=t[yy*W+x];if(m&&KIND[m]!==G&&KIND[m]!==F&&KIND[m]!==L)return yy;}return y;}
+// moves the hero for powers that steer it (p.script > 0 skips normal movement): slides along what it can't enter
+export function scriptMove(p,vx,vy){const top=ST.PH+2-SKY+VH/2,nx=Math.max(5,Math.min(W-5,p.x+vx)),ny=Math.max(top,Math.min(H-8,p.y+vy));
+  if(!boxHit(nx,ny)){p.x=nx;p.y=ny;return true;}if(!boxHit(nx,p.y)){p.x=nx;return true;}if(!boxHit(p.x,ny)){p.y=ny;return true;}return false;}
+export function grabbable(x,y,r){let b=null,bd=r;for(const e of enemies){if(e.hp<=0||e.grabbed||e.def.title||e.def.titan||e.def.w>20)continue;const d=Math.hypot(e.x-x,e.y-y)-e.def.w/2;if(d<bd){bd=d;b=e;}}return b;}
 export const isMetal=e=>e.def.metal!==false;
 export function crackCell(X,Y,vx){if(X<0||X>=W||Y<0||Y>=H-44)return;const i=Y*W+X,m=t[i];if(!m||KIND[m]===G||KIND[m]===F)return;if(m===OBSID||m===STEEL&&R()<.6)return;
   if(ST.np<MP-400&&R()<.45)spawn(X,Y,vx*(.5+R())+(R()-.5)*1.5,-1.5-R()*3,col[i],80,KIND[m]===S?RUBBLE:KIND[m]===L?m:0,0);setc(i,EMPTY);}
-export function shockFx(x,y,s=1){if(waves.length>5)waves.shift();waves.push({x,y,r:2,s,life:30});ST.caPulse=Math.max(ST.caPulse,s*3);} // GPU ring distortion + colour split
+export function shockFx(x,y,s=1){s*=Math.min(2,Math.sqrt(ST.aoeC||1));if(waves.length>5)waves.shift();waves.push({x,y,r:2,s,life:30});ST.caPulse=Math.max(ST.caPulse,s*3);} // GPU ring distortion + colour split
 export function updWaves(){for(let n=waves.length-1;n>=0;n--){const w=waves[n];w.r+=4+w.s*3;if(--w.life<=0)waves.splice(n,1);}ST.caPulse*=.85;}
 // ---- updaters for the new powers
 export function updPins(){for(let n=pins.length-1;n>=0;n--){const P2=pins[n];P2.life--;
@@ -51,7 +59,7 @@ export function updPins(){for(let n=pins.length-1;n>=0;n--){const P2=pins[n];P2.
   if(P2.life<=0){flash(P2.x,P2.y,20,BLUE,4);shots.push({x:P2.x,y:P2.y-3,vx:0,vy:-4,type:'hammer',life:300,out:0,hitSet:new Set(),spin:0});pins.splice(n,1);}}}
 export function updTherm(){for(let n=therm.length-1;n>=0;n--){const b=therm[n];
   if(!b.stuck){b.vy+=.12;const st=Math.ceil(Math.hypot(b.vx,b.vy))||1;
-    for(let k=0;k<st;k++){b.x+=b.vx/st;b.y+=b.vy/st;const X=b.x|0,Y=b.y|0;if(X<1||X>=W-1||Y<1||Y>=H-1){b.life=0;break;}const i=Y*W+X,m=t[i];
+    for(let k=0;k<st;k++){b.x+=b.vx/st;b.y+=b.vy/st;const X=b.x|0,Y=b.y|0;if(X<1||X>=W-1||Y<-SKY||Y>=H-1){b.life=0;break;}const i=Y*W+X,m=Y>=0?t[i]:0;
       if(m===WATER){setc(i,STEAM);b.life=0;break;}
       if(m&&(KIND[m]===S||KIND[m]===P)){b.stuck=true;b.x-=b.vx/st;b.y-=b.vy/st;b.life=110+R()*70|0;break;}
       const e=enemyAt(b.x,b.y,1);if(e){hitEnemy(e,7,0,0);b.life=0;for(let q2=0;q2<5;q2++)spawn(b.x,b.y,(R()-.5)*3,(R()-.5)*3,rgb(255,230,160),10,0,1,1);break;}}
@@ -122,13 +130,13 @@ export function shield(){
 }
 export function quake(x,y,o={}){
   fxWord(x,y-18,'WHUDOOM!',1.5,'#ffc93c',true);snd('slam',x,y,{size:(o.r||36)/30});fxBurst(x,y,60,o.col?`rgb(${o.col[0]},${o.col[1]},${o.col[2]})`:'#8dffb0');ST.hitstop=Math.max(ST.hitstop,4);fxImpact(x,y,4);
-  const r=o.r||36, gc=o.col||[120,255,160], green=!o.col;ST.shake=22;
+  const r=Math.min(AOE_MAXR,(o.r||36)*(ST.aoeC||1))|0, gc=o.col||[120,255,160], green=!o.col;ST.shake=22;
   for(let yy=-r;yy<=r;yy++)for(let xx=-r;xx<=r;xx++){const d=Math.hypot(xx,yy);if(d>r)continue;const X=x+xx|0,Y=y+yy|0;if(X<0||X>=W||Y<0||Y>=H)continue;const i=Y*W+X,m=t[i];
     if(KIND[m]===S&&m!==STEEL&&R()<(1-d/r)*.9/(1+HARD[m]*.15)){if(R()<.25&&Y<=y+3){spawn(X,Y,xx*.07+(R()-.5),-2-R()*3.5*(1-d/r),col[i],90,RUBBLE,0);t[i]=0;}else crumble(i);markDirty(i);wake(i);}
     else if((KIND[m]===P||KIND[m]===L)&&R()<.35*(1-d/r)){spawn(X,Y,(R()-.5)*2,-2-R()*3.5,col[i],80,m,0);t[i]=0;wake(i);}
   }
   explode(x,y+2,7,{fire:.15,green,col:o.col,self:true});ringChunks(x,y+4,r*.6,true);
-  damageEnemies(x,y,r*1.3,45,0,-4);
+  damageEnemies(x,y,r*1.3/(ST.aoeC||1),45,0,-4);
   for(let k=0;k<3;k++)rings.push({x,y,r:4+k*4,vr:2.4+k*.6,life:18+k*3,c:gc});
   for(let k=0;k<120;k++){const a=Math.PI+R()*Math.PI;spawn(x,y,Math.cos(a)*5,Math.sin(a)*3.5,green?gcol():pickC(gc),20+R()*25,0,1,1);}
   if(o.bolts)for(let k=0;k<6;k++)lightningStrike(x+(R()-.5)*120,y,6);
@@ -158,8 +166,8 @@ export function lightningStrike(x,ty,r){
   snd('thunder',x,ty,{gap:.12,v:Math.min(1,.5+r/16)});
   fxWord(x,ty-24,'KRAKKA-THOOM!',1.3,'#bfe3ff',true);ST.hitstop=Math.max(ST.hitstop,2);fxImpact(x,ty,3);
   // bolt from the sky to the first solid thing under x
-  x=Math.max(2,Math.min(W-3,x|0));let y=Math.max(0,ST.camY-10|0);
-  for(;y<H-1;y++){const m=t[y*W+x];if(m&&KIND[m]!==G&&KIND[m]!==F)break;if(enemyAt(x,y,4))break;}
+  x=Math.max(2,Math.min(W-3,x|0));let y=ST.camY-10|0;const yEnd=groundNear(x,ty,160);
+  for(;y<yEnd&&y<H-1;y++){if(y>=0){const m=t[y*W+x];if(m&&KIND[m]!==G&&KIND[m]!==F)break;}if(enemyAt(x,y,4))break;}
   const pts=[[x+(R()-.5)*30,ST.camY-10]];let cx=pts[0][0],cy=pts[0][1];
   while(cy<y){cy+=8+R()*6;cx+=(x-cx)*.3+(R()-.5)*10;pts.push([cx,Math.min(cy,y)]);}
   beams.push({pts,life:4,c:[245,250,255],g:[130,180,255]});
@@ -293,6 +301,8 @@ export function updTelekinesis(){
 export function updShots(world=true){
   for(let n=shots.length-1;n>=0;n--){
     const s=shots[n];
+    if(s.k==null)s.k=s.owner==='enemy'?1:ST.aoeK;ST.aoeC=s.k; // a shot keeps the area size it was fired with
+    if(s.type==='shield')continue; // Captain America's shield flies itself (heroes/cosmic.js)
     if(s.delay>0){s.delay--;const h=hand();s.x=h.x;s.y=h.y;continue;}
     if(ST.stasis&&inStasis(s.x,s.y))continue; // frozen mid-flight
     if(!world&&s.owner==='enemy')continue; // Tactical Focus: enemy fire crawls
@@ -303,7 +313,7 @@ export function updShots(world=true){
       if(hit||--s.life<=0){const e=hit&&hit!==true?hit:null;explode(s.x|0,s.y|0,8,{col:BLUE,self:true,word:'THOOOOM!'});lightningStrike(s.x,s.y,6);if(e)hitEnemy(e,40,0,2);pins.push({x:s.x,y:s.y,life:360,e});shots.splice(n,1);}
       continue;}
     if(s.type==='axe'){ // Stormbreaker: a razor-thin cut through everything on its line
-      s.spin+=.6;const st=Math.ceil(Math.hypot(s.vx,s.vy)),sp=Math.hypot(s.vx,s.vy)||1,nx=-s.vy/sp,ny=s.vx/sp;
+      s.spin+=.6;const st=Math.ceil(Math.hypot(s.vx,s.vy)),sp=Math.hypot(s.vx,s.vy)||1,nx=-s.vy/sp,ny=s.vx/sp;sliceLine(s.x,s.y,s.x+s.vx,s.y+s.vy,{edge:[200,220,255],quiet:true,push:1.3}); // the edge severs chunks and leaves a clean cut
       for(let k=0;k<st;k++){s.x+=s.vx/st;s.y+=s.vy/st;if(s.x<1||s.x>=W-1||s.y<-SKY||s.y>=H-1){s.life=0;break;}
         for(let w=-1;w<=1;w++){const X=s.x+nx*w|0,Y=s.y+ny*w|0;if(X<0||X>=W||Y<0||Y>=H-42)continue;const i=Y*W+X,m=t[i];if(!m||KIND[m]===G||KIND[m]===F)continue;if(m===OBSID&&R()<.7)continue;
           if(ST.np<MP-300&&R()<.25)spawn(X,Y,s.vx*.2+(R()-.5)*2,s.vy*.2-R()*2,KIND[m]===S&&R()<.5?rgb(200,220,255):col[i],40,KIND[m]===S?RUBBLE:KIND[m]===L?m:0,KIND[m]===S?1:0);if(bgB[i]){bg[i]=bgD[i];bgB[i]=0;}setc(i,EMPTY);}}
@@ -345,6 +355,7 @@ export function updShots(world=true){
       else{
         if(s.type!=='missile')for(const b of bodies){if(b.held)continue;if(Math.abs(s.x-b.x)<b.rmax+1&&Math.abs(s.y-b.y)<b.rmax+1&&bodyAt(b,s.x,s.y)){hit=true;break;}}
         const he=enemyAt(s.x,s.y,1);if(he&&he!==s.src&&!(s.team&&he.team===s.team))hit=true;
+        else if((s.boom||0)>=5||s.onHit&&s.prox!==false){const ne=nearestEnemy(s.x,s.y,(s.boom||6)*.7*s.k);if(ne&&ne!==s.src)hit=true;} // proximity fuse: blasts go off beside a target, so they work in open sky too
       }
       if(hit)break;
     }
@@ -374,9 +385,11 @@ export function updDrones(){
   }
 }
 export function updVortex(){
-  const v=ST.vortex;if(!v)return;if(--v.life<=0){explode(v.x,v.y,14,{fire:.3,green:true});rings.push({x:v.x,y:v.y,r:40,vr:-2.5,life:14,c:[120,255,160]});ST.vortex=null;return;}
-  const r=48;
-  for(let n=0;n<1100;n++){
+  const v=ST.vortex;if(!v)return;if(v.k==null)v.k=ST.aoeC||1;const k0=ST.aoeC;ST.aoeC=v.k;try{updVortex1(v);}finally{ST.aoeC=k0;}}
+function updVortex1(v){
+  if(--v.life<=0){explode(v.x,v.y,14,{fire:.3,green:true});rings.push({x:v.x,y:v.y,r:40*v.k,vr:-2.5*v.k,life:14,c:[120,255,160]});ST.vortex=null;return;}
+  const r=48*v.k;
+  for(let n=0,nn=Math.min(4000,1100*v.k*v.k|0);n<nn;n++){
     const a=R()*6.283,d=Math.sqrt(R())*r,X=v.x+Math.cos(a)*d|0,Y=v.y+Math.sin(a)*d|0;
     if(X<1||X>=W-1||Y<1||Y>=H-1)continue;const i=Y*W+X,m=t[i];if(m===0)continue;
     if(d<4){if(R()<.5)spawn(X,Y,(R()-.5)*2,(R()-.5)*2,col[i],12,0,1,0);setc(i,EMPTY);continue;}

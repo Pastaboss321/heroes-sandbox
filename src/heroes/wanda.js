@@ -58,7 +58,7 @@ const WANDA_POWERS=[
    for(let y=-r;y<=r;y++)for(let x=-r;x<=r;x++){if(x*x+y*y>r*r)continue;const X=cx+x,Y=cy+y;if(X<0||X>=W||Y<0||Y>=H-44)continue;const i=Y*W+X,m=t[i];if(KIND[m]===S&&m!==OBSID){const c=col[i];setc(i,SAND);col[i]=mix3(c,[214,186,118],.35);}}
    rings.push({x:cx,y:cy,r:4,vr:3,life:10,c:[255,70,140]});flash(cx,cy,40,[255,60,130],6);fxWord(cx,cy-r-6,'TRANSMUTE',1.1,'#ff6fa8',true);snd('psi',cx,cy,{pitch:.6});}},
  // hold: a storm of hex lightning tears up everything around the cursor
- {n:'Hex Storm',fn:(a,p,use)=>{if(!use(.9))return;const cx=mouse.wx,cy=mouse.wy;if(ST.frame%4===0){const x=cx+(R()-.5)*90,r=ray(x,cy-70,0,1,160,true),h=hand();
+ {n:'Hex Storm',fn:(a,p,use)=>{if(!use(.9))return;const cx=mouse.wx,cy=mouse.wy;if(ST.frame%4===0){const x=cx+(R()-.5)*90,r0=ray(x,cy-70,0,1,160,true),r=r0.hit?r0:{x,y:cy+(R()-.5)*40},h=hand();
      beams.push({pts:[[h.x,h.y],[(h.x+x)/2+(R()-.5)*20,(h.y+r.y)/2+(R()-.5)*20],[x,r.y]],life:3,c:[255,150,200],g:[255,40,120]});explode(x|0,r.y|0,5+(R()*4|0),{self:true,quiet:true,col:[255,60,130]});damageEnemies(x,r.y,12,8,0,-2,true);}
    if(ST.frame%3===0)rings.push({x:cx,y:cy,r:50,vr:-2,life:6,c:[255,60,130]});ST.shake=Math.max(ST.shake,2);sndLoop('hexf','arc',cx,cy,{v:.6});}},
  // "No more." Every weak enemy on screen simply stops existing; the rest are badly hurt
@@ -81,7 +81,7 @@ const WANDA_POWERS=[
    rings.push({x:cx,y:cy,r:r,vr:-2,life:10,c:[255,60,130]});fxWord(cx,cy-r-6,'INVERTED',1.1,'#ff6fa8',true);snd('psi',cx,cy,{pitch:1.1});}},
  // conjure random objects out of thin air above the cursor
  {n:'Conjure Chaos',fn:(a,p,use)=>{if(!use(30))return;ST.cd=50;const pool=['car','propane','boulder','crates','oil','girder','tree'];
-   for(let k=0;k<4;k++){const id=pool[R()*pool.length|0],o=OBJS.find(z=>z.id===id)||OBJS[0];const x=Math.max(30,Math.min(W-30,mouse.wx+(k-1.5)*30|0)),y=Math.max(40,(ST.camY|0)+30+(R()*20|0));placeStruct(o.place,x,y);}
+   for(let k=0;k<4;k++){const id=pool[R()*pool.length|0],o=OBJS.find(z=>z.id===id)||OBJS[0];const x=Math.max(30,Math.min(W-30,mouse.wx+(k-1.5)*30|0)),y=(ST.camY|0)+30+(R()*20|0);if(y<40){shots.push({x,y,vx:(R()-.5),vy:3,type:'hex',life:160,boom:10,col:[255,60,130],ecol:[255,60,130]});continue;}placeStruct(o.place,x,y);}
    fxWord(mouse.wx,ST.camY+20,'ABRA-CHAOS!',1.2,'#ff6fa8',true);flash(mouse.wx,ST.camY+40,90,[255,60,130],8);snd('psi',mouse.wx,ST.camY+40,{pitch:.7});}},
  // chaos unleashed: everything around her turns into something else
  {n:'Chaos Unleashed',fn:(a,p,use)=>{if(!use(55))return;ST.cd=140;const cx=p.x|0,cy=p.y-ST.PH/2|0,r=62;fxWord(cx,cy-40,'CHAOS!',1.8,'#ff6fa8',true);ST.hitstop=Math.max(ST.hitstop,4);fxImpact(cx,cy,4);shockFx(cx,cy,1.3);

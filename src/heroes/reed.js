@@ -73,7 +73,7 @@ const REED_POWERS=[
  {n:'Lasso Topple',fn:(a,p,use)=>{const cx=mouse.wx|0,cy=mouse.wy|0;if(Math.hypot(cx-p.x,cy-p.y)>260)return;const n0=solidCells(cx,cy,22,false);if(n0<60||!use(30))return;ST.cd=55;const b=makeBody(q,n0,false);if(!b)return;
    const dir=p.x<b.x?-1:1;b.vx=dir*4;b.vy=-2;b.va=dir*.06;b.thrown=true;b.safeP=ST.frame+60;stretchFx(a.h.x,a.h.y,cx,cy,14);fxWord(cx,cy-30,'TIMBERRR!',1.2,'#9fd0f0',true);snd('rip',cx,cy);ST.shake+=6;}},
  // a stretched fist hammers straight down, again and again, drilling a shaft
- {n:'Pile Driver',fn:(a,p,use)=>{if(!use(28))return;ST.cd=50;const x=mouse.wx|0;let y=Math.max(0,mouse.wy|0)-30,k=0;fxWord(x,y-20,'PILE DRIVER!',1.2,'#9fd0f0',true);
+ {n:'Pile Driver',fn:(a,p,use)=>{if(!use(28))return;ST.cd=50;const x=mouse.wx|0;let y=(mouse.wy|0)-30,k=0;fxWord(x,y-20,'PILE DRIVER!',1.2,'#9fd0f0',true);
    ACT.push(()=>{if(k%3===0){explode(x+(R()-.5)*4|0,y|0,9,{self:true,quiet:k%9!==0,col:F4C});damageEnemies(x,y,14,14,0,5);const h=hand();stretchFx(h.x,h.y,x,y,3);y+=10;}ST.shake=Math.max(ST.shake,5);return++k<36&&y<H-46;});}},
  // a rift to the Negative Zone drinks in wreckage and enemies, then blows
  {n:'Negative Zone Rift',fn:(a,p,use)=>{if(!use(40))return;ST.cd=90;const cx=mouse.wx,cy=mouse.wy;let k=0;fxWord(cx,cy-30,'NEGATIVE ZONE!',1.3,'#c8a0ff',true);snd('psi',cx,cy);

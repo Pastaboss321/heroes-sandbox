@@ -1,6 +1,7 @@
 // Helpers shared by the X-Men kits.
 import './powers.js'; // evaluation order: runs after heroes/powers.js
 import { ST } from '../state.js';
+import { clawSlice } from '../world/slice.js';
 import { ACID, EMPTY, F, G, ICE, KIND, LAVA, OBSID, R, RUBBLE, S, STEAM, STEEL, WATER, cl, rgb } from '../world/materials.js';
 import { H, W, col, setc, t } from '../world/grid.js';
 import { lumC } from '../render/look.js';
@@ -27,8 +28,8 @@ export function slashFx(x,y,ang){ // three claw arcs
 }
 export function clawSlash(a,p){
   const ang=Math.atan2(a.dy,a.dx),cx=a.h.x+a.dx*6,cy=a.h.y+a.dy*6;
-  for(let c=-1;c<=1;c++)for(let k=0;k<=14;k++){const t2=ang-.9+k*.13,r=10+c*2.2,X=cx+Math.cos(t2)*r|0,Y=cy+Math.sin(t2)*r|0;if(X<0||X>=W||Y<0||Y>=H)continue;const i=Y*W+X,m=t[i];
-    if(m&&KIND[m]!==G&&KIND[m]!==F&&!(m===STEEL&&R()<.3)){if(R()<.5)spawn(X,Y,a.dx*2+(R()-.5)*2,-R()*2,col[i],60,KIND[m]===S?RUBBLE:m,0);setc(i,EMPTY);if(R()<.4)spawn(X,Y,(R()-.5)*3,(R()-.5)*3,rgb(255,240,200),8,0,1,0,1);}}
+  // three adamantium blades: clean kerfs (MOLTYN-style) through walls, ground and falling chunks; what they wall off slides away
+  clawSlice(a.h.x,a.h.y,a.dx,a.dy,28,3,3,{edge:[236,238,250],vx:a.dx*3,vy:a.dy*3,quiet:true,push:.9});
   slashFx(cx,cy,ang);damageCone(a.h.x,a.h.y,a.dx,a.dy,24,16,3);bgHit(cx,cy,8);snd('slash',cx,cy,{gap:.06});
   p.punchF=7;ST.shake=Math.max(ST.shake,2);
 }

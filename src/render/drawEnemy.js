@@ -6,6 +6,7 @@ import { SET } from './look.js';
 import { pix } from './canvas.js';
 
 export function drawEnemy(e){
+  if(e.def.draw){e.def.draw(e);return;} // titans draw themselves (render/titan.js)
   const d=e.def,sp=d.sprite,sw=sp[0].length,sh=sp.length,S=(d.scale||1)*(e.sc||1),x0=e.x-sw*S/2,y0=e.y-sh*S/2+(d.fly?Math.round(Math.sin(e.t*.12+e.x*.1)):0);
   const walk=!d.fly&&e.ground&&Math.abs(e.vx)>.12,ph=e.t*(S>1?.16:.32),legY=Math.floor(sh*.62);
   const off=(x,y)=>{if(!walk||y<legY)return 0;const side=x<sw/2?1:-1,k=(y-legY+1)/(sh-legY);return Math.round(Math.sin(ph)*side*k*1.8*S);};

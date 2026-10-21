@@ -66,9 +66,12 @@ function rivalOf(e){
 }
 export function enemyAt(x,y,pad){for(const e of enemies){if(Math.abs(x-e.x)<=e.def.w/2+pad&&Math.abs(y-e.y)<=e.def.h/2+pad)return e;}return null;}
 export function nearestEnemy(x,y,r){let b=null,bd=r;for(const e of enemies){const d=Math.hypot(e.x-x,e.y-y);if(d<bd){bd=d;b=e;}}return b;}
-export function hitEnemy(e,dmg,kx,ky){if(e.hp<=0)return;if(e.mem.shield>0)dmg*=.35;if(e.hex>0)dmg*=1.5;e.hp-=dmg;e.flash=5;e.vx+=kx||0;e.vy+=ky||0;
+export function hitEnemy(e,dmg,kx,ky){if(e.hp<=0)return;
+  if(e.host){e.flash=5;if(e.host.hp>0)hitEnemy(e.host,dmg*(e.mult||1),0,0);return;} // a titan's weak point passes the hit on, multiplied
+  if(e.def.titan){kx=ky=0;}if(e.mem.shield>0)dmg*=.35;if(e.hex>0)dmg*=1.5;e.hp-=dmg;e.flash=5;e.vx+=kx||0;e.vy+=ky||0;
   if(dmg>=8&&ST.np<MP-2000){for(let k=0;k<5;k++){const a=R()*6.283,s=1.5+R()*2.5;spawn(e.x,e.y,Math.cos(a)*s,Math.sin(a)*s,R()<.5?rgb(255,250,230):rgb(255,210,120),6+R()*6,0,1,0,1);}if(dmg>=20)flash(e.x,e.y,10+dmg*.2,[255,230,180],3);}}
 export function damageEnemies(x,y,r,dmg,kx,ky,radial){
+  r*=ST.aoeC||1;
   for(const e of enemies){const dx=e.x-x,dy=e.y-y,d=Math.hypot(dx,dy);if(d>r+e.def.w/2)continue;const f=Math.max(.25,1-d/(r+1));
     const kr=radial||(!kx&&!ky)?3*f:0;hitEnemy(e,dmg*f,(kx||0)*f+(d?dx/d*kr:0),(ky||0)*f+(d?dy/d*kr:0));}
 }
@@ -77,6 +80,7 @@ export function damageLine(x0,y0,x1,y1,r,dmg){
   for(const e of enemies){const u=Math.max(0,Math.min(1,((e.x-x0)*dx+(e.y-y0)*dy)/L2));const d=Math.hypot(x0+dx*u-e.x,y0+dy*u-e.y);if(d<r+e.def.w/2)hitEnemy(e,dmg,dx/Math.sqrt(L2)*.3,dy/Math.sqrt(L2)*.3);}
 }
 export function damageCone(x,y,ux,uy,r,dmg,knock){
+  r*=ST.aoeC||1;
   for(const e of enemies){const dx=e.x-x,dy=e.y-y,d=Math.hypot(dx,dy)||1;if(d<r&&(dx*ux+dy*uy)/d>.6)hitEnemy(e,dmg*(1-d/r*.5),ux*knock,uy*knock-1);}
 }
 export function eHit(e,x,y){const hw=e.def.w/2,hh=e.def.h/2;
@@ -85,6 +89,10 @@ export function updEnemies(){
   for(let n=spawnQ.length-1;n>=0;n--){const s=spawnQ[n];if(--s.delay>0)continue;spawnQ.splice(n,1);const pos=spawnPoint(ENEMY_TYPES[s.type]);if(pos)spawnEnemy(s.type,pos[0],pos[1]);}
   for(let n=enemies.length-1;n>=0;n--){
     const e=enemies[n],d=e.def;e.t++;if(e.cd>0)e.cd--;if(e.flash>0)e.flash--;
+    if(d.titan){ // titans place themselves: no gravity, no collision, no knockback, nothing holds them
+      e.frozen=0;e.webbed=0;e.bound=0;e.hang=null;e.loop=null;e.grabbed=false;e.vx=e.vy=0;
+      if(!(ST.stasis&&inStasis(e.x,e.y)))d.think(e);
+      if(e.hp<=0){killEnemy(e);enemies.splice(n,1);}continue;}
     if(e.grabbed){if(e.hp<=0){if(ST.heldE===e)ST.heldE=null;killEnemy(e);enemies.splice(n,1);}continue;} // held by telekinesis: no AI, no physics
     if(ST.stasis&&inStasis(e.x,e.y)){if(ST.frame%4===0)spawn(e.x+(R()-.5)*e.def.w,e.y+(R()-.5)*e.def.h,0,0,rgb(255,150,230),6,0,1,0,1);if(e.hp<=0){killEnemy(e);enemies.splice(n,1);}continue;}
     const preSp=Math.hypot(e.vx,e.vy);
@@ -103,7 +111,7 @@ export function updEnemies(){
         if(rv){ST.AI_ALLY=e;ST.AI_TE=rv;ST.AI_T={x:rv.x,y:rv.y};try{d.think(e);}finally{ST.AI_T=ST.AI_TE=ST.AI_ALLY=null;}}else d.think(e);}
       else d.think(e);}
     // physics
-    if(d.fly){e.vx*=.97;e.vy*=.97;}else{e.vy=Math.min(6,e.vy+.35);e.vx*=e.ground?.8:.98;
+    if(d.fly){e.vx*=.97;e.vy*=.97;}else{e.vy=Math.min(6,e.vy+.35*(ST.gk||1));e.vx*=e.ground?.8:.98;
       const wi=(e.y|0)*W+(e.x|0);if(wi>=0&&wi<N&&KIND[t[wi]]===L&&!d.title){e.vx*=.9;e.vy=e.vy*.88-.3;}} // walkers wade and float in liquids
     const nx=e.x+e.vx;
     if(!eHit(e,nx,e.y))e.x=nx;else if(!d.fly&&!eHit(e,nx,e.y-2)){e.x=nx;e.y-=2;}else{e.vx*=-.3;e.mem.blocked=e.t;}
@@ -123,10 +131,10 @@ export function updEnemies(){
   }
 }
 function killEnemy(e){
-  const d=e.def;if(!e.mem.noScore){ST.kills++;ST.score+=d.score;}snd('kill',e.x,e.y,{v:Math.min(1,.5+d.boom/16)});
+  const d=e.def;if(d.name==='titan_part')return;if(!e.mem.noScore){ST.kills++;ST.score+=d.score;}snd('kill',e.x,e.y,{v:Math.min(1,.5+d.boom/16)});
   explode(e.x,e.y,d.boom,{fire:.25,self:true,col:[255,140,80]});
   // scrap: the sprite's own pixels fly off and land as debris
-  const sp=d.sprite,sw=sp[0].length,sh=sp.length,S=d.scale||1;
+  const sp=d.draw?['.']:d.sprite,sw=sp[0].length,sh=sp.length,S=d.scale||1;
   for(let y=0;y<sh;y++)for(let x=0;x<sw;x++){const ch=sp[y][x];if(ch==='.')continue;const c=d.pal[ch];if(c===undefined)continue;
     if(sw*sh>300&&R()<.4)continue;spawn(e.x+(x-sw/2)*S,e.y+(y-sh/2)*S,(x-sw/2)*.35+(R()-.5)*2+e.vx*.5,(y-sh/2)*.3-1.5-R()*2,c,120,R()<.5?RUBBLE:0,d.glow.includes(ch)?1:0);}
   if(d.onDeath)d.onDeath(e);

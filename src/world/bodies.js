@@ -8,6 +8,7 @@ import { MP, crumble, dustCol, rubbleCol, spawn, spawnDust } from './particles.j
 import { flash, fxWord, rings } from '../render/fx.js';
 import { explode, shade } from './destruction.js';
 import { snd } from '../sfx.js';
+import { recentCut } from './slice.js';
 import { inStasis } from '../heroes/powers.js';
 import { hurt, mouse, pl_ } from '../player.js';
 
@@ -23,6 +24,7 @@ export function makeBody(list,n,held){
   for(let y=0;y<lh;y++){let L=-1,Rr=-1;for(let x=0;x<lw;x++)if(lm[y*lw+x]){if(L<0)L=x;Rr=x;}
     for(let x=L+1;x<Rr;x++){const o=y*lw+x;if(lm[o])continue;const i=(my+y)*W+mx+x;if(!bgB[i])continue;lm[o]=BACK;lc[o]=shade(bg[i],.85);bg[i]=bgD[i];bgB[i]=0;}}
   const b=finishBody(lm,lc,lw,lh,cx,cy,mx+cx,my+cy,0,n,held);
+  if(!held&&recentCut(b.x,b.y,b.rmax)){b.slab=true;b.va=0;return b;} // cut loose by a blade: a clean slab that slides off its cut face
   if(ST.frame-ST.lastBoom.f<20){ // fling + spin away from the blast that cut it loose
     const ddx=b.x-ST.lastBoom.x,ddy=b.y-ST.lastBoom.y,d=Math.hypot(ddx,ddy)||1;
     if(d<ST.lastBoom.r*6){const f=Math.min(3.5,ST.lastBoom.r*9/(d+10))*Math.min(1,400/n);b.vx+=ddx/d*f;b.vy+=ddy/d*f-.6;b.va+=(R()-.5)*f*.03;}
@@ -107,6 +109,11 @@ function contacts(b){
     if(X<0||X>=W||Y<0)continue;if(Y>=H||KIND[t[Y*W+X]]===S||KIND[t[Y*W+X]]===P){n++;sum+=X;if(X<mn)mn=X;if(X>mxx)mxx=X;}}
   return{n,avg:n?sum/n:0,min:mn,max:mxx};
 }
+// slope of whatever a chunk is resting on (cells per cell, + = falls away to the right), from a
+// least-squares line through the support cells under its edge; 0 when it rests on fewer than 3 cells
+function slopeUnder(b){const c=Math.cos(b.a),s=Math.sin(b.a);let n=0,sx=0,sy=0,sxx=0,sxy=0;
+  for(let k=0;k<b.ex.length;k++){const X=Math.round(b.x+b.ex[k]*c-b.ey[k]*s),Y=Math.round(b.y+b.ex[k]*s+b.ey[k]*c)+1;if(X<0||X>=W||Y<0||Y>=H)continue;const kd=KIND[t[Y*W+X]];if(kd!==S&&kd!==P)continue;n++;sx+=X;sy+=Y;sxx+=X*X;sxy+=X*Y;}
+  if(n<3)return 0;const v=sxx-sx*sx/n;return v<4?0:(sxy-sx*sy/n)/v;}
 export function bodyAt(b,X,Y){ // local material under a world point
   const c=Math.cos(b.a),s=Math.sin(b.a),dx=X-b.x,dy=Y-b.y;
   const lx=Math.round(dx*c+dy*s+b.cx),ly=Math.round(-dx*s+dy*c+b.cy);
@@ -119,7 +126,7 @@ export function updBodies(){
     if(ST.stasis&&inStasis(b.x,b.y))continue; // hangs in the air until the bubble pops (and does not age, so it cannot freeze up there)
     b.age++;
     if(b.held){ if(!b.overhead){b.vx=(b.vx+((b.tx??mouse.wx)-b.x)*.18)*.72; b.vy=(b.vy+((b.ty??mouse.wy)-b.y)*.18)*.72; b.va*=.9;} }
-    else { b.vy+=PB.grav; b.vx*=PB.drag; b.va*=PB.spinDrag; if(b.topple&&b.age<90)b.va+=b.topple*.0015; }
+    else { b.vy+=PB.grav*(ST.gk||1); b.vx*=PB.drag; b.va*=PB.spinDrag; if(b.topple&&b.age<90)b.va+=b.topple*.0015; }
     const sp=Math.hypot(b.vx,b.vy); if(sp>PB.maxV){b.vx*=PB.maxV/sp;b.vy*=PB.maxV/sp;}
     if(Math.abs(b.va)>PB.maxSpin)b.va=Math.sign(b.va)*PB.maxSpin;
     const ns=Math.min(14,Math.max(1,Math.ceil(Math.max(Math.abs(b.vx),Math.abs(b.vy),Math.abs(b.va)*b.rmax))));
@@ -135,8 +142,15 @@ export function updBodies(){
         if(b.vy>CK.minBounceV){b.vy*=-CK.bounce;b.vx*=1-CK.friction;b.va=b.va*.5+b.vx*CK.roll;if(b.vy<-.8)debrisBurst(b,1.2,2);}
         else{b.vy=0;b.vx*=1-CK.friction;b.va*=.6;}
       }
+      else if(b.vy>0&&!b.held&&(b.slide=slopeUnder(b),Math.abs(b.slide)>(b.slab?.22:.6))&&b.vy<PB.landV){ // MOLTYN slabs: a piece resting on a steep cut face slides down it instead of freezing
+        grounded=true;b.sliding=true;b.rest=0;const sl=b.slide,k=Math.min(1,Math.abs(sl))/Math.sqrt(1+sl*sl);
+        b.vx+=Math.sign(sl)*PB.grav*(ST.gk||1)*k*.9/ns;b.vx*=1-.01/ns;b.vy=0;b.va*=.85;
+        if(Math.abs(b.vx)>1.5&&R()<.3)debrisBurst(b,1,1);
+        if(Math.abs(b.vx)>2&&ST.frame%14===0)snd('scrape',b.x,b.y,{v:Math.min(.7,Math.abs(b.vx)/6),pitch:.6});
+      }
+      else if(b.vy>0&&!b.held&&b.slab&&Math.abs(b.vx)>.6){grounded=true;b.sliding=true;b.vy=0;b.vx*=1-.08/ns;b.va*=.8;} // skids to a stop on the flat
       else if(b.vy>0&&!b.held){
-        grounded=true;
+        grounded=true;b.sliding=false;
         const hit=b.vy+Math.abs(b.va)*b.rmax*.6, c=contacts(b);
         const off=b.x-c.avg, stable=c.n===0||(b.x>=c.min-1&&b.x<=c.max+1);
         if((hit>PB.landV&&b.age>PB.grace)||(stable&&Math.abs(b.va)<.01)){landed=true;impact=hit;break;}
@@ -149,6 +163,7 @@ export function updBodies(){
       // horizontal
       const nx=b.x+b.vx/ns;
       if(!bodyHitPose(b,nx,b.y,b.a))b.x=nx;
+      else if(b.sliding&&!bodyHitPose(b,nx,b.y-1,b.a)){b.x=nx;b.y-=1;} // ride over the grain of the cut
       else if(Math.abs(b.vx)>PB.crushV&&b.age>PB.grace&&!b.held&&!b.chunk&&b.n>=30&&(dv=crush(b,nx,b.y,b.a,Math.abs(b.vx),Math.sign(b.vx),0))){b.vx-=Math.sign(b.vx)*dv;b.x=nx;}
       else{ if(Math.abs(b.vx)>PB.wallV&&b.age>PB.grace&&!b.held&&!b.chunk){landed=true;impact=Math.abs(b.vx);break;} b.vx*=b.chunk?-CK.bounce:-PB.wallBounce; }
       // rotation

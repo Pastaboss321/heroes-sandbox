@@ -1,17 +1,21 @@
 // Cellular-automaton step: powders, liquids, gases, fire, lava and acid reactions.
-import { CS, CW, H, N, W, booms, canSink, life, markDirty, rn, setc, stamp, swap, t, vel, wake } from './grid.js';
+import { CS, CW, H, N, VW, W, booms, canSink, life, markDirty, rn, setc, stamp, swap, t, vel, wake } from './grid.js';
 import { ST } from '../state.js';
-import { ACID, ASH, EMBER, EMPTY, F, FIRE, FLAM, G, GFIRE, GLASS, HARD, ICE, KIND, L, LAVA, OBSID, OIL, P, PROPANE, R, RUBBLE, S, SAND, SMOKE, SNOW, STEAM, STEEL, WATER, WOOD, rgb } from './materials.js';
+import { ACID, ASH, BONE, CONC, DIRT, EMBER, EMPTY, GOLD, STONE, VIBR, F, FIRE, FLAM, G, GFIRE, GLASS, HARD, ICE, KIND, L, LAVA, OBSID, OIL, P, PROPANE, R, RUBBLE, S, SAND, SMOKE, SNOW, STEAM, STEEL, WATER, WOOD, rgb } from './materials.js';
 import { PHYS } from './physics.js';
 import { MP, spawn } from './particles.js';
 
 export function step(){
   ST.clock=(ST.clock%255)+1; ST.frame++;
   const tmp=ST.act; ST.act=ST.nxt; ST.nxt=tmp; ST.nxt.fill(0);
+  // long maps: chunks more than a screen away from the view only step every third tick (they stay awake
+  // meanwhile), so the cost follows the camera rather than the width of the world
+  const near0=((ST.camX-VW)/CS)|0, near1=((ST.camX+VW*2)/CS)|0, farTick=ST.frame%3===0;
   for(let y=H-1;y>=0;y--){
     const rowA=(y>>5)*CW, ltr=((ST.frame+y)&1)===0;
     for(let q=0;q<CW;q++){
       const cx=ltr?q:CW-1-q; if(!ST.act[rowA+cx])continue;
+      if(!farTick&&(cx<near0||cx>near1)){ST.nxt[rowA+cx]=1;continue;}
       const xs=cx*CS, xe=xs+CS>W?W:xs+CS;
       for(let k=xs;k<xe;k++){
         const x=ltr?k:xe-1-(k-xs), i=y*W+x, m=t[i];
@@ -43,8 +47,11 @@ function updPowder(i,m,x,y){
   if(x-d>=0&&x-d<W&&canSink(m,t[j-d])){swap(i,j-d);if(i>=W&&KIND[t[i-W]]===S)markDirty(i-W);return;}
   if(hit>3&&x+d*2>=0&&x+d*2<W&&t[i+d]===0&&t[i+d*2]===0)swap(i,i+d); // impact scatter
 }
+// lava keeps its chunk awake (it melts, ignites and slowly crusts over), except deep inside a settled pool:
+// boxed in by lava and inert solids it can neither flow nor react, so long underground lava seas can sleep
+const inertL=m=>m===LAVA||m===OBSID||m===STONE||m===DIRT||m===CONC||m===STEEL||m===BONE||m===VIBR||m===GOLD;
 function updLiquid(i,m,x,y){
-  if(m===LAVA){ wake(i); if(reactLava(i))return; if(R()<.55)return; }
+  if(m===LAVA){ if(y<=0||y>=H-1||!(inertL(t[i-1])&&inertL(t[i+1])&&inertL(t[i+W])&&(t[i-W]===0||inertL(t[i-W])))){wake(i); if(reactLava(i))return;} if(R()<.55)return; }
   else if(m===ACID){ if(reactAcid(i))return; }
   if(y<H-1){
     const j=i+W, tj=t[j];

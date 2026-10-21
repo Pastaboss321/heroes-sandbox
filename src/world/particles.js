@@ -22,7 +22,7 @@ function depo(j,n){const m=pm[n];if(m===RUBBLE){if(R()>=PHYS.mix.rubble){if(R()<
 export const dustCol=c=>rgb(((c&255)+2*112)/3,(((c>>8)&255)+2*104)/3,(((c>>16)&255)+2*94)/3); // mostly dull grey-brown, a hint of the source colour
 export function solidAt(x,y){if(x<0||x>=W||y>=H)return true;if(y<0)return false;const m=t[(y|0)*W+(x|0)],k=KIND[m];return(k===S&&m!==LEAF)||k===P;}
 export function updParticles(){
-  const ss=ST.stasis,PP=PHYS.part,PD=PHYS.dust;
+  const ss=ST.stasis,PP=PHYS.part,PD=PHYS.dust,gk=ST.gk||1;
   for(let n=0;n<ST.np;n++){
     if(ss){const dx=px[n]-ss.x,dy=py[n]-ss.y;if(dx*dx+dy*dy<ss.r*ss.r)continue;}
     const f=pg[n];
@@ -31,7 +31,7 @@ export function updParticles(){
       if(--pl[n]<=0||px[n]<0||px[n]>=W||py[n]>=H){ST.np--;px[n]=px[ST.np];py[n]=py[ST.np];pvx[n]=pvx[ST.np];pvy[n]=pvy[ST.np];pc[n]=pc[ST.np];pl[n]=pl[ST.np];pm[n]=pm[ST.np];pg[n]=pg[ST.np];n--;}
       continue;}
     if(f&32){pvy[n]=(pvy[n]+PHYS.flake.grav)*PHYS.flake.drag;pvx[n]+=Math.sin(py[n]*.06+n)*PHYS.flake.sway;} // falls at a steady drifting speed, never stalls
-    if(f&2)pvy[n]+=PP.grav;
+    if(f&2)pvy[n]+=PP.grav*gk;
     if(f&4){pvx[n]*=PP.dragHeavy;pvy[n]*=PP.dragHeavy;} else pvx[n]*=PP.drag;
     const ox=px[n],oy=py[n],nx=ox+pvx[n],ny=oy+pvy[n];
     let dead=--pl[n]<=0;

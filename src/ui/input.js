@@ -10,6 +10,7 @@ import { selPower } from './hud.js';
 import { $, pauseRun, resumeRun } from '../modes/core.js';
 import { playFromMenu } from './menu.js';
 import { closeSettings } from './settings.js';
+import { aoeBigger, aoeSmaller } from '../heroes/aoe.js';
 
 export const helpEl=document.getElementById('help');
 document.getElementById('helpbtn').onclick=e=>{helpEl.style.display=helpEl.style.display==='none'?'':'none';e.target.blur();};
@@ -25,7 +26,9 @@ addEventListener('keydown',e=>{
   if(e.code in KEYMAP&&KEYMAP[e.code]<ST.CH.powers.length)selPower(KEYMAP[e.code]);
   if(sb&&e.code==='KeyC')setChar(CHARS.indexOf(ST.CH)+(e.shiftKey?-1:1));if(sb&&e.code==='KeyN')startWave();if(sb&&e.code==='KeyK')clearEnemies();
   if(sb&&e.code==='KeyB')ST.spawnUI.toggle();
-  if(sb&&e.code==='BracketLeft'){SPAWN.brush=Math.max(1,SPAWN.brush-1);ST.spawnUI.setBrush(SPAWN.brush);}if(sb&&e.code==='BracketRight'){SPAWN.brush=Math.min(14,SPAWN.brush+1);ST.spawnUI.setBrush(SPAWN.brush);}
+  const brush=sb&&SPAWN.tool; // [ ] size the spawn brush while placing, otherwise they size area powers like Z / X
+  if(brush&&e.code==='BracketLeft'){SPAWN.brush=Math.max(1,SPAWN.brush-1);ST.spawnUI.setBrush(SPAWN.brush);}if(brush&&e.code==='BracketRight'){SPAWN.brush=Math.min(14,SPAWN.brush+1);ST.spawnUI.setBrush(SPAWN.brush);}
+  if(e.code==='KeyZ'||(!brush&&e.code==='BracketLeft'))aoeSmaller();if(e.code==='KeyX'||(!brush&&e.code==='BracketRight'))aoeBigger();
   if(e.code==='KeyQ')selPower(ST.cur-1);if(e.code==='KeyE')selPower(ST.cur+1);
   if(sb&&e.code==='KeyR')regen();if(sb&&e.code==='KeyM'){mapSel.value=MAPS[(MAPS.indexOf(mapSel.value)+1)%MAPS.length];regen();}
   if(e.code==='KeyH')helpEl.style.display=helpEl.style.display==='none'?'':'none';

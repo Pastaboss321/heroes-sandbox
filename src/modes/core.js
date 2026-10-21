@@ -30,6 +30,7 @@ export function bestOf(id){try{return +(localStorage.getItem('ironsorc.best.'+id
 function saveBest(id,v){try{localStorage.setItem('ironsorc.best.'+id,String(v));}catch(e){}}
 let bannerT=0;
 export function banner(ti,sub){snd('wave',ST.camX+VW/2,ST.camY+VH/2,{v:.8,gap:.5});const b=$('banner');$('bT').textContent=ti;$('bS').textContent=sub||'';b.classList.remove('pop');void b.offsetWidth;b.classList.add('pop');b.style.opacity=1;clearTimeout(bannerT);bannerT=setTimeout(()=>{b.style.opacity=0;},2400);}
+ST.banner=banner;
 export function bossBar(e){const el=$('bossbar');if(!e){el.style.display='none';return;}el.style.display='block';$('bossN').textContent=e.def.title||'ULTRON PRIME';$('bossF').style.width=Math.max(0,e.hp/e.def.hp*100)+'%';}
 export function overlay(id){for(const o of ['menu','pause','over','settings'])$(o).classList.toggle('hidden',o!==id);document.body.classList.toggle('ui-off',id==='menu'||id==='over'||(id==='settings'&&ST.setFrom==='menu'));}
 export function startRun(modeId,hero,map){

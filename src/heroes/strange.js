@@ -63,7 +63,7 @@ const STRANGE_POWERS=[
        const e=enemyAt(x,y,2);if(e&&!(e.mem.whipT>ST.frame)){e.mem.whipT=ST.frame+8;hitEnemy(e,18,(pl_.x-e.x)*.04,-1.5);}}
      return k<8;});}},
  // turn the city around the cursor into mirror-glass, then shatter it
- {n:'Mirror Shatter',fn:(a,p,use)=>{if(mouse.wy<-20||!use(34))return;ST.cd=60;const cx=mouse.wx|0,cy=mouse.wy|0,r=30;let k=0;
+ {n:'Mirror Shatter',fn:(a,p,use)=>{if(!use(34))return;ST.cd=60;const cx=mouse.wx|0,cy=mouse.wy|0,r=30;let k=0;
    for(let y=-r;y<=r;y++)for(let x=-r;x<=r;x++){if(x*x+y*y>r*r)continue;const X=cx+x,Y=cy+y;if(X<0||X>=W||Y<0||Y>=H-44)continue;const i=Y*W+X;if(KIND[t[i]]===S&&t[i]!==OBSID){setc(i,GLASS);col[i]=(x+y)&3?rgb(200,220,240):rgb(255,230,160);}}
    fxWord(cx,cy-r-6,'MIRROR DIMENSION',1.1,'#ffc93c',true);snd('psi',cx,cy,{pitch:.4});
    ACT.push(()=>{if(++k<30)return true;for(let n=0;n<10;n++){const an=R()*6.283,d=R()*r;explode(cx+Math.cos(an)*d|0,cy+Math.sin(an)*d|0,7,{self:true,quiet:n>0,col:[220,235,255]});}damageEnemies(cx,cy,r+10,45,0,-4,true);fxWord(cx,cy-r-6,'SHATTER!',1.4,'#d8e4ff',true);snd('glass',cx,cy,{size:2});ST.shake=Math.max(ST.shake,12);return false;});}},

@@ -63,6 +63,7 @@ const head = `
   #powers .pw.on{transform:none!important;font-size:17px!important;padding:3px 12px!important}
   /* phone HUD: no keyboard help, no desktop-only sandbox controls (hero and map are picked in the menu) */
   #help,#helpbtn,#top #char,#top #map,#top #regen,#wavebtn,#menubtn,#fps{display:none!important}
+  #aoechip{right:auto!important;bottom:auto!important;left:max(12px,env(safe-area-inset-left));top:calc(max(8px,env(safe-area-inset-top)) + 96px);font-size:15px!important;padding:1px 8px 0!important}
   /* left thumb: a floating joystick (left/right walk, up jumps or climbs, down drops / slams) */
   #joy{position:relative;width:118px;height:118px;border-radius:50%;border:3px solid #14110f;background:rgba(255,201,60,.22);box-shadow:3px 3px 0 #14110f;pointer-events:auto;touch-action:none}
   #knob{position:absolute;left:50%;top:50%;width:52px;height:52px;margin:-26px 0 0 -26px;border-radius:50%;border:3px solid #14110f;background:rgba(255,201,60,.9);box-shadow:2px 2px 0 #14110f}
@@ -104,6 +105,7 @@ const body = `
 <div id="tc">
   <div class="pad"><div id="joy" aria-label="Move"><div id="knob"></div></div></div>
   <div class="pad">
+    <div class="pad small" style="flex-direction:column"><button data-k="KeyX" data-c="x" aria-label="Bigger area powers">A+</button><button data-k="KeyZ" data-c="z" aria-label="Smaller area powers">A&#8722;</button></div>
     <div class="pad small" style="flex-direction:column"><button data-k="KeyQ" data-c="q" aria-label="Previous power">Q</button><button data-k="KeyE" data-c="e" aria-label="Next power">E</button></div>
     <button data-k="ShiftLeft" data-c="Shift" aria-label="Boost">&#8679;</button>
     <div class="pad small" style="flex-direction:column;justify-content:flex-end"><button data-k="Escape" data-c="Escape" aria-label="Pause">II</button></div>
@@ -111,6 +113,7 @@ const body = `
 </div>
 <script>
 window.HS_MINIMAP_Y=8; // minimap at the top edge on phones
+window.HS_MOBILE=true; // shorter worlds (memory) - maps/index.js mapW()
 (function(){
   // on-screen buttons press and release real keys, so the game needs no changes
   for(const b of document.querySelectorAll('#tc button')){

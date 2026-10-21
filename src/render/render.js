@@ -2,7 +2,7 @@
 import { presentGL } from '../gl.js';
 import { drawEnemy } from './drawEnemy.js';
 import { ST } from '../state.js';
-import { ACID, EMBER, F, FIRE, G, GFIRE, GLASS, ICE, KIND, LAVA, NEON, PROPANE, R, S, SMOKE, STEAM, rgb } from '../world/materials.js';
+import { ACID, EMBER, F, FIRE, G, GFIRE, GLASS, ICE, KIND, LAVA, NEON, PROPANE, R, S, SMOKE, STEAM, VIBR, rgb } from '../world/materials.js';
 import { PHYS } from '../world/physics.js';
 import { H, VH, VW, W, bg, col, life, t } from '../world/grid.js';
 import { bodies } from '../world/support.js';
@@ -53,6 +53,7 @@ export function render(){
         case LAVA:{nLava++;const f=Math.sin(i*.37+fl*.05)*25;buf[o]=rgb(240,90+f,20);gbuf[o]=rgb(200,60,10);break;}
         case EMBER:{const c=rgb(255,100+life[i]*.6,30);buf[o]=c;gbuf[o]=c;break;}
         case ICE:{let c=col[i];if(ink&&t[i-W]===0)c=lut(rimL,c);buf[o]=lut(fgL,c);if(((i*7+(fl>>2))&127)===0)gbuf[o]=rgb(120,180,230);break;}
+        case VIBR:{let c=col[i];if(ink&&t[i-W]===0)c=lut(rimL,c);buf[o]=lut(fgL,c);if(((i*13+(fl>>2))&31)===0)gbuf[o]=rgb(110,60,200);break;} // vibranium hums with a faint violet glow
         case NEON:{const c=col[i];buf[o]=c;gbuf[o]=rgb((c&255)*.7,((c>>8)&255)*.7,((c>>16)&255)*.7);break;}
         case ACID:{buf[o]=col[i];if((i+fl)%7===0)gbuf[o]=rgb(60,140,20);break;}
         case SMOKE:case STEAM:case PROPANE:{
@@ -85,6 +86,7 @@ export function render(){
   // projectiles
   for(const s of shots){
     if(s.delay>0)continue;
+    if(s.draw){s.draw(s,pix);continue;} // shots that draw themselves (Cap's shield)
     if(s.type!=='hammer'&&s.type!=='bomb'){const g=s.col?rgb(s.col[0]*.6,s.col[1]*.6,s.col[2]*.6):s.type==='missile'?rgb(255,150,60):rgb(60,200,90);line(s.x-s.vx*1.6,s.y-s.vy*1.6,s.x-s.vx*.3,s.y-s.vy*.3,g,g);}
     if(s.type==='missile'){pix(s.x,s.y,rgb(210,210,220));pix(s.x-s.vx*.3,s.y-s.vy*.3,rgb(140,140,150));pix(s.x-s.vx*.6,s.y-s.vy*.6,rgb(255,200,80),rgb(255,150,40));}
     else if(s.type==='hammer'){const ca=Math.cos(s.spin),sa=Math.sin(s.spin);for(let k=-2;k<=2;k++)for(let w=-1;w<=1;w++)pix(s.x+k*ca-w*sa,s.y+k*sa+w*ca,rgb(170,176,186),rgb(90,130,220));for(let k=2;k<5;k++)pix(s.x-k*sa,s.y+k*ca,rgb(110,80,50));}
@@ -123,6 +125,7 @@ export function render(){
   const p=pl_;
   if(ST.CH.cape&&p.hist.length>3){const yo=ST.PH-5;for(let k=1;k<Math.min(8,p.hist.length);k++){const [hx,hy]=p.hist[k];const wv=Math.sin(ST.frame*.3+k)*1.2;pix(hx-p.face*(2+k*.4),hy-yo+k*.6+wv,k<4?ST.CH.cape[0]:ST.CH.cape[1]);pix(hx-p.face*(2+k*.4),hy-yo+1+k*.6+wv,ST.CH.cape[1]);}}
   if(p.ant>0)drawSprite(p.x,p.y+5,0,p.face,false,(ST.frame>>2)&1?FANT_A:FANT_B,FANT_PAL);
+  if(ST.CH.board&&p.fly){const c=Math.cos(p.ang),s2=Math.sin(p.ang),bx=p.x-s2*1,by=p.y+1;for(let k=-9;k<=9;k++){const X=bx+k*c,Y=by+k*s2,edge=Math.abs(k)>7;pix(X,Y,edge?rgb(150,156,172):rgb(226,232,244),edge?0:rgb(90,160,230));if(Math.abs(k)<8)pix(X,Y+1,rgb(110,116,130));}} // the Surfer's board
   if(p.slip)drawSlip(p.slip);else if(p.blob)drawBlob(p);else drawSprite(p.x,p.y+PP*ST.SZ,p.ang,p.face,false,posePlayer(p),p.metal>0?metalPal():null,p.hurtF,p.stealth>0,ST.SZ);
   const h=hand();
   if(ST.CH.id==='thor'&&!p.tow&&!pins.length&&!shots.some(s=>s.type==='hammer'||s.type==='pin')){for(let yy=0;yy<3;yy++)pix(h.x,h.y+yy,rgb(110,80,50));for(let yy=-2;yy<0;yy++)for(let xx=-1;xx<=1;xx++)pix(h.x+xx,h.y+yy,rgb(160,166,176));}
@@ -140,6 +143,10 @@ export function render(){
     if(T.cat==='enemies'){const d=ENEMY_TYPES[T.id];if(d){const hw=d.w/2+1,hh=d.h/2+1;for(let k=-hw;k<=hw;k+=2){pix(x+k,y-hh,c,c);pix(x+k,y+hh,c,c);}for(let k=-hh;k<=hh;k+=2){pix(x-hw,y+k,c,c);pix(x+hw,y+k,c,c);}}}
     else if(T.cat==='objects'){const gy=SPAWN.snap?groundBelow(x,y):y;for(let k=-8;k<=8;k++)pix(x+k,gy,c,c);for(let yy=y;yy<gy;yy+=3)pix(x,yy,c,0);}
     else circle(x,y,SPAWN.brush+.5,c,0);}
+  // area-size preview: a ring at the cursor for a moment after Z / X
+  if(ST.aoeShow>0&&ST.GS==='play'){const r=24*ST.aoeK,a=Math.min(1,ST.aoeShow/20),c=rgb(255*a,220*a,110*a);for(let k=0,n=Math.max(24,r*5|0);k<n;k++){if((k+(ST.frame>>1))%4===0)continue;const an=k/n*6.283;pix(mouse.wx+Math.cos(an)*r,mouse.wy+Math.sin(an)*r,c,c);}}
+  // Knull's dark: everything but a pool of light around the hero sinks to black
+  if(ST.dark>0){const k=ST.dark,cx=p.x-ST.CX,cy=p.y-ST.PH/2-ST.CY;for(let y=0;y<VH;y++)for(let x=0;x<VW;x++){const d=Math.hypot(x-cx,y-cy),a=Math.min(.92,Math.max(0,(d-50)/90))*k;if(a<=0)continue;const o=y*VW+x,c=buf[o];buf[o]=rgb((c&255)*(1-a),((c>>8)&255)*(1-a),((c>>16)&255)*(1-a)+6*a);}}
   sctx.putImageData(img,0,0);if(SET.bloom||ST.GL&&SET.light)gctx.putImageData(gimg,0,0);
   // shake: trauma curve (small rumbles barely register, big hits still land) driven by smooth noise, not per-frame random jumps
   const sk=SET.shake/100,tr=Math.min(1,ST.shake/22),amp=tr*Math.sqrt(tr)*22*ST.scale*.3*sk,sf=ST.frame;
@@ -157,10 +164,13 @@ export function render(){
     ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';}
   drawComics(sx,sy);
   // minimap
-  if(ST.frame%15===0){for(let y=0;y<H/8;y++)for(let x=0;x<W/8;x++){const i=(y*8+4)*W+x*8+4,m=t[i];mbuf[y*(W/8)+x]=m?col[i]:(bg[i]?bg[i]:rgb(20,24,40));}mctx.putImageData(mimg,0,0);}
-  const mw=W/8*1.2,mh=H/8*1.2,mx=cv.width-mw-16,my=window.HS_MINIMAP_Y??100; // the phone build lifts it to the top edge
+  const MW=mm.width,MH=mm.height;
+  if(ST.frame%15===0){for(let y=0;y<MH;y++)for(let x=0;x<MW;x++){const i=Math.min(H-1,y*8+4)*W+Math.min(W-1,x*8+4),m=t[i];mbuf[y*MW+x]=m?col[i]:(bg[i]?bg[i]:rgb(20,24,40));}mctx.putImageData(mimg,0,0);}
+  // the minimap shows at most 1600 px of world around the camera at 1.2 screen px per 8 world px; wider maps scroll inside it
+  const span=Math.min(W,1600),sx0=Math.max(0,Math.min(W-span,ST.CX+VW/2-span/2)),k=1.2/8,mw=span*k,mh=H*k,mx=cv.width-mw-16,my=window.HS_MINIMAP_Y??100; // the phone build lifts it to the top edge
   if(ST.GS==='menu'||ST.GS==='over')return;
-  ctx.fillStyle='#14110f';ctx.fillRect(mx+3,my+3,mw+4,mh+4);ctx.drawImage(mm,mx,my,mw,mh);ctx.strokeStyle='#ffc93c';ctx.lineWidth=2;ctx.strokeRect(mx+ST.CX/8*1.2,my+ST.CY/8*1.2,VW/8*1.2,VH/8*1.2);ctx.strokeStyle='#14110f';ctx.lineWidth=3;ctx.strokeRect(mx-1,my-1,mw+2,mh+2);
-  for(const e of enemies){const b=!!e.def.title;ctx.fillStyle=e.ally>0?'#ff9ad8':b?'#c88cff':'#ff6b5c';const s2=b?4:2;ctx.fillRect(mx+e.x/8*1.2-s2/2,my+e.y/8*1.2-s2/2,s2,s2);} // enemies on the minimap
-  ctx.fillStyle='#e23b2e';ctx.fillRect(mx+p.x/8*1.2-1.5,my+p.y/8*1.2-3,3,3);
+  ctx.fillStyle='#14110f';ctx.fillRect(mx+3,my+3,mw+4,mh+4);ctx.drawImage(mm,sx0/8,0,span/8,MH,mx,my,mw,mh);ctx.strokeStyle='#ffc93c';ctx.lineWidth=2;ctx.strokeRect(mx+(ST.CX-sx0)*k,my+ST.CY*k,VW*k,VH*k);ctx.strokeStyle='#14110f';ctx.lineWidth=3;ctx.strokeRect(mx-1,my-1,mw+2,mh+2);
+  if(W>span){ctx.fillStyle='#ffc93c';ctx.fillRect(mx+sx0/W*mw,my+mh+4,Math.max(4,span/W*mw),3);} // where this window sits in the whole map
+  for(const e of enemies){if(e.x<sx0||e.x>sx0+span||e.def.name==='titan_part')continue;const b=!!e.def.title;ctx.fillStyle=e.ally>0?'#ff9ad8':b?'#c88cff':'#ff6b5c';const s2=b?(e.def.titan?7:4):2;ctx.fillRect(mx+(e.x-sx0)*k-s2/2,my+e.y*k-s2/2,s2,s2);} // enemies on the minimap
+  ctx.fillStyle='#e23b2e';ctx.fillRect(mx+(p.x-sx0)*k-1.5,my+p.y*k-3,3,3);
 }

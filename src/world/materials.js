@@ -32,8 +32,11 @@ export const MATS=[
   ['ice',     S,9, 0,  2, 186,228,250,14],
   ['snow',    P,4, 0,  0, 236,242,250,6],
   ['web',     S,2, .35,0, 236,236,240,6],
+  ['gold',    S,34,0,  5, 214,168,64,14],   // Asgard's halls and spires
+  ['vibranium',S,30,0, 9, 130,80,220,18],   // Wakanda: nearly unbreakable, glows faintly
+  ['bone',    S,26,0,  6, 176,150,120,12],  // the Celestial skull Knowhere is built in
 ];
-export const EMPTY=0,SAND=1,DIRT=2,STONE=3,CONC=4,STEEL=5,GLASS=6,WOOD=7,LEAF=8,GRASS=9,WATER=10,OIL=11,ACID=12,LAVA=13,FIRE=14,SMOKE=15,STEAM=16,ASH=17,EMBER=18,GFIRE=19,RUBBLE=20,PROPANE=21,OBSID=22,NEON=23,ICE=24,SNOW=25,WEB=26;
+export const EMPTY=0,SAND=1,DIRT=2,STONE=3,CONC=4,STEEL=5,GLASS=6,WOOD=7,LEAF=8,GRASS=9,WATER=10,OIL=11,ACID=12,LAVA=13,FIRE=14,SMOKE=15,STEAM=16,ASH=17,EMBER=18,GFIRE=19,RUBBLE=20,PROPANE=21,OBSID=22,NEON=23,ICE=24,SNOW=25,WEB=26,GOLD=27,VIBR=28,BONE=29;
 export const NM=MATS.length;
 export const KIND=new Uint8Array(NM),DENS=new Uint8Array(NM),FLAM=new Float32Array(NM),HARD=new Uint8Array(NM);
 MATS.forEach((m,i)=>{KIND[i]=m[1];DENS[i]=m[2];FLAM[i]=m[3];HARD[i]=m[4];});

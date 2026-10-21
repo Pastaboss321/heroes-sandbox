@@ -21,22 +21,26 @@ import { pwDiv } from './ui/hud.js';
 import { MAPDEFS, mapSel } from './maps/index.js';
 import { $ } from './modes/core.js';
 import { useTool } from './ui/spawn.js';
+import { updTravel } from './world/travel.js';
+import { updCapShields } from './heroes/cosmic.js';
 
 const waveTEl=document.getElementById('waveT'),scoreNEl=document.getElementById('scoreN'),scoreSEl=document.getElementById('scoreS'),waveEl=document.getElementById('wave'),hpEl=document.getElementById('hp'),enEl=document.getElementById('en'),fpsEl=document.getElementById('fps'),modeEl=document.getElementById('mode');
 let last=performance.now(),acc=0,fpsT=0,fpsN=0;
 export function tick(){
   ST.shieldOn=false;
   updCamera();
+  ST.aoeC=ST.aoeK; // the hero's own effects use the chosen area size; enemies and the world run at 1 (heroes/aoe.js)
   if(mouse.right&&SPAWN.tool){SPAWN.tool=null;ST.spawnUI&&ST.spawnUI.select(null);}
   if(!mouse.down){SPAWN.latch=false;SPAWN.lx=SPAWN.ly=null;}
   if(mouse.down){if(SPAWN.tool)useTool();else cast();}if(ST.cd>0)ST.cd--;
   updTelekinesis();
   const world=!(ST.slowT>0&&(ST.slowT--&1))&&!SPAWN.pause; // Tactical Focus runs the world at half speed; the spawn menu can freeze it
-  updPlayer();if(!pl_.slip){TSL.push({x:pl_.x,y:pl_.y,hp:pl_.hp,face:pl_.face});if(TSL.length>300)TSL.shift();}updShots(world);
-  if(world){updDrones();updVortex();updStrikes();updStorm();updEnemies();updJets();}
-  updPins();updTherm();updDecoy();if(world)updWave2();
+  updPlayer();if(!pl_.slip){TSL.push({x:pl_.x,y:pl_.y,hp:pl_.hp,face:pl_.face});if(TSL.length>300)TSL.shift();}updShots(world);ST.aoeC=ST.aoeK;
+  if(world){updDrones();updVortex();updStrikes();updStorm();ST.aoeC=1;updEnemies();ST.aoeC=ST.aoeK;updJets();}
+  updPins();updTherm();updDecoy();if(world)updWave2();updCapShields();
   for(let n=ACT.length-1;n>=0;n--)if(ACT[n]()===false)ACT.splice(n,1);
   if(world)updSlide();
+  ST.aoeC=1;
   if(ST.MODE&&ST.MODE.update){ST.MODE.update(ST.MS);ST.MS.t++;}
   const md=MAPDEFS[mapSel.value];if(md&&md.amb&&world)md.amb();
   const t0=performance.now();
@@ -44,6 +48,7 @@ export function tick(){
   ST.simMs=ST.simMs*.95+(performance.now()-t0)*.05;
   if(world)updParticles();
   updFx();updWaves();
+  updTravel();if(ST.mindT>0)ST.mindT--;if(ST.aoeShow>0)ST.aoeShow--;
   for(const k in pressed)pressed[k]=false;
 }
 export function loop(now){

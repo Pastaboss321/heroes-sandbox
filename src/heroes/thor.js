@@ -76,7 +76,7 @@ THOR_POWERS.push(
      return true;});}},
  // drop Mjolnir from the sky onto a foe: no one unworthy can move while it sits on them
  {n:'Mjolnir Pin',fn:(a,p,use)=>{if(pins.length||shots.some(s=>s.type==='hammer'||s.type==='pin')||!use(26))return;ST.cd=50;const e=nearestEnemy(mouse.wx,mouse.wy,60);
-   shots.push({x:e?e.x:mouse.wx,y:Math.max(2,ST.camY-16),vx:0,vy:9,type:'pin',life:240,target:e});fxWord(p.x,p.y-ST.PH-8,'ONLY THE WORTHY!',1.1,'#bfe3ff',true);flash(p.x,p.y-ST.PH/2,30,BLUE,6);}},
+   shots.push({x:e?e.x:mouse.wx,y:ST.camY-16,vx:0,vy:9,type:'pin',life:240,target:e});fxWord(p.x,p.y-ST.PH-8,'ONLY THE WORTHY!',1.1,'#bfe3ff',true);flash(p.x,p.y-ST.PH/2,30,BLUE,6);}},
  // launch everything in front skyward, then lightning finds each of them in the air
  {n:'Asgardian Uppercut',fn:(a,p,use)=>{if(!use(16))return;ST.cd=34;const dir=a.dx<0?-1:1;p.face=dir;p.punchF=10;if(p.ground){p.vy=-3.5;p.ground=false;}const cx=p.x+dir*9,cy=p.y-ST.PH/2;
    for(let s=0;s<=10;s++)carve(p.x+dir*(6+Math.sin(s/10*Math.PI)*7),p.y-4-s*2.6,3.5,dir,-3);
