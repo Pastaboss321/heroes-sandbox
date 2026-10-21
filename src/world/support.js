@@ -76,7 +76,7 @@ function downToBedrock(s,sameGnd){const g0=gnd[s],mk=sameGnd?vis:vis2,lo=sameGnd
     if(nx<0)return false;i=nx;}
   return false;}
 function anchorFlood(s,init){
-  if(useProbe&&downToBedrock(s,false))return;
+  ST.scN&&ST.scN[0]++;if(useProbe&&downToBedrock(s,false)){ST.scN&&ST.scN[1]++;return;}
   const id=++ggen;let sp=0,tl=0,npc=0;stk[sp++]=s;q[tl++]=s;vis2[s]=id;
   while(sp>0){
     if(tl>GCAP)return; // the landscape itself
@@ -129,19 +129,25 @@ export function supportCheck(init){
   ST.dx0=W;ST.dy0=H;ST.dx1=-1;ST.dy1=-1; collapses=0;
   // 1) nothing may hang in the sky: every solid must connect, through solids of ANY material,
   //    to the world floor / bedrock or rest on loose debris. Whatever doesn't becomes chunks or dust.
-  gstart=++ggen;
+  gstart=++ggen;const T0=performance.now();ST.scN=[0,0,0,0];
   for(const b of boxes){const x0=Math.max(0,b[0]-2),x1=Math.min(W-1,b[2]+2),y0=Math.max(0,b[1]-2),y1=Math.min(H-1,b[3]+2);
     for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const i=y*W+x;if(KIND[t[i]]===S&&vis2[i]<gstart)anchorFlood(i,init);}}
   // 2) structural strength: each structure (ground vs built) must carry its own weight
-  vstart=++ST.vgen;
+  const T1=performance.now();vstart=++ST.vgen;
   for(const b of boxes){const x0=Math.max(0,b[0]-2),x1=Math.min(W-1,b[2]+2),y0=Math.max(0,b[1]-2),y1=Math.min(H-1,b[3]+2);
     for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const i=y*W+x;if(KIND[t[i]]===S&&vis[i]<vstart)flood(i,init);}}
+  ST.scT=[T1-T0,performance.now()-T1]; // debug timing: anchor pass, strength pass
   if(!init){ // back walls are swept less often, one dirty area at a time
     sweepBg();}
 }
 const ob=[W,-1,H,-1]; // where structure was actually destroyed since the last back-wall sweep
-export function obAdd(x,y){if(x<ob[0])ob[0]=x;if(x>ob[1])ob[1]=x;if(y<ob[2])ob[2]=y;if(y>ob[3])ob[3]=y;}
-function sweepBg(){if(ST.frame%8!==0||ob[1]<0)return;orphanBg(ob[0]-70,ob[1]+70,ob[2]-70,ob[3]+70);ob[0]=W;ob[1]=-1;ob[2]=H;ob[3]=-1;}
+// several separate areas (like the dirty boxes), so damage at both ends of a long map doesn't make one
+// map-wide back-wall sweep
+const obs=[];
+export function obAdd(x,y){if(ob[1]<0||(x>ob[0]-96&&x<ob[1]+96&&y>ob[2]-96&&y<ob[3]+96)){if(x<ob[0])ob[0]=x;if(x>ob[1])ob[1]=x;if(y<ob[2])ob[2]=y;if(y>ob[3])ob[3]=y;return;}
+  for(const b of obs)if(x>b[0]-96&&x<b[1]+96&&y>b[2]-96&&y<b[3]+96){if(x<b[0])b[0]=x;if(x>b[1])b[1]=x;if(y<b[2])b[2]=y;if(y>b[3])b[3]=y;return;}
+  if(obs.length<8)obs.push([x,x,y,y]);else{const b=obs[obs.length-1];if(x<b[0])b[0]=x;if(x>b[1])b[1]=x;if(y<b[2])b[2]=y;if(y>b[3])b[3]=y;}}
+function sweepBg(){if(ST.frame%8!==0||ob[1]<0&&!obs.length)return;if(ob[1]>=0)orphanBg(ob[0]-70,ob[1]+70,ob[2]-70,ob[3]+70);for(const b of obs)orphanBg(b[0]-70,b[1]+70,b[2]-70,b[3]+70);obs.length=0;ob[0]=W;ob[1]=-1;ob[2]=H;ob[3]=-1;}
 export const BLDS=m=>KIND[m]===S&&!NAT[m]&&m!==LEAF;
 function orphanBg(x0,x1,y0,y1){
   const RCH=110;x0=Math.max(0,x0);x1=Math.min(W-1,x1);y0=Math.max(0,y0);y1=Math.min(H-1,y1);
@@ -157,7 +163,7 @@ function orphanBg(x0,x1,y0,y1){
 }
 function dropBg(i,x,y){if(R()<.2&&ST.np<MP-500)spawn(x,y,(R()-.5)*1.5,-R(),shade(bg[i],.8),90,RUBBLE,0);bg[i]=bgD[i];bgB[i]=0;}
 function flood(s,init){
-  if(useProbe&&gnd[s]&&downToBedrock(s,true))return; // ground resting on bedrock can't fail
+  ST.scN&&ST.scN[2]++;if(useProbe&&gnd[s]&&downToBedrock(s,false)){ST.scN&&ST.scN[3]++;return;} // ground with a solid path to bedrock can't fail (streets stand on subway columns)
   // walk one connected structure (natural ground and built stuff are separate structures)
   // depth-first, diving down first: anything resting on the world floor is proven sound in a few hundred steps
   const id=++ST.vgen; let sp=0,tl=0,nfc=0; stk[sp++]=s; q[tl++]=s; vis[s]=id; let sup=0, mass=0, My=0, Ty=H, smx=-1, smn=W, cmx=0, hook=false, r0=rid[s], mixed=false;
@@ -207,4 +213,4 @@ function flood(s,init){
   }
 }
 // per cell arrays follow the world size
-onWorldResize(()=>{vis=new Uint32Array(N);const QN=Math.min(N,1<<20);q=new Int32Array(QN);bm=new Uint16Array(N);pin=new Uint8Array(N);gnd=new Uint8Array(N);str=new Uint8Array(N).fill(10);vis2=new Uint32Array(N);stk=new Int32Array(QN);rid=new Int32Array(N);ob[0]=W;ob[1]=-1;ob[2]=H;ob[3]=-1;ST.vgen=0;ggen=0;gstart=0;});
+onWorldResize(()=>{vis=new Uint32Array(N);const QN=Math.min(N,1<<20);q=new Int32Array(QN);bm=new Uint16Array(N);pin=new Uint8Array(N);gnd=new Uint8Array(N);str=new Uint8Array(N).fill(10);vis2=new Uint32Array(N);stk=new Int32Array(QN);rid=new Int32Array(N);ob[0]=W;ob[1]=-1;ob[2]=H;ob[3]=-1;obs.length=0;ST.vgen=0;ggen=0;gstart=0;});

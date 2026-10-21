@@ -39,23 +39,25 @@ export function tick(){
   if(ST.wantUlt){ST.wantUlt=false;castUlt();}
   if(ST.ultT>0){const pw=ST.CH.powers[ST.cur];if(pw&&pw.ult){ST.ultT--;cast();}else ST.ultT=0;} // a held ultimate (beam) keeps firing on its own
   else if(mouse.down){if(SPAWN.tool)useTool();else cast();}if(ST.cd>0)ST.cd--;
-  updTelekinesis();
+  const Q=ST.ph||(ST.ph={});let q0=performance.now();const lap=k=>{const n=performance.now();Q[k]=n-q0;q0=n;}; // debug: per-phase ms (GAME.ST.ph)
+  lap('cast');updTelekinesis();
   const world=!(ST.slowT>0&&(ST.slowT--&1))&&!SPAWN.pause; // Tactical Focus runs the world at half speed; the spawn menu can freeze it
-  updPlayer();if(!pl_.slip){TSL.push({x:pl_.x,y:pl_.y,hp:pl_.hp,face:pl_.face});if(TSL.length>300)TSL.shift();}updShots(world);ST.aoeC=ST.aoeK;ST.pctx=true;updSummons();
-  if(world){updDrones();updVortex();updStrikes();updStorm();ST.aoeC=1;ST.pctx=false;updEnemies();ST.pctx=true;ST.aoeC=ST.aoeK;updJets();}
+  updPlayer();if(!pl_.slip){TSL.push({x:pl_.x,y:pl_.y,hp:pl_.hp,face:pl_.face});if(TSL.length>300)TSL.shift();}updShots(world);lap('player+shots');ST.aoeC=ST.aoeK;ST.pctx=true;updSummons();
+  if(world){updDrones();updVortex();updStrikes();updStorm();ST.aoeC=1;ST.pctx=false;lap('powers');updEnemies();lap('enemies');ST.pctx=true;ST.aoeC=ST.aoeK;updJets();}
   updPins();updTherm();updDecoy();if(world)updWave2();updCapShields();updRings();
   for(let n=ACT.length-1;n>=0;n--)if(ACT[n]()===false)ACT.splice(n,1);
+  lap('act');
   if(world)updSlide();
   while(ST.blastQ.length){const [bx,by]=ST.blastQ.pop();explode(bx|0,by|0,7,{fire:.6,self:true,col:[255,150,50]});} // WILDFIRE combos
   ST.aoeC=1;ST.pctx=false;
   if(ST.MODE&&ST.MODE.update){ST.MODE.update(ST.MS);ST.MS.t++;}
   const md=MAPDEFS[mapSel.value];if(md&&md.amb&&world)md.amb();
-  const t0=performance.now();
+  lap('mode+amb');const t0=performance.now();
   if(world){updStasis();const a1=performance.now();step();const a2=performance.now();updBodies();const a3=performance.now();if(ST.frame%4===0)supportCheck(false);const a4=performance.now();
     const pf=ST.prof||(ST.prof={step:0,bodies:0,support:0,max:0,maxAt:''});pf.step=a2-a1;pf.bodies=a3-a2;pf.support=a4-a3;const mx=Math.max(pf.step,pf.bodies,pf.support);if(mx>pf.max){pf.max=mx;pf.maxAt=mx===pf.step?'step':mx===pf.bodies?'bodies':'support';}}
   ST.simMs=ST.simMs*.95+(performance.now()-t0)*.05;
-  if(world)updParticles();
-  updFx();updWaves();
+  lap('sim');if(world)updParticles();lap('particles');
+  updFx();updWaves();lap('fx');
   updTravel();if(ST.mindT>0)ST.mindT--;if(ST.aoeShow>0)ST.aoeShow--;
   for(const k in pressed)pressed[k]=false;
 }
