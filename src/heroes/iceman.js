@@ -64,6 +64,7 @@ const ICE_POWERS=[
    rings.push({x:cx,y:cy,r:4,vr:4,life:14,c:[200,240,255]});flash(cx,cy,90,[150,210,255],10);ST.shake+=10;}},
  {n:'Glacier Spikes',fn:(a,p,use)=>{if(!use(24))return;ST.cd=40;const dir=a.dx<0?-1:1;let k=0,x=p.x+dir*8;fxWord(p.x+dir*30,p.y-ST.PH-6,'SHRAKK!',1.2,'#bfe3ff',true);ST.shake+=4;
    ACT.push(()=>{if(k%2===0){let y=Math.max(0,p.y-30|0);while(y<H-1&&y<p.y+60&&(t[y*W+(x|0)]===0||KIND[t[y*W+(x|0)]]!==S))y++;
+       if(y>=p.y+60&&k%4===0){shots.push({x,y:p.y-ST.PH/2,vx:dir*6,vy:(R()-.5)*.6,type:'shard',life:50,col:[200,240,255],boom:5,onHit:sh=>{for(const e of enemies)if(Math.hypot(e.x-sh.x,e.y-sh.y)<10)e.frozen=Math.max(e.frozen||0,40);}});}
        if(y<p.y+60){const h=10+R()*7|0;for(let yy=0;yy<h;yy++){const w=Math.round((1-yy/h)*3);for(let xx=-w;xx<=w;xx++)iceAt(x+xx,y-1-yy);}
          damageEnemies(x,y-h/2,9,22,dir*2,-5);for(const e of enemies)if(Math.abs(e.x-x)<9&&Math.abs(e.y-(y-h/2))<14)e.frozen=Math.max(e.frozen||0,50);
          for(let q2=0;q2<8;q2++)spawn(x+(R()-.5)*6,y-R()*h,(R()-.5)*3,-R()*3,rgb(225,245,255),16,0,1,1);flash(x,y-h/2,14,[150,210,255],3);}

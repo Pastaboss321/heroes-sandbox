@@ -4,6 +4,7 @@ import { CONC, DIRT, EMPTY, GLASS, GRASS, R, SAND, STEEL, STONE, WATER, WOOD, rg
 import { H, W, bg, bgD, setc, sxy } from '../world/grid.js';
 import { clearAll, disc, fill, makeFar, tint } from './gen.js';
 import { building, car, cityUnder, glassTower } from './city.js';
+import { avengersTower, baxterBuilding, dailyBugle, sanctum } from './landmarks.js';
 
 export function genNYC(){
   clearAll();
@@ -43,7 +44,12 @@ export function genNYC(){
   let x=RX+116;const placed={};
   while(x<W-30){
     const r=R();
-    if(!placed.park&&x>650&&r<.18){placed.park=1;x=centralPark(x,GY);}
+    if(!placed.sanctum&&x>W*.16){placed.sanctum=1;x=sanctum(x,GY);} // the landmarks, spread along the island
+    else if(!placed.baxter&&x>W*.34){placed.baxter=1;x=baxterBuilding(x,GY);}
+    else if(!placed.avengers&&x>W*.52){placed.avengers=1;x=avengersTower(x,GY);}
+    else if(!placed.bugle&&x>W*.7){placed.bugle=1;x=dailyBugle(x,GY);}
+    else if(!placed.park2&&placed.park&&x>W*.8&&r<.3){placed.park2=1;x=centralPark(x,GY);}
+    else if(!placed.park&&x>650&&r<.18){placed.park=1;x=centralPark(x,GY);}
     else if(!placed.step&&x>420&&r<.32){placed.step=1;x=steppedTower(x,GY);}
     else if(!placed.deco&&x>420&&r<.46){placed.deco=1;x=decoTower(x,GY);}
     else{const w=34+R()*36|0,h=150+R()*170|0,x1=Math.min(W-2,x+w),top=Math.max(30,GY-h);

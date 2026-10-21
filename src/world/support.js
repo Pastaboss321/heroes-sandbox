@@ -64,15 +64,19 @@ function pileHolds(j,vm,id){
 // floor to find the next way down) that reaches the bedrock band. Long maps have huge connected ground
 // masses, and a full flood of them costs tens of milliseconds; most changes deep in the ground are
 // settled by this in a few hundred steps. sameGnd: only through cells of the same kind (ground vs built).
-function downToBedrock(s,sameGnd){const g0=gnd[s];let i=s;
-  for(let n=0;n<1400;n++){const y=(i/W)|0;if(y>=H-1||(y>=H-40&&gnd[i]))return true;const j=i+W;
+// Only used on small dirty boxes (useProbe): a whole-map pass is cheaper as ordinary floods, which mark
+// everything they prove. The path a probe walks is marked as proven too (mk), so later probes and floods
+// that touch it stop there.
+let useProbe=false,pathN=0;const PATH=new Int32Array(1400);
+function downToBedrock(s,sameGnd){const g0=gnd[s],mk=sameGnd?vis:vis2,lo=sameGnd?vstart:gstart;let i=s;pathN=0;
+  for(let n=0;n<1400;n++){const y=(i/W)|0;PATH[pathN++]=i;if(y>=H-1||(y>=H-40&&gnd[i])||(n>0&&mk[i]>=lo)){const id=sameGnd?++ST.vgen:++ggen;for(let k=0;k<pathN;k++)mk[PATH[k]]=id;return true;}const j=i+W;
     if(KIND[t[j]]===S&&(!sameGnd||gnd[j]===g0)){i=j;continue;}
     let nx=-1;const x=i-y*W;
     for(const sg of [-1,1]){for(let d=1;d<=24;d++){const X=x+sg*d;if(X<0||X>=W)break;const k=i+sg*d;if(KIND[t[k]]!==S||sameGnd&&gnd[k]!==g0)break;const kb=k+W;if(KIND[t[kb]]===S&&(!sameGnd||gnd[kb]===g0)){nx=kb;break;}}if(nx>=0)break;}
     if(nx<0)return false;i=nx;}
   return false;}
 function anchorFlood(s,init){
-  if(!init&&downToBedrock(s,false))return;
+  if(useProbe&&downToBedrock(s,false))return;
   const id=++ggen;let sp=0,tl=0,npc=0;stk[sp++]=s;q[tl++]=s;vis2[s]=id;
   while(sp>0){
     if(tl>GCAP)return; // the landscape itself
@@ -121,6 +125,7 @@ export function supportCheck(init){
   const boxes=[];if(ST.dx1>=0)boxes.push([ST.dx0,ST.dy0,ST.dx1,ST.dy1]);if(ST.dfar&&ST.dfar.length){for(const b of ST.dfar)boxes.push(b);ST.dfar=[];}
   if(!boxes.length){if(!init)sweepBg();return;}
   ST.lastBoxes=boxes; // debug: GAME.ST.lastBoxes
+  {let area=0;for(const b of boxes)area+=(b[2]-b[0]+5)*(b[3]-b[1]+5);useProbe=!init&&area<60000;}
   ST.dx0=W;ST.dy0=H;ST.dx1=-1;ST.dy1=-1; collapses=0;
   // 1) nothing may hang in the sky: every solid must connect, through solids of ANY material,
   //    to the world floor / bedrock or rest on loose debris. Whatever doesn't becomes chunks or dust.
@@ -152,7 +157,7 @@ function orphanBg(x0,x1,y0,y1){
 }
 function dropBg(i,x,y){if(R()<.2&&ST.np<MP-500)spawn(x,y,(R()-.5)*1.5,-R(),shade(bg[i],.8),90,RUBBLE,0);bg[i]=bgD[i];bgB[i]=0;}
 function flood(s,init){
-  if(!init&&gnd[s]&&downToBedrock(s,true))return; // ground resting on bedrock can't fail
+  if(useProbe&&gnd[s]&&downToBedrock(s,true))return; // ground resting on bedrock can't fail
   // walk one connected structure (natural ground and built stuff are separate structures)
   // depth-first, diving down first: anything resting on the world floor is proven sound in a few hundred steps
   const id=++ST.vgen; let sp=0,tl=0,nfc=0; stk[sp++]=s; q[tl++]=s; vis[s]=id; let sup=0, mass=0, My=0, Ty=H, smx=-1, smn=W, cmx=0, hook=false, r0=rid[s], mixed=false;

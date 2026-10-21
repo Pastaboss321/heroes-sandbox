@@ -69,7 +69,7 @@ const JEAN_POWERS=[
 JEAN_POWERS.push(
  {n:'Levitate Crowd',fn:(a,p,use)=>{if(!use(28))return;ST.cd=50;const cx=mouse.wx,cy=mouse.wy,list=enemies.filter(e=>Math.hypot(e.x-cx,e.y-cy)<90);let k=0;fxWord(cx,cy-30,'HNNNN...',1,'#ff9ad8',true);
    ACT.push(()=>{k++;for(const e of list){if(e.hp<=0)continue;if(k<40){e.vy=-1.6;e.vx*=.8;e.frozen=Math.max(e.frozen||0,2);if(ST.frame%3===0)spawn(e.x,e.y,(R()-.5),(R()-.5),rgb(255,120,210),10,0,1,0,1);}else{e.vy=9;e.frozen=0;e.mem.slam=true;}}
-     if(k===40)fxWord(cx,cy,'SLAM!',1.4,'#ff9ad8',true);if(k>40){for(const e of list)if(e.mem.slam&&e.ground){e.mem.slam=false;hitEnemy(e,40,0,-2);explode(e.x,e.y+e.def.h/2,5,{col:[255,110,200],quiet:true,self:true});}}
+     if(k===40)fxWord(cx,cy,'SLAM!',1.4,'#ff9ad8',true);if(k>40){for(const e of list)if(e.mem.slam&&(e.ground||k===58)){e.mem.slam=false;hitEnemy(e,40,0,-2);explode(e.x,e.y+e.def.h/2,5,{col:[255,110,200],quiet:true,self:true});}}
      return k<70;});}},
  {n:'Mind Shield',fn:(a,p,use)=>{if(!use(.45))return;shieldAs([[255,200,240],[255,110,200],[255,80,190]],false);}},
  {n:'Debris Storm',fn:(a,p,use)=>{if(!use(.4))return;if(p.debrisOn===ST.frame-1||p.debrisOn===ST.frame){p.debrisOn=ST.frame;}else{p.debrisOn=ST.frame;fxWord(p.x,p.y-ST.PH-8,'RRRMMM',.9,'#ff9ad8',true);

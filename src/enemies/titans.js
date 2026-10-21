@@ -13,7 +13,7 @@ import { H, W, col, setc, t } from '../world/grid.js';
 import { bodies, gnd } from '../world/support.js';
 import { finishBody } from '../world/bodies.js';
 import { MP, spawn, spawnFlake } from '../world/particles.js';
-import { beams, flash, fxWord, rings } from '../render/fx.js';
+import { beams, flash, fxImpact, fxWord, rings } from '../render/fx.js';
 import { explode, ringChunks } from '../world/destruction.js';
 import { sliceLine } from '../world/slice.js';
 import { snd } from '../sfx.js';
@@ -35,7 +35,7 @@ defineEnemy('titan_part',{hp:1e9,w:18,h:18,fly:true,titan:true,score:0,boom:0,me
   draw(e){if(!e.host)return;const k=.5+.5*Math.sin(ST.frame*.15);if(e.flash>0||k>.8)TK.glowDot(e.x,e.y,2,C(255,240,200));}});
 function part(host,w,h,mult){const p=spawnEnemy('titan_part',host.x,host.y);if(!p)return null;p.host=host;p.mult=mult;p.w=w;p.def=Object.assign({},p.def,{w,h});(host.mem.parts||(host.mem.parts=[])).push(p);return p;}
 const place=(p,x,y)=>{if(p){p.x=x;p.y=y;}};
-function phase(e,names){const ph=phaseOf(e);if(ph!==e.mem.ph){if(e.mem.ph){banner(e.def.title,names[ph-1]);snd('roar',e.x,e.y,{pitch:.5,v:1});ST.shake=22;shockFx(e.x,e.y,1.4);ST.hitstop=Math.max(ST.hitstop,8);}e.mem.ph=ph;}return ph;}
+function phase(e,names){const ph=phaseOf(e);if(ph!==e.mem.ph){if(e.mem.ph){banner(e.def.title,names[ph-1]);fxImpact(e.x,e.y,6);snd('roar',e.x,e.y,{pitch:.5,v:1});ST.shake=22;shockFx(e.x,e.y,1.4);ST.hitstop=Math.max(ST.hitstop,8);}e.mem.ph=ph;}return ph;}
 // a titan's beam: marches from (x0,y0) toward (tx,ty), carves where it lands, burns the hero on its line
 function tBeam(e,x0,y0,tx,ty,o){const dx=tx-x0,dy=ty-y0,d=Math.hypot(dx,dy)||1,ux=dx/d,uy=dy/d;let x=x0,y=y0,hit=false;
   for(let s=0;s<(o.len||900);s++){x+=ux;y+=uy;if(x<0||x>=W||y>=H)break;
@@ -50,8 +50,8 @@ function moon(e,x){ // a slab of rock dropped from orbit
   for(let y=0;y<w;y++)for(let k=0;k<w;k++){const dx=k-r,dy=y-r;if(dx*dx+dy*dy>r*r)continue;lm[y*w+k]=STONE;const v=R()*20;lc[y*w+k]=C(110+v,100+v,120+v);n++;}
   const b=finishBody(lm,lc,w,w,r,r,x,ST.camY-40,0,n,false);b.vx=(R()-.5)*2;b.vy=6;b.va=(R()-.5)*.1;b.thrown=true;b.chunk=false;fxWord(x,ST.camY+30,'INCOMING!',1,'#ff6b5c',true);}
 function bigDeath(e,c){const x=e.x,y=e.y,h=e.def.h,w=e.def.w;let k=0;ST.hitstop=Math.max(ST.hitstop,20);fxWord(x,y-h*.3,e.def.title+' FALLS!',2,'#ffc93c',true);
-  ACT.push(()=>{k++;if(k%5===0){const bx=x+(R()-.5)*w,by=y+(R()-.5)*h;explode(bx|0,by|0,10+R()*8|0,{self:true,quiet:k%15!==0,col:c,fire:.2});}
-    if(k===90){explode(x|0,y|0,34,{self:true,col:c,fire:.3});shockFx(x,y,1.4);flash(x,y,240,[255,255,255],20);ST.shake=22;}
+  ACT.push(()=>{k++;if(k%5===0){const bx=x+(R()-.5)*w,by=y+(R()-.5)*h;explode(bx|0,by|0,10+R()*8|0,{self:true,quiet:k%15!==0,col:c,fire:.2,noK:true});}
+    if(k===90){explode(x|0,y|0,34,{self:true,col:c,fire:.3,noK:true});shockFx(x,y,1.4);flash(x,y,240,[255,255,255],20);ST.shake=22;}
     return k<90;});}
 const TITANS=['galactus','thanos','dormammu','surtur','knull'];
 export const isTitan=e=>TITANS.includes(e.def.name);
@@ -260,4 +260,8 @@ export const TITAN_INFO={
   galactus:{map:'city',sub:'the Devourer of Worlds'},thanos:{map:'titan',sub:'the Mad Titan'},dormammu:{map:'dark',sub:'Lord of the Dark Dimension'},
   surtur:{map:'asgard',sub:'Ragnarok'},knull:{map:'knowhere',sub:'the King in Black'}};
 export function spawnTitan(id,x){const d={galactus:[150,220],thanos:[46,60],dormammu:[0,260],surtur:[115,200],knull:[60,120]}[id]||[100,100];
-  const sx=Math.max(80,Math.min(W-80,x)),e=spawnEnemy(id,sx,gy(sx|0)-d[0]-(id==='dormammu'?d[1]:0));if(e)rings.push({x:e.x,y:e.y,r:80,vr:4,life:20,c:[255,230,180]});return e;}
+  const sx=Math.max(80,Math.min(W-80,x)),e=spawnEnemy(id,sx,gy(sx|0)-d[0]-(id==='dormammu'?d[1]:0));
+  if(e){rings.push({x:e.x,y:e.y,r:80,vr:4,life:20,c:[255,230,180]});ST.slowT=Math.max(ST.slowT,90);ST.shake=22;shockFx(e.x,e.y,1.4);snd('boom',e.x,e.y,{size:2.5});
+    document.body.classList.add('cine');clearTimeout(cineT);cineT=setTimeout(()=>document.body.classList.remove('cine'),2600);}
+  return e;}
+let cineT=0;
