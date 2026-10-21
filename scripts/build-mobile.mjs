@@ -57,15 +57,42 @@ const head = `
   #tc button.on{background:#ff6b5c}
   #tc .small button{width:48px;height:48px;font-size:14px}
   body.menu-open #tc{display:none}
-  /* only the selected power shows, up top, so the bar never sits under the thumbs (Q/E switch powers) */
   /* only the selected power shows, centred along the bottom edge under the thumb buttons (Q/E switch powers) */
   #powers{bottom:max(6px,env(safe-area-inset-bottom))!important;width:auto!important;z-index:100}
   #powers .pw:not(.on){display:none}
   #powers .pw.on{transform:none!important;font-size:17px!important;padding:3px 12px!important}
   /* phone HUD: no keyboard help, no desktop-only sandbox controls (hero and map are picked in the menu) */
-  #help,#helpbtn,#char,#map,#regen,#fps{display:none!important}
+  #help,#helpbtn,#top #char,#top #map,#top #regen,#wavebtn,#menubtn,#fps{display:none!important}
+  /* left thumb: a floating joystick (left/right walk, up jumps or climbs, down drops / slams) */
+  #joy{position:relative;width:118px;height:118px;border-radius:50%;border:3px solid #14110f;background:rgba(255,201,60,.22);box-shadow:3px 3px 0 #14110f;pointer-events:auto;touch-action:none}
+  #knob{position:absolute;left:50%;top:50%;width:52px;height:52px;margin:-26px 0 0 -26px;border-radius:50%;border:3px solid #14110f;background:rgba(255,201,60,.9);box-shadow:2px 2px 0 #14110f}
+  /* pause menu: sandbox tools for phones (hero and map pickers, wave, rebuild) */
+  #msb{display:none;flex-direction:column;gap:8px;padding-top:8px;border-top:3px solid #14110f}
+  body.sandbox #msb{display:flex}
+  #msb label{font:700 12px sans-serif;letter-spacing:1px;display:flex;flex-direction:column;gap:4px}
+  #msb select,#msb button{font:16px sans-serif;padding:8px;border:3px solid #14110f;background:#fff8e8;color:#14110f;width:100%}
+  #msb .row{display:flex;gap:8px}
+  /* landscape phones are short: the pause panel goes wide, buttons on the left, sandbox tools on the right */
+  body.sandbox #pause .panel{width:min(640px,94vw)!important;display:grid!important;grid-template-columns:1fr 1fr;column-gap:16px;row-gap:8px;max-height:94vh;overflow:auto;transform:none!important;padding:14px!important}
+  #pause .ptitle{grid-column:1/-1}
+  #pause .cbtn{font-size:18px!important;padding:6px 12px!important}
+  body.sandbox #msb{grid-column:2;grid-row:2/span 4;border-top:0;padding-top:0}
+  body.menu-open #powers{display:none!important}
   #top{right:max(10px,env(safe-area-inset-right))!important;gap:6px!important}
   #top .sb{padding:6px 10px!important;font-size:12px!important}
+  /* top-right: minimap in the corner, score and kills beside it, the Spawn button below the map */
+  #scorebox{top:max(6px,env(safe-area-inset-top))!important;right:calc(max(10px,env(safe-area-inset-right)) + 262px)!important}
+  #top{top:118px!important}
+  /* spawn menu: centred between the HUD and the thumb controls, bigger touch targets, a close button */
+  #spawn{left:50%!important;right:auto!important;transform:translateX(-50%)!important;top:max(54px,env(safe-area-inset-top))!important;bottom:150px!important;width:min(560px,70vw)!important;z-index:101!important}
+  #spawn .sp-head span{display:none}
+  #spawn .sp-grid{grid-template-columns:repeat(auto-fill,minmax(78px,1fr))}
+  #spawn .sp-item{min-height:58px;font-size:10px}
+  #spclose{font:18px Bangers,Impact,sans-serif;letter-spacing:1px;border:3px solid #fff8e8;background:#e23b2e;color:#fff8e8;padding:2px 12px}
+  /* while placing something: a big cancel button at the top */
+  #spcancel{position:fixed;left:50%;top:max(54px,env(safe-area-inset-top));transform:translateX(-50%);z-index:101;display:none;font:20px Bangers,Impact,sans-serif;letter-spacing:2px;border:3px solid #14110f;background:#e23b2e;color:#fff8e8;padding:6px 18px;box-shadow:3px 3px 0 #14110f}
+  body.placing #spcancel{display:block}
+  body.menu-open #spcancel{display:none}
   #toolchip{bottom:calc(max(8px,env(safe-area-inset-bottom)) + 112px)!important}
   #hud{left:max(10px,env(safe-area-inset-left))!important;top:max(8px,env(safe-area-inset-top))!important;transform:scale(.85);transform-origin:top left}
   #rot{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;background:#0d0a18;color:#ffc93c;font:28px Bangers,Impact,sans-serif;letter-spacing:2px;text-align:center}
@@ -75,14 +102,15 @@ const head = `
 const body = `
 <div id="rot">TURN YOUR PHONE SIDEWAYS<span>Heroes Sandbox plays in landscape</span></div>
 <div id="tc">
-  <div class="pad"><button data-k="KeyA" data-c="a" aria-label="Left">&#9664;</button><button data-k="KeyD" data-c="d" aria-label="Right">&#9654;</button></div>
+  <div class="pad"><div id="joy" aria-label="Move"><div id="knob"></div></div></div>
   <div class="pad">
     <div class="pad small" style="flex-direction:column"><button data-k="KeyQ" data-c="q" aria-label="Previous power">Q</button><button data-k="KeyE" data-c="e" aria-label="Next power">E</button></div>
-    <button data-k="KeyS" data-c="s" aria-label="Down">&#9660;</button><button data-k="ShiftLeft" data-c="Shift" aria-label="Boost">&#8679;</button><button data-k="Space" data-c=" " aria-label="Jump">&#9650;</button>
-    <div class="pad small" style="flex-direction:column"><button data-k="Escape" data-c="Escape" aria-label="Pause">II</button><button data-k="KeyB" data-c="b" aria-label="Spawn menu">B</button></div>
+    <button data-k="ShiftLeft" data-c="Shift" aria-label="Boost">&#8679;</button>
+    <div class="pad small" style="flex-direction:column;justify-content:flex-end"><button data-k="Escape" data-c="Escape" aria-label="Pause">II</button></div>
   </div>
 </div>
 <script>
+window.HS_MINIMAP_Y=8; // minimap at the top edge on phones
 (function(){
   // on-screen buttons press and release real keys, so the game needs no changes
   for(const b of document.querySelectorAll('#tc button')){
@@ -92,6 +120,41 @@ const body = `
     const up=e=>{if(!held)return;held=false;b.classList.remove('on');send('keyup');};
     b.addEventListener('pointerup',up);b.addEventListener('pointercancel',up);b.addEventListener('lostpointercapture',up);
   }
+  // joystick: thumb offset becomes held keys. Pushing up again after letting go re-taps W (double-tap flies)
+  const key=(c,k,on)=>dispatchEvent(new KeyboardEvent(on?'keydown':'keyup',{code:c,key:k,bubbles:true}));
+  const joy=document.getElementById('joy'),knob=document.getElementById('knob'),J={KeyA:0,KeyD:0,KeyW:0,KeyS:0},K={KeyA:'a',KeyD:'d',KeyW:'w',KeyS:'s'};
+  let jid=null;
+  const setJ=(dx,dy)=>{const R=42,d=Math.hypot(dx,dy)||1,f=Math.min(1,R/d);knob.style.transform='translate('+dx*f+'px,'+dy*f+'px)';
+    const nx=dx/R,ny=dy/R,want={KeyA:nx<-.35,KeyD:nx>.35,KeyW:ny<-.55,KeyS:ny>.6};
+    for(const c in want)if(!!J[c]!==want[c]){J[c]=want[c]?1:0;key(c,K[c],want[c]);}};
+  const centre=()=>{const r=joy.getBoundingClientRect();return[r.left+r.width/2,r.top+r.height/2];};
+  joy.addEventListener('pointerdown',e=>{e.preventDefault();jid=e.pointerId;try{joy.setPointerCapture(jid);}catch(_){}const [cx,cy]=centre();setJ(e.clientX-cx,e.clientY-cy);});
+  joy.addEventListener('pointermove',e=>{if(e.pointerId!==jid)return;const [cx,cy]=centre();setJ(e.clientX-cx,e.clientY-cy);});
+  const rel=e=>{if(e.pointerId!==jid)return;jid=null;setJ(0,0);};
+  // holding up keeps hopping: each time the hero is back on the ground (and not flying), W is pressed again.
+  // grounded-only, so it never trips the in-air double-tap that turns on flight
+  setInterval(()=>{const G=window.GAME,p=G&&G.pl_;if(J.KeyW&&p&&!p.fly&&p.ground&&G.GS==='play'){key('KeyW','w',false);key('KeyW','w',true);}},50);
+  joy.addEventListener('pointerup',rel);joy.addEventListener('pointercancel',rel);joy.addEventListener('lostpointercapture',rel);
+  // pause menu gains a sandbox section: the game's own hero and map pickers move in here
+  const panel=document.querySelector('#pause .panel');
+  if(panel){const box=document.createElement('div');box.id='msb';
+    box.innerHTML='<label>HERO<span id="msbH"></span></label><label>MAP<span id="msbM"></span></label><div class="row"><button id="msbW">SPAWN WAVE</button><button id="msbR">NEW MAP</button></div>';
+    panel.appendChild(box);
+    const ch=document.getElementById('char'),mp=document.getElementById('map');
+    if(ch)document.getElementById('msbH').appendChild(ch);if(mp)document.getElementById('msbM').appendChild(mp);
+    document.getElementById('msbW').onclick=()=>{document.getElementById('resume').click();document.getElementById('wavebtn').click();};
+    document.getElementById('msbR').onclick=()=>{document.getElementById('regen').click();};}
+  // spawn menu on phones: close button in its header; picking something to place closes the menu so the
+  // next tap lands in the world; a CANCEL button stays up while a tool is armed
+  const cancel=document.createElement('button');cancel.id='spcancel';cancel.textContent='✕ CANCEL PLACING';document.body.appendChild(cancel);
+  const ui=()=>window.GAME&&GAME.spawnUI&&GAME.spawnUI();
+  cancel.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();GAME.SPAWN.tool=null;const u=ui();u&&u.select(null);});
+  const hookSpawn=()=>{const sp=document.getElementById('spawn');if(!sp||sp.dataset.m)return;sp.dataset.m=1;
+    const head=sp.querySelector('.sp-head'),x=document.createElement('button');x.id='spclose';x.textContent='CLOSE';head.appendChild(x);
+    x.onclick=()=>{const u=ui();u&&u.close();};
+    for(const ev of ['pointerdown','touchstart'])sp.addEventListener(ev,e=>e.stopPropagation());
+    sp.addEventListener('click',e=>{if(e.target.closest('.sp-item'))setTimeout(()=>{if(GAME.SPAWN.tool){const u=ui();u&&u.close();}},0);});};
+  setInterval(()=>{hookSpawn();document.body.classList.toggle('placing',!!(window.GAME&&GAME.SPAWN&&GAME.SPAWN.tool));},150);
   // hide the buttons while a menu is up
   const ov=['menu','pause','over','settings'].map(id=>document.getElementById(id)).filter(Boolean);
   const sync=()=>document.body.classList.toggle('menu-open',ov.some(o=>!o.classList.contains('hidden')));

@@ -4,11 +4,11 @@ import { ST } from '../state.js';
 import { ACID, ASH, CONC, EMPTY, F, FLAM, G, GFIRE, GLASS, HARD, ICE, KIND, L, LAVA, OBSID, P, PROPANE, R, RUBBLE, S, SNOW, STEAM, STEEL, STONE, WATER, rgb } from '../world/materials.js';
 import { CHN, CW, H, N, VH, W, bg, bgB, bgD, booms, col, markDirty, setc, stamp, swap, t, wake } from '../world/grid.js';
 import { ignite } from '../world/sim.js';
-import { BLDS, NAT, bodies, gnd, q, vis } from '../world/support.js';
+import { BLDS, NAT, bodies, gnd, q, rid, vis } from '../world/support.js';
 import { bodyAt, makeBody } from '../world/bodies.js';
 import { MP, crumble, gcol, pvx, pvy, px, py, solidAt, spawn } from '../world/particles.js';
 import { afters, beams, flash, flashes, fxBurst, fxImpact, fxWord, rings } from '../render/fx.js';
-import { bgHit, explode } from '../world/destruction.js';
+import { bgHit, explode, ringChunks } from '../world/destruction.js';
 import { iceAt } from './xmen.js';
 import { SKY, carve, glowRGB, hand, hurt, mouse, pl_ } from '../player.js';
 import { damageCone, damageEnemies, damageLine, enemies, enemyAt, hitEnemy, nearestEnemy } from '../enemies/core.js';
@@ -127,7 +127,7 @@ export function quake(x,y,o={}){
     if(KIND[m]===S&&m!==STEEL&&R()<(1-d/r)*.9/(1+HARD[m]*.15)){if(R()<.25&&Y<=y+3){spawn(X,Y,xx*.07+(R()-.5),-2-R()*3.5*(1-d/r),col[i],90,RUBBLE,0);t[i]=0;}else crumble(i);markDirty(i);wake(i);}
     else if((KIND[m]===P||KIND[m]===L)&&R()<.35*(1-d/r)){spawn(X,Y,(R()-.5)*2,-2-R()*3.5,col[i],80,m,0);t[i]=0;wake(i);}
   }
-  explode(x,y+2,7,{fire:.15,green,col:o.col,self:true});
+  explode(x,y+2,7,{fire:.15,green,col:o.col,self:true});ringChunks(x,y+4,r*.6,true);
   damageEnemies(x,y,r*1.3,45,0,-4);
   for(let k=0;k<3;k++)rings.push({x,y,r:4+k*4,vr:2.4+k*.6,life:18+k*3,c:gc});
   for(let k=0;k<120;k++){const a=Math.PI+R()*Math.PI;spawn(x,y,Math.cos(a)*5,Math.sin(a)*3.5,green?gcol():pickC(gc),20+R()*25,0,1,1);}
@@ -212,7 +212,7 @@ function grabBody(cx,cy,r){let best=null,bd=1e9;
   return best;}
 // the whole connected structure under the grab point (a building, a tree, a car...), unless it is the landscape itself
 const GRABCAP=30000;
-export function grabRegion(cx,cy,r){
+export function grabRegion(cx,cy,r,maxR=1e9){ // maxR: tear off only a chunk this far from where it was grabbed
   let s=-1,sd=1e9;
   for(let y=-r;y<=r;y++)for(let x=-r;x<=r;x++){const X=cx+x,Y=cy+y,d=x*x+y*y;if(d>r*r||X<0||X>=W||Y<0||Y>=H-1)continue;const m=t[Y*W+X];if(KIND[m]===S&&!gnd[Y*W+X]&&d<sd){sd=d;s=Y*W+X;}}
   if(s<0)return 0;
@@ -221,9 +221,10 @@ export function grabRegion(cx,cy,r){
   for(let y=(s/W)|0;y<H;y++){const m=t[y*W+sx0];if(KIND[m]!==S)continue;if(NAT[m]){gl=y;break;}
     let a=sx0,b=sx0;while(a>0&&BLDS(t[y*W+a-1])&&sx0-a<220)a--;while(b<W-1&&BLDS(t[y*W+b+1])&&b-sx0<220)b++;if(b-a>200){gl=y;break;}}
   if(((s/W)|0)>=gl)return 0;
-  const id=++ST.vgen;let h=0,n=0;q[n++]=s;vis[s]=id;
+  const id=++ST.vgen,sr=rid[s],sx=s%W,sy=(s/W)|0,ph=R()*6.283;let h=0,n=0;q[n++]=s;vis[s]=id;
+  const inR=j=>{if(maxR>=1e9)return true;const dx=j%W-sx,dy=((j/W)|0)-sy,a=Math.atan2(dy,dx),lim=maxR*(.78+.22*Math.sin(a*5+ph)+.08*Math.sin(a*11));return dx*dx+dy*dy<=lim*lim;}; // ragged, torn edge // only the piece grabbed: never the wreckage piled against it
   while(h<n){const i=q[h++],x=i%W;if(n>GRABCAP)return 0;
-    for(const j of [x>0?i-1:-1,x<W-1?i+1:-1,i-W,i+W]){if(j<0||j>=N||vis[j]===id||((j/W)|0)>=gl)continue;const m=t[j];if(KIND[m]!==S||gnd[j])continue;vis[j]=id;q[n++]=j;}}
+    for(const j of [x>0?i-1:-1,x<W-1?i+1:-1,i-W,i+W]){if(j<0||j>=N||vis[j]===id||((j/W)|0)>=gl)continue;const m=t[j];if(KIND[m]!==S||gnd[j]||(sr&&rid[j]!==sr)||!inR(j))continue;vis[j]=id;q[n++]=j;}}
   for(let k=0;k<n;k++)markDirty(q[k]);
   return n;
 }
@@ -274,7 +275,7 @@ export function updTelekinesis(){
       else if(t2.overhead){b.tx=pl_.x;b.ty=pl_.y-ST.PH-b.rmax*.6-4;}else{b.tx=mouse.wx;b.ty=mouse.wy;}
       if(!b.overhead)for(let k=0;k<6;k++){const j=R()*b.ex.length|0;spawn(b.x+b.ex[j],b.y+b.ey[j],(R()-.5)*.5,(R()-.5)*.5,ST.CH.thrust(),10,0,1,0,1);} // telekinetic shimmer (Hulk just carries it)
       else if(ST.frame%5===0){const j=R()*b.ex.length|0;spawn(b.x+b.ex[j],b.y+b.ey[j],(R()-.5)*.6,.5,rgb(150,140,125),14,0,0,1);} // grit trickling off the load
-      if(t2.tether){const h=hand();beams.push({pts:[[h.x,h.y],[(h.x+b.x)/2+(R()-.5)*8,(h.y+b.y)/2+(R()-.5)*8],[b.x,b.y]],life:1,c:[100,220,140],g:[40,160,80]});}}
+      if(t2.tether){const h=hand();beams.push({pts:[[h.x,h.y],[(h.x+b.x)/2+(R()-.5)*8,(h.y+b.y)/2+(R()-.5)*8],[b.x,b.y]],life:1,c:ST.CH.tetherC||[100,220,140],g:ST.CH.tetherG||[40,160,80]});}}
   }
   if(ST.heldE){
     const e=ST.heldE,t2=tk||{};

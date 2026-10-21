@@ -16,6 +16,7 @@ import { JET_PAL, JET_SPR, SPAWN, drones, jets, pins, shots, strikes, therm, wav
 import { metalPal } from '../heroes/xmen.js';
 import { DECOY_PAL, SPR_ICE } from '../heroes/iceman.js';
 import { FANT_A, FANT_B, FANT_PAL, drawWave2 } from '../heroes/wave2.js';
+import { drawBlob } from '../heroes/venom.js';
 import { glowRGB, hand, mouse, pl_ } from '../player.js';
 import { ENEMY_TYPES, enemies } from '../enemies/core.js';
 import { bctx, blur, buf, circle, ctx, cv, gaddS, gbuf, gctx, gimg, glc, img, line, mbuf, mctx, mimg, mm, pix, pixA, sctx, sim } from './canvas.js';
@@ -122,7 +123,7 @@ export function render(){
   const p=pl_;
   if(ST.CH.cape&&p.hist.length>3){const yo=ST.PH-5;for(let k=1;k<Math.min(8,p.hist.length);k++){const [hx,hy]=p.hist[k];const wv=Math.sin(ST.frame*.3+k)*1.2;pix(hx-p.face*(2+k*.4),hy-yo+k*.6+wv,k<4?ST.CH.cape[0]:ST.CH.cape[1]);pix(hx-p.face*(2+k*.4),hy-yo+1+k*.6+wv,ST.CH.cape[1]);}}
   if(p.ant>0)drawSprite(p.x,p.y+5,0,p.face,false,(ST.frame>>2)&1?FANT_A:FANT_B,FANT_PAL);
-  if(p.slip)drawSlip(p.slip);else drawSprite(p.x,p.y+PP*ST.SZ,p.ang,p.face,false,posePlayer(p),p.metal>0?metalPal():null,p.hurtF,p.stealth>0,ST.SZ);
+  if(p.slip)drawSlip(p.slip);else if(p.blob)drawBlob(p);else drawSprite(p.x,p.y+PP*ST.SZ,p.ang,p.face,false,posePlayer(p),p.metal>0?metalPal():null,p.hurtF,p.stealth>0,ST.SZ);
   const h=hand();
   if(ST.CH.id==='thor'&&!p.tow&&!pins.length&&!shots.some(s=>s.type==='hammer'||s.type==='pin')){for(let yy=0;yy<3;yy++)pix(h.x,h.y+yy,rgb(110,80,50));for(let yy=-2;yy<0;yy++)for(let xx=-1;xx<=1;xx++)pix(h.x+xx,h.y+yy,rgb(160,166,176));}
   else if(ST.CH.id!=='hulk')pix(h.x,h.y,glowRGB(),glowRGB());
@@ -157,7 +158,7 @@ export function render(){
   drawComics(sx,sy);
   // minimap
   if(ST.frame%15===0){for(let y=0;y<H/8;y++)for(let x=0;x<W/8;x++){const i=(y*8+4)*W+x*8+4,m=t[i];mbuf[y*(W/8)+x]=m?col[i]:(bg[i]?bg[i]:rgb(20,24,40));}mctx.putImageData(mimg,0,0);}
-  const mw=W/8*1.2,mh=H/8*1.2,mx=cv.width-mw-16,my=100;
+  const mw=W/8*1.2,mh=H/8*1.2,mx=cv.width-mw-16,my=window.HS_MINIMAP_Y??100; // the phone build lifts it to the top edge
   if(ST.GS==='menu'||ST.GS==='over')return;
   ctx.fillStyle='#14110f';ctx.fillRect(mx+3,my+3,mw+4,mh+4);ctx.drawImage(mm,mx,my,mw,mh);ctx.strokeStyle='#ffc93c';ctx.lineWidth=2;ctx.strokeRect(mx+ST.CX/8*1.2,my+ST.CY/8*1.2,VW/8*1.2,VH/8*1.2);ctx.strokeStyle='#14110f';ctx.lineWidth=3;ctx.strokeRect(mx-1,my-1,mw+2,mh+2);
   for(const e of enemies){const b=!!e.def.title;ctx.fillStyle=e.ally>0?'#ff9ad8':b?'#c88cff':'#ff6b5c';const s2=b?4:2;ctx.fillRect(mx+e.x/8*1.2-s2/2,my+e.y/8*1.2-s2/2,s2,s2);} // enemies on the minimap

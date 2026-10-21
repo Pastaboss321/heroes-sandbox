@@ -88,15 +88,22 @@ function blastDebris(cx,cy,r){
       b.vx=dx/d*v;b.vy=dy/d*v-1-R()*1.5;b.va=(R()-.5)*.2;
     }
   }
-  if(r>=6&&bodies.length<140){const K=Math.min(10,Math.round(r*PHYS.mix.ringChunks*(.7+R()*.6)));
-    for(let k=0;k<K&&bodies.length<140;k++){const a=R()*6.283,d=r*(1.1+R()*.4),rc=6+R()*Math.min(8,r/2);
-      const n0=solidCells(cx+Math.cos(a)*d,cy+Math.sin(a)*d,rc|0,false);let n=0;
-      for(let j=0;j<n0;j++)if(KIND[t[q[j]]]===S)q[n++]=q[j]; // solid cells only, no loose powder
-      if(n<14)continue;
-      const b=makeBody(q,n,false);if(b){b.chunk=true;b.vx+=Math.cos(a)*(.8+R());b.vy+=Math.sin(a)*(.8+R())-1;}}}
+  ringChunks(cx,cy,r,false);
   const nd=Math.min(D.max,r*r*D.perR2|0);
   for(let k=0;k<nd;k++){const a=R()*6.283,d=R()*r*1.1,sp=.4+R()*(1+r*.12);
     spawnDust(cx+Math.cos(a)*d,cy+Math.sin(a)*d,Math.cos(a)*sp,Math.sin(a)*sp-.6-R()*.8,dustCol(exN?exC[R()*exN|0]:rgb(150,140,125)));}
+}
+// big intact chunks broken off around an impact and flung outward (blast push comes from makeBody).
+// ground=true also tears slabs out of the street and terrain (ground slams)
+export function ringChunks(cx,cy,r,ground){
+  const M=PHYS.mix;if(r<M.ringMinR||bodies.length>=145)return;const K=Math.min(M.ringMax,Math.round(r*M.ringChunks*(.7+R()*.6)));
+  for(let k=0;k<K&&bodies.length<145;k++){const a=ground?Math.PI*(.15+R()*.7):R()*6.283,d=r*(ground?.35+R()*.45:1.1+R()*.4),rc=(ground?4:6)+R()*Math.min(8,r/2);
+    const n0=solidCells(cx+Math.cos(a)*d,cy+Math.sin(a)*d,rc|0,ground);let n=0;
+    for(let j=0;j<n0;j++)if(KIND[t[q[j]]]===S)q[n++]=q[j]; // solid cells only, no loose powder
+    if(n<14)continue;
+    const b=makeBody(q,n,false);if(!b)continue;b.chunk=true;
+    if(ground){b.vx+=(b.x-cx)/(r||1)*2.5+(R()-.5);b.vy=-(3+R()*3.5);b.va=(R()-.5)*.15;}
+    else{b.vx+=Math.cos(a)*(.8+R());b.vy+=Math.sin(a)*(.8+R())-1;}}
 }
 export function bgHit(cx,cy,r){
   for(let y=-r;y<=r;y++)for(let x=-r;x<=r;x++){if(x*x+y*y>r*r)continue;const X=cx+x|0,Y=cy+y|0;if(X<0||X>=W||Y<0||Y>=H)continue;const i=Y*W+X;if(!bgB[i])continue;

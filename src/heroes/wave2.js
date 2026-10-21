@@ -3,7 +3,7 @@ import './storm.js'; // evaluation order: runs after heroes/storm.js
 import { ST } from '../state.js';
 import { EMPTY, G, KIND, OBSID, P, R, S, STEEL, WEB, rgb } from '../world/materials.js';
 import { H, N, W, bg, bgB, bgD, col, life, markDirty, setc, t, wake } from '../world/grid.js';
-import { bodies, gnd, pin, q } from '../world/support.js';
+import { bodies, gnd, pin, q, rid } from '../world/support.js';
 import { finishBody } from '../world/bodies.js';
 import { pvx, pvy, px, py, solidAt, spawn } from '../world/particles.js';
 import { fxWord, rings } from '../render/fx.js';
@@ -27,7 +27,14 @@ export function scaleChunk(list,n,f){let mx=W,my=H,Mx=0,My=0;for(let k=0;k<n;k++
   const W2=Math.max(2,Math.round(lw*f)),H2=Math.max(2,Math.round(lh*f)),lm=new Uint8Array(W2*H2),lc=new Uint32Array(W2*H2);let cnt=0,sx=0,sy=0;
   for(let y=0;y<H2;y++)for(let x=0;x<W2;x++){const X=Math.min(lw-1,x/f|0),Y=Math.min(lh-1,y/f|0),m=src[Y*lw+X];if(!m)continue;lm[y*W2+x]=m;lc[y*W2+x]=sc[Y*lw+X];cnt++;sx+=x;sy+=y;}
   if(cnt<6)return null;const b=finishBody(lm,lc,W2,H2,sx/cnt,sy/cnt,mx+lw/2,my+lh/2,0,cnt,false);smashOverlap(b);return b;}
-export function solidCells(cx,cy,r,ground){let n=0;for(let y=-r;y<=r;y++)for(let x=-r;x<=r;x++){if(x*x+y*y>r*r)continue;const X=cx+x|0,Y=cy+y|0;if(X<0||X>=W||Y<0||Y>=H-44)continue;const i=Y*W+X;if((KIND[t[i]]===S||KIND[t[i]]===P)&&(ground||!gnd[i])){q[n++]=i;markDirty(i);}}return n;}
+// the solid cells in a circle, but only from ONE piece: the piece (rid) of the solid cell nearest the centre.
+// Debris that landed against a building, or a heap of separate chunks, comes away as just the piece you aimed at.
+// Cells with no piece id (natural terrain, freshly painted) fall back to everything in the circle.
+export function solidCells(cx,cy,r,ground){
+  let sr=0,sd=1e9;for(let y=-r;y<=r;y++)for(let x=-r;x<=r;x++){const d=x*x+y*y;if(d>r*r||d>=sd)continue;const X=cx+x|0,Y=cy+y|0;if(X<0||X>=W||Y<0||Y>=H-44)continue;const i=Y*W+X;if(KIND[t[i]]===S&&(ground||!gnd[i])){sd=d;sr=rid[i];}}
+  let n=0;for(let y=-r;y<=r;y++)for(let x=-r;x<=r;x++){if(x*x+y*y>r*r)continue;const X=cx+x|0,Y=cy+y|0;if(X<0||X>=W||Y<0||Y>=H-44)continue;const i=Y*W+X,k=KIND[t[i]];
+    if(!(ground||!gnd[i]))continue;if(k===S?(!sr||rid[i]===sr):(k===P&&!sr)){q[n++]=i;markDirty(i);}}
+  return n;}
 export function updWave2(){
   // ants crawl along surfaces toward the nearest enemy, biting and eating anything organic
   for(let n=ants.length-1;n>=0;n--){const a=ants[n];if(--a.life<=0){ants.splice(n,1);continue;}const e=nearestEnemy(a.x,a.y,160);const tx=e?e.x:pl_.x+(n%20-10)*3;

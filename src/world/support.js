@@ -86,14 +86,14 @@ function dropCluster(list,n){
     else if(R()<.5)dust(x,y);
     if(bgB[i]&&R()<.5){bg[i]=bgD[i];bgB[i]=0;}
     markDirty(i);t[i]=0;pin[i]=0;wake(i);};
-  if(n<=26){for(let k=0;k<n;k++)dust1(list[k]);return;}
+  if(n<10){for(let k=0;k<n;k++)dust1(list[k]);return;} // only specks crumble; anything bigger falls as a rock
   // mark membership so neighbour counts only see this cluster
   const id=++ggen;for(let k=0;k<n;k++)vis2[list[k]]=id;
   let k2=0;
   for(let k=0;k<n;k++){const i=list[k],m=t[i];let c=0;
     if(vis2[i-1]===id)c++;if(vis2[i+1]===id)c++;if(i>=W&&vis2[i-W]===id)c++;if(vis2[i+W]===id)c++;
     const fragile=m===LEAF||m===GLASS||m===GRASS;
-    if(c<=1||(fragile&&R()<.45)||R()<.04)dust1(i);else list[k2++]=i;}
+    if(c<=1||(fragile&&R()<.3)||R()<.01)dust1(i);else list[k2++]=i;}
   if(k2>0){const b=makeBody(list,k2,false);if(b){b.vy=Math.max(b.vy,.4);b.va+=(R()-.5)*.01;}}
   ST.shake=Math.min(22,ST.shake+Math.min(6,Math.sqrt(n)/12));
 }

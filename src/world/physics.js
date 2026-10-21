@@ -27,11 +27,11 @@ export const PHYS={
     friction:.25,         // share of sideways speed lost per ground contact
     minBounceV:1.2,       // below this downward speed a chunk stops bouncing and slides to rest
     roll:.04,             // how strongly ground speed turns into spin (tumbling)
-    max:90,               // live explosion chunks allowed at once; past it blasts make dust only
-    minR:4,               // explosions smaller than this radius make no chunks (dust only)
-    perR:.9,              // chunks per unit of blast radius above minR
-    perBoom:16,           // most chunks one explosion can make
-    size:[4,8],           // chunk blob radius range, cells
+    max:120,              // live explosion chunks allowed at once; past it blasts make dust only
+    minR:3,               // explosions smaller than this radius make no chunks (dust only)
+    perR:1.2,             // chunks per unit of blast radius above minR
+    perBoom:22,           // most chunks one explosion can make
+    size:[4,9],           // chunk blob radius range, cells
     speed:.3},            // launch speed per unit of blast radius
   dust:{                  // light dust motes: no grid collision, cheap
     grav:.035, drag:.94,
@@ -43,10 +43,12 @@ export const PHYS={
   part:{grav:.15, drag:.99, dragHeavy:.9}, // debris grains and sparks
   flake:{grav:.012, drag:.985, sway:.006},  // snow and ash: settles to ~0.8 cells/tick with a little side-to-side sway
   mix:{                   // how destruction splits between intact chunks, loose rubble and dust
-    rubble:.03,           // share of rubble (flying grains and cells broken in place) that stays as loose sand; the rest vanishes into dust
-    rimRubble:.06,        // share of cracked crater-rim cells that stay as loose rubble (rest blow away)
-    landCrumble:.12,       // scales how much of a landing chunk crumbles to rubble (1 = old behaviour)
-    ringChunks:.5,        // big chunks broken off the crater wall per unit of blast radius
+    rubble:.01,           // share of rubble (flying grains and cells broken in place) that stays as loose sand; the rest vanishes into dust
+    rimRubble:.02,        // share of cracked crater-rim cells that stay as loose rubble (rest blow away)
+    landCrumble:.06,       // scales how much of a landing chunk crumbles to rubble (1 = old behaviour)
+    ringChunks:.7,        // big chunks broken off around an impact, per unit of radius
+    ringMinR:4,           // smaller impacts break off no big chunks
+    ringMax:14,           // most big chunks one impact can break off
     grey:.6},             // how far rubble colour is pulled toward grey concrete, so walls do not turn into neon sand
   powder:{maxV:5}, liquid:{maxV:4},        // fastest fall, cells per tick
 };

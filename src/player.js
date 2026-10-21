@@ -1,5 +1,5 @@
 // Player state (pl_), input state, movement, hurt, camera.
-import './heroes/thing.js'; // evaluation order: runs after heroes/thing.js
+import { blobMove, venomSize } from './heroes/venom.js';
 import { ST } from './state.js';
 import { ACID, DENS, EMPTY, F, FIRE, G, GLASS, ICE, KIND, L, LAVA, LEAF, OBSID, PROPANE, R, RUBBLE, S, STEEL, WOOD, rgb } from './world/materials.js';
 import { H, N, VH, VW, W, booms, col, setc, t } from './world/grid.js';
@@ -74,10 +74,11 @@ export function updPlayer(){
   if(p.metal>0&&!p.ground&&p.vy>3)carve(p.x,p.y+2,4,0,p.vy,H); // adamantium cannonball through the floor
   if(p.wings>0){damageEnemies(p.x,p.y-ST.PH/2,10,3,0,0,true);for(let k=0;k<4;k++){const side=k&1?1:-1,u=R(),wx=p.x-p.face*2+side*(4+u*16),wy=p.y-ST.PH*.7-Math.sin(u*3)*6+u*4;spawn(wx,wy,side*.4-p.vx*.2,-.3,R()<.5?rgb(255,170,50):rgb(255,90,30),12,R()<.02?FIRE:0,1,0,1);}}
   if(p.thrustF>0)p.thrustF--; if(ST.senseT>0)ST.senseT--; if(p.spin>0)p.spin--; if(p.eye>0)p.eye--;
+  if(p.bm>0&&--p.biomassT<=0){p.bm--;p.biomassT=1200;venomSize(p);} // Venom sheds a level of biomass every 20 s
   if(p.dodge>0)p.dodge--; if(p.stealth>0)p.stealth--; if(p.sense>0)p.sense--; if(p.shell>0)p.shell--;
   if(p.surge>0){p.surge--;damageEnemies(p.x,p.y-ST.PH/2,ST.PW+6,1.2,p.face*1.5,-.5);if(ST.frame%2===0)spawn(p.x+(R()-.5)*14,p.y-R()*ST.PH,(R()-.5)*.5,-.8,rgb(255,40+R()*40|0,30),12,0,1,0,1);}
   if(p.ant>0){p.ant--;p.fly=true;if(p.ant===0){p.fly=false;fxWord(p.x,p.y-ST.PH-6,'BYE, ANT-THONY',.7,'#ff6b5c',true);}}
-  if(ST.CH.id==='antman'){ // Pym particles: ease toward the target size, the hitbox follows
+  if(ST.CH.id==='antman'||ST.CH.id==='venom'){ // Pym particles (or Venom's biomass): ease toward the target size, the hitbox follows
     const ts=p.sizeT||1;if(Math.abs((p.size||1)-ts)>.01){const grow=ts>(p.size||1);p.size=(p.size||1)+(ts-(p.size||1))*.15;if(Math.abs(p.size-ts)<.02)p.size=ts;
       ST.PW=Math.max(3,Math.round(ST.CH.pw*Math.min(1.6,p.size)));ST.PH=Math.max(8,Math.round(ST.CH.ph*p.size));if(grow&&boxHit(p.x,p.y))punchOut(p);}
     ST.SZ=p.size||1;if(ts>1.5){p.en-=.16;if(p.en<=1){p.sizeT=1;fxWord(p.x,p.y-ST.PH-6,'OUT OF PYM PARTICLES',.8,'#ff6b5c',true);}}
@@ -102,7 +103,8 @@ export function updPlayer(){
   if(p.fly&&shiftH&&p.boost>0)p.boost=Math.max(p.boost,2);
   if(!ST.CH.fly&&shiftH&&p.charge>0)p.charge=Math.max(p.charge,2);
   if(!p.fly)p.boost=0;
-  if(p.fly){
+  if(p.blob){blobMove(p,ax,ay);}
+  else if(p.fly){
     // free flight: velocity eases toward input direction; light easing on release = glide → hover
     let dx=ax,dy=ay;const mag=Math.hypot(dx,dy);if(mag>0){dx/=mag;dy/=mag;}
     const boosting=p.boost>0, spd=FS*(boosting?BOOST:1)*(p.wings>0?1.7:1);
