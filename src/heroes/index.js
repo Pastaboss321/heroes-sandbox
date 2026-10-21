@@ -32,12 +32,14 @@ import { CHAR_VENOM } from './venom.js';
 import { CHAR_PANTHER } from './panther.js';
 import { CHAR_CAP, CHAR_MARVEL, CHAR_SURFER } from './cosmic.js';
 import { CHAR_POOL, CHAR_RIDER } from './wave4.js';
+import { applyKits } from './kits2b.js';
 import { aoeCost } from './aoe.js';
 import { markUlt } from './abilities.js';
 import { SPAWN } from './powers.js';
 import { buildPowerBar, pwDiv } from '../ui/hud.js';
 
 export const CHARS=[CHAR_DOOM,CHAR_HULK,CHAR_THOR,CHAR_IRON,CHAR_WOLVERINE,CHAR_CYCLOPS,CHAR_ICEMAN,CHAR_JEAN,CHAR_SPIDEY,CHAR_WANDA,CHAR_STRANGE,CHAR_ANTMAN,CHAR_JUGGERNAUT,CHAR_ULTRON,CHAR_MAGNETO,CHAR_STORM,CHAR_VENOM,CHAR_REED,CHAR_SUE,CHAR_TORCH,CHAR_THING,CHAR_PANTHER,CHAR_CAP,CHAR_MARVEL,CHAR_SURFER,CHAR_RIDER,CHAR_POOL]; // entries live in src/heroes/<hero>.js
+applyKits(CHARS); // reworked and new powers (heroes/kits2a.js, kits2b.js)
 ST.CH=CHARS[0];
 export const HERO_UI={juggernaut:'#7a2a1e',ultron:'#8a909e',magneto:'#5a2470',spidey:'#c8282f',wanda:'#a8183a',strange:'#2a52a0',antman:'#8a1c1c',doom:'#2f8f4e',hulk:'#6aa84f',thor:'#3a6fd8',iron:'#c23a2b',wolverine:'#e8b21f',cyclops:'#1f3c8a',iceman:'#7cc8f0',jean:'#c42a3a',storm:'#2a2a33',venom:'#1c1c28',reed:'#4f86b8',sue:'#7fb2d8',torch:'#e8731f',thing:'#d0702c',panther:'#2a2236',cap:'#2c4aa0',marvel:'#c8282f',surfer:'#9aa4b8',rider:'#e8731f',pool:'#9a1c24'};
 export const HERO_DARK=new Set(['hulk','wolverine','iceman','sue','surfer']);

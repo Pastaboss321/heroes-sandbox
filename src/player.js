@@ -66,7 +66,8 @@ export function hurt(d){
   if(p.rage>0||p.eye>0)d*=.5;
   if(p.grit>0){const dd=d*ST.CH.armor;p.gritD+=dd;p.hp=Math.max(1,p.hp-dd);p.hurtF=8;ST.hurtV=Math.min(1,ST.hurtV+dd/40);ST.shake=Math.max(ST.shake,2);snd('hurt',p.x,p.y,{gap:.14,v:.5});
     for(let k=0;k<4;k++)spawn(p.x+(R()-.5)*8,p.y-R()*ST.PH,(R()-.5)*2,-R()*2,rgb(255,60+R()*60|0,40),12,0,1,0,1);return;}
-  p.hp-=d*ST.CH.armor;p.hurtF=8;ST.hurtV=Math.min(1,ST.hurtV+d*ST.CH.armor/30);ST.shake=Math.max(ST.shake,2);snd('hurt',p.x,p.y,{gap:.14,v:Math.min(1,.4+d/20)});
+  p.hp-=d*ST.CH.armor;p.hurtF=8;
+  if(p.hp<=0&&p.rebirth>0){p.rebirth=0;p.hp=ST.CH.hp;explode(p.x|0,p.y-8|0,22,{self:true,fire:.6,col:[255,150,40],noK:true});fxWord(p.x,p.y-ST.PH-14,'THE PHOENIX RISES!',1.5,'#ff9a3c',true);ST.hitstop=Math.max(ST.hitstop,10);return;} // Jean's Phoenix RebirthST.hurtV=Math.min(1,ST.hurtV+d*ST.CH.armor/30);ST.shake=Math.max(ST.shake,2);snd('hurt',p.x,p.y,{gap:.14,v:Math.min(1,.4+d/20)});
 }
 export function updPlayer(){
   const p=pl_;

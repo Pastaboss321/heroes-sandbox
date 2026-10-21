@@ -30,6 +30,7 @@ export function applyStatus(e,k,d){if(!e||e.hp<=0||e.host)return;const s=stOf(e)
 function onHit(e,dmg){
   const s=stOf(e),player=ST.pctx,tag=ST.dmgTag||(ST.zapF===ST.frame&&Math.hypot(ST.zapX-e.x,ST.zapY-e.y)<20?'shock':null);let d=dmg,word=null,wc='#ffc93c';
   if(s.mark>0)d*=1.5;
+  if(player&&ST.buffT>ST.frame)d*=1.3; // Captain America's rally
   if(!e.def.titan&&e.frozen>0&&!(s.stun>0)&&dmg>=15&&tag!=='ice'){d+=dmg*1.5;e.frozen=0;word='SHATTER!';wc='#bfe3ff';snd('glass',e.x,e.y,{v:.8});
     for(let k=0;k<24;k++){const a=R()*6.283,sp=1+R()*3;spawn(e.x,e.y,Math.cos(a)*sp,Math.sin(a)*sp-1,R()<.5?rgb(210,240,255):rgb(150,210,250),40,0,1,1);}}
   if(tag==='shock'){if(s.wet>0){d+=25;s.wet=0;s.stun=40;word='ELECTROCUTED!';wc='#9fd8ff';chain(e);}else if(s.burn>0){d+=18;s.burn=0;word='WILDFIRE!';wc='#ff9a3c';ST.blastQ.push([e.x,e.y]);}s.shock=Math.max(s.shock,30);}
