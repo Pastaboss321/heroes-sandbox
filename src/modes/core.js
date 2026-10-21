@@ -38,7 +38,7 @@ export function startRun(modeId,hero,map){
   resetSpawn();
   document.body.classList.toggle('sandbox',!!ST.MODE.sandbox);
   mapSel.value=ST.MODE.map||map||'city';regen();setChar(hero);pl_.hp=ST.CH.hp;pl_.en=100;
-  ST.kills=0;ST.score=0;ST.wave=0;ST.MS={t:0};for(const k in pressed)pressed[k]=false;for(const k in keys)keys[k]=false;mouse.down=false;
+  ST.kills=0;ST.score=0;ST.wave=0;ST.ult=0;ST.ultT=0;ST.MS={t:0};for(const k in pressed)pressed[k]=false;for(const k in keys)keys[k]=false;mouse.down=false;
   helpEl.style.display=ST.MODE.sandbox?'':'none'; // H still toggles it
   bossBar(null);if(ST.MODE.setup)ST.MODE.setup(ST.MS);
   overlay(null);ST.GS='play';

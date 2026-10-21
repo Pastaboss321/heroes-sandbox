@@ -14,7 +14,9 @@ import { ACT } from './heroes/xmen.js';
 import { updSlide } from './heroes/iceman.js';
 import { updWave2 } from './heroes/wave2.js';
 import { mouse, pl_, pressed, updCamera, updPlayer } from './player.js';
-import { cast } from './heroes/index.js';
+import { cast, castUlt } from './heroes/index.js';
+import { hudUlt, updSummons } from './heroes/abilities.js';
+import { explode } from './world/destruction.js';
 import { enemies, spawnQ, updEnemies } from './enemies/core.js';
 import { render } from './render/render.js';
 import { pwDiv } from './ui/hud.js';
@@ -29,18 +31,22 @@ let last=performance.now(),acc=0,fpsT=0,fpsN=0;
 export function tick(){
   ST.shieldOn=false;
   updCamera();
+  ST.pctx=true;
   ST.aoeC=ST.aoeK; // the hero's own effects use the chosen area size; enemies and the world run at 1 (heroes/aoe.js)
   if(mouse.right&&SPAWN.tool){SPAWN.tool=null;ST.spawnUI&&ST.spawnUI.select(null);}
   if(!mouse.down){SPAWN.latch=false;SPAWN.lx=SPAWN.ly=null;}
-  if(mouse.down){if(SPAWN.tool)useTool();else cast();}if(ST.cd>0)ST.cd--;
+  if(ST.wantUlt){ST.wantUlt=false;castUlt();}
+  if(ST.ultT>0){const pw=ST.CH.powers[ST.cur];if(pw&&pw.ult){ST.ultT--;cast();}else ST.ultT=0;} // a held ultimate (beam) keeps firing on its own
+  else if(mouse.down){if(SPAWN.tool)useTool();else cast();}if(ST.cd>0)ST.cd--;
   updTelekinesis();
   const world=!(ST.slowT>0&&(ST.slowT--&1))&&!SPAWN.pause; // Tactical Focus runs the world at half speed; the spawn menu can freeze it
-  updPlayer();if(!pl_.slip){TSL.push({x:pl_.x,y:pl_.y,hp:pl_.hp,face:pl_.face});if(TSL.length>300)TSL.shift();}updShots(world);ST.aoeC=ST.aoeK;
-  if(world){updDrones();updVortex();updStrikes();updStorm();ST.aoeC=1;updEnemies();ST.aoeC=ST.aoeK;updJets();}
+  updPlayer();if(!pl_.slip){TSL.push({x:pl_.x,y:pl_.y,hp:pl_.hp,face:pl_.face});if(TSL.length>300)TSL.shift();}updShots(world);ST.aoeC=ST.aoeK;ST.pctx=true;updSummons();
+  if(world){updDrones();updVortex();updStrikes();updStorm();ST.aoeC=1;ST.pctx=false;updEnemies();ST.pctx=true;ST.aoeC=ST.aoeK;updJets();}
   updPins();updTherm();updDecoy();if(world)updWave2();updCapShields();
   for(let n=ACT.length-1;n>=0;n--)if(ACT[n]()===false)ACT.splice(n,1);
   if(world)updSlide();
-  ST.aoeC=1;
+  while(ST.blastQ.length){const [bx,by]=ST.blastQ.pop();explode(bx|0,by|0,7,{fire:.6,self:true,col:[255,150,50]});} // WILDFIRE combos
+  ST.aoeC=1;ST.pctx=false;
   if(ST.MODE&&ST.MODE.update){ST.MODE.update(ST.MS);ST.MS.t++;}
   const md=MAPDEFS[mapSel.value];if(md&&md.amb&&world)md.amb();
   const t0=performance.now();
@@ -64,7 +70,7 @@ export function loop(now){
   else{ambience('fire',0);ambience('lava',0);ambience('rain',0);ambience('wind',0);}
   ST.frameMs=ST.frameMs*.95+(performance.now()-a)*.05;
   fpsN++;fpsT+=dt;if(fpsT>=500){ST.fps=fpsN*1000/fpsT;fpsN=0;fpsT=0;}
-  hpEl.style.width=Math.max(0,pl_.hp/ST.CH.hp*100)+'%';enEl.style.width=Math.max(0,pl_.en)+'%';
+  hudUlt();hpEl.style.width=Math.max(0,pl_.hp/ST.CH.hp*100)+'%';enEl.style.width=Math.max(0,pl_.en)+'%';
   {const tc=$('toolchip'),T=SPAWN.tool,st=[SPAWN.pause&&'PHYSICS PAUSED',SPAWN.slow&&'SLOW MOTION',SPAWN.god&&'GOD MODE',SPAWN.inf&&'INFINITE ENERGY',SPAWN.peace&&'PEACEFUL'].filter(Boolean);
    const txt=T?'PLACING '+T.label.toUpperCase()+' · RIGHT-CLICK CANCELS'+(T.kind==='paint'||T.id==='boom'||T.id==='boulder'?' · [ ] BRUSH '+SPAWN.brush:''):st.join(' · ');tc.style.display=txt&&ST.GS==='play'?'block':'none';if(tc.textContent!==txt)tc.textContent=txt;}
   {const d=pwDiv.children[ST.cur],f=d&&d.lastChild;if(f&&f.className==='cdf')f.style.width=(ST.cd>0?Math.min(100,ST.cd/ST.cdMax*100):0)+'%';}

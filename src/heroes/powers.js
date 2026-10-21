@@ -29,7 +29,7 @@ export const pickC=c=>rgb(c[0]*(.7+R()*.3),c[1]*(.7+R()*.3),c[2]*(.7+R()*.3));
 export const TSL=[]; // the hero's last five seconds (300 ticks) of position and health, for Doom's Timeslip
 
 // ================= extra powers =================
-export function zap(x0,y0,x1,y1,c,g){const pts=[[x0,y0]],n=Math.max(2,Math.hypot(x1-x0,y1-y0)/7|0);for(let k=1;k<n;k++){const f=k/n;pts.push([x0+(x1-x0)*f+(R()-.5)*7,y0+(y1-y0)*f+(R()-.5)*7]);}pts.push([x1,y1]);beams.push({pts,life:2,c,g});}
+export function zap(x0,y0,x1,y1,c,g){ST.zapF=ST.frame;ST.zapX=x1;ST.zapY=y1;const pts=[[x0,y0]],n=Math.max(2,Math.hypot(x1-x0,y1-y0)/7|0);for(let k=1;k<n;k++){const f=k/n;pts.push([x0+(x1-x0)*f+(R()-.5)*7,y0+(y1-y0)*f+(R()-.5)*7]);}pts.push([x1,y1]);beams.push({pts,life:2,c,g});}
 export function shieldAs(cols,reflect){ST.shieldC=cols;shield();
   if(reflect)for(const s2 of shots)if(s2.owner==='enemy'&&Math.hypot(s2.x-pl_.x,s2.y-pl_.y+8)<26){s2.owner='player';s2.vx*=-1.3;s2.vy*=-1.3;s2.col=cols[0];s2.ecol=cols[0];flash(s2.x,s2.y,8,cols[2],3);}}
 // ================= overhaul powers: every hero but Doom gets a full 12-power kit =================
@@ -153,7 +153,7 @@ export function lightning(a,o={}){
     if(enemyAt(x,y,3)){hitX=X;hitY=Y;break;}
   }
   beams.push({pts,life:2,c:C,g:Gc});sndLoop('arc','arc',a.h.x,a.h.y);
-  for(let k=1;k<pts.length;k++)damageEnemies(pts[k][0],pts[k][1],5,.8,0,0);
+  ST.dmgTag='shock';for(let k=1;k<pts.length;k++)damageEnemies(pts[k][0],pts[k][1],5,.8,0,0);ST.dmgTag=null;
   for(let f=0;f<3;f++){const st=pts[(R()*pts.length)|0];const fp=[st];let fx=st[0],fy=st[1];const ang=Math.atan2(a.dy,a.dx)+(R()-.5)*2.2;for(let k=0;k<5;k++){fx+=Math.cos(ang)*5+(R()-.5)*5;fy+=Math.sin(ang)*5+(R()-.5)*5;fp.push([fx,fy]);}beams.push({pts:fp,life:2,c:Fc,g:Gc});
     const ex=fx|0,ey=fy|0;if(ex>=0&&ex<W&&ey>=0&&ey<H){const m=t[ey*W+ex];if(FLAM[m]>0)ignite(ey*W+ex);}}
   const ex=hitX>=0?hitX:x|0,ey=hitX>=0?hitY:y|0;
@@ -172,8 +172,8 @@ export function lightningStrike(x,ty,r){
   while(cy<y){cy+=8+R()*6;cx+=(x-cx)*.3+(R()-.5)*10;pts.push([cx,Math.min(cy,y)]);}
   beams.push({pts,life:4,c:[245,250,255],g:[130,180,255]});
   for(let f=0;f<2;f++){const st=pts[(R()*pts.length)|0];const fp=[st];let fx=st[0],fy=st[1];for(let k=0;k<4;k++){fx+=(R()-.5)*14;fy+=6+R()*4;fp.push([fx,fy]);}beams.push({pts:fp,life:3,c:[200,220,255],g:[90,140,255]});}
-  explode(x,y,r,{fire:.25,col:BLUE});
-  damageEnemies(x,y,r*2,30,0,-2);
+  explode(x,y,r,{col:BLUE});
+  ST.dmgTag='shock';damageEnemies(x,y,r*2,30,0,-2);ST.dmgTag=null;
   flash(x,y,r*5,[150,190,255],8);flash(x,ST.camY+VH/2,200,[60,80,130],4);
   ST.shake=Math.min(24,ST.shake+r*.6);
 }

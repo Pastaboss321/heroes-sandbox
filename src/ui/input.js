@@ -29,6 +29,7 @@ addEventListener('keydown',e=>{
   const brush=sb&&SPAWN.tool; // [ ] size the spawn brush while placing, otherwise they size area powers like Z / X
   if(brush&&e.code==='BracketLeft'){SPAWN.brush=Math.max(1,SPAWN.brush-1);ST.spawnUI.setBrush(SPAWN.brush);}if(brush&&e.code==='BracketRight'){SPAWN.brush=Math.min(14,SPAWN.brush+1);ST.spawnUI.setBrush(SPAWN.brush);}
   if(e.code==='KeyZ'||(!brush&&e.code==='BracketLeft'))aoeSmaller();if(e.code==='KeyX'||(!brush&&e.code==='BracketRight'))aoeBigger();
+  if(e.code==='KeyG')ST.wantUlt=true;
   if(e.code==='KeyQ')selPower(ST.cur-1);if(e.code==='KeyE')selPower(ST.cur+1);
   if(sb&&e.code==='KeyR')regen();if(sb&&e.code==='KeyM'){mapSel.value=MAPS[(MAPS.indexOf(mapSel.value)+1)%MAPS.length];regen();}
   if(e.code==='KeyH')helpEl.style.display=helpEl.style.display==='none'?'':'none';

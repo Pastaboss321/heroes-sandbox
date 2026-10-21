@@ -24,6 +24,7 @@ import { drawComics } from './comic.js';
 import { drawAxe, drawHammer, drawSlip, drawSprite } from './sprites.js';
 import { groundBelow } from '../ui/spawn.js';
 import { drawChain } from '../heroes/wave4.js';
+import { drawStatus, drawSummons } from '../heroes/abilities.js';
 
 const flick=new Float32Array(256);
 const SPACE_ROW=new Uint32Array(VH);
@@ -105,6 +106,7 @@ export function render(){
   // drones
   for(const d of drones){for(let yy=0;yy<5;yy++)for(let xx=0;xx<7;xx++){const eye=yy===2&&(xx===2||xx===4);if((yy===0||yy===4)&&(xx===0||xx===6))continue;pix(d.x-3+xx,d.y-2+yy,eye?rgb(255,90,70):yy===0?rgb(150,158,170):rgb(100,108,120),eye?rgb(255,60,40):0);}}
   for(const e of enemies)drawEnemy(e);
+  drawSummons();drawStatus(pix,enemies);
   drawWave2();
   // ---- new power visuals: planted / falling / towed Mjolnir, Stormbreaker, thermite, the X-Jet, Iceman's decoy
   for(const P2 of pins)drawHammer(P2.x,P2.y-2,-Math.PI/2);

@@ -26,6 +26,7 @@ import { mapSel } from '../maps/index.js';
 //   onDeath(e)      optional extra effects (default death explosion + scrap always happens)
 // Waves come from WAVES(n) → [[type,count],...]. spawnEnemy(type,x,y) spawns one directly.
 export const ENEMY_TYPES={}, enemies=[], spawnQ=[];
+ST.enemyList=()=>enemies;
 // wave, kills, score: shared state (ST in state.js)
 export function defineEnemy(name,def){ENEMY_TYPES[name]=Object.assign({name,hp:30,w:7,h:7,fly:true,score:10,boom:5,glow:'*',think:null,onDeath:null},def);}
 export function spawnEnemy(name,x,y){
@@ -68,7 +69,9 @@ export function enemyAt(x,y,pad){for(const e of enemies){if(Math.abs(x-e.x)<=e.d
 export function nearestEnemy(x,y,r){let b=null,bd=r;for(const e of enemies){const d=Math.hypot(e.x-x,e.y-y);if(d<bd){bd=d;b=e;}}return b;}
 export function hitEnemy(e,dmg,kx,ky){if(e.hp<=0)return;
   if(e.host){e.flash=5;if(e.host.hp>0)hitEnemy(e.host,dmg*(e.mult||1),0,0);return;} // a titan's weak point passes the hit on, multiplied
-  if(e.def.titan){kx=ky=0;}if(e.mem.shield>0)dmg*=.35;if(e.hex>0)dmg*=1.5;e.hp-=dmg;e.flash=5;e.vx+=kx||0;e.vy+=ky||0;
+  if(e.def.titan){kx=ky=0;}
+  if(ST.hitHook)dmg=ST.hitHook(e,dmg); // statuses and combos (heroes/abilities.js)
+  if(ST.pctx)e.pHit=ST.frame;if(e.mem.shield>0)dmg*=.35;if(e.hex>0)dmg*=1.5;e.hp-=dmg;e.flash=5;e.vx+=kx||0;e.vy+=ky||0;
   if(dmg>=8&&ST.np<MP-2000){for(let k=0;k<5;k++){const a=R()*6.283,s=1.5+R()*2.5;spawn(e.x,e.y,Math.cos(a)*s,Math.sin(a)*s,R()<.5?rgb(255,250,230):rgb(255,210,120),6+R()*6,0,1,0,1);}if(dmg>=20)flash(e.x,e.y,10+dmg*.2,[255,230,180],3);}}
 export function damageEnemies(x,y,r,dmg,kx,ky,radial){
   r*=ST.aoeC||1;
@@ -88,7 +91,7 @@ export function eHit(e,x,y){const hw=e.def.w/2,hh=e.def.h/2;
 export function updEnemies(){
   for(let n=spawnQ.length-1;n>=0;n--){const s=spawnQ[n];if(--s.delay>0)continue;spawnQ.splice(n,1);const pos=spawnPoint(ENEMY_TYPES[s.type]);if(pos)spawnEnemy(s.type,pos[0],pos[1]);}
   for(let n=enemies.length-1;n>=0;n--){
-    const e=enemies[n],d=e.def;e.t++;if(e.cd>0)e.cd--;if(e.flash>0)e.flash--;
+    const e=enemies[n],d=e.def;e.t++;if(e.cd>0)e.cd--;if(e.flash>0)e.flash--;if(ST.statusTick&&!e.host)ST.statusTick(e);
     if(d.titan){ // titans place themselves: no gravity, no collision, no knockback, nothing holds them
       e.frozen=0;e.webbed=0;e.bound=0;e.hang=null;e.loop=null;e.grabbed=false;e.vx=e.vy=0;
       if(!(ST.stasis&&inStasis(e.x,e.y)))d.think(e);
@@ -131,7 +134,7 @@ export function updEnemies(){
   }
 }
 function killEnemy(e){
-  const d=e.def;if(d.name==='titan_part')return;if(!e.mem.noScore){ST.kills++;ST.score+=d.score;}snd('kill',e.x,e.y,{v:Math.min(1,.5+d.boom/16)});
+  const d=e.def;if(d.name==='titan_part')return;if(ST.frame-(e.pHit||-99)<90&&ST.gainUlt)ST.gainUlt(d.titan?30:3);if(!e.mem.noScore){ST.kills++;ST.score+=d.score;}snd('kill',e.x,e.y,{v:Math.min(1,.5+d.boom/16)});
   explode(e.x,e.y,d.boom,{fire:.25,self:true,col:[255,140,80]});
   // scrap: the sprite's own pixels fly off and land as debris
   const sp=d.draw?['.']:d.sprite,sw=sp[0].length,sh=sp.length,S=d.scale||1;

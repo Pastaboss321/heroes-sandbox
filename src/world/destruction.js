@@ -59,7 +59,7 @@ export function explode(cx,cy,r,opt={}){
   ST.shake=Math.min(22,ST.shake+r*.6);
   const dx=pl_.x-cx,dy=pl_.y-8-cy,dd=Math.hypot(dx,dy);
   if(dd<r*2.2&&dd>0&&!opt.self){pl_.vx+=dx/dd*3;pl_.vy+=dy/dd*3-1;}
-  if(opt.enemy){if(dd<r*1.8)hurt(opt.dmg??5);if(ST.decoy&&Math.hypot(ST.decoy.x-cx,ST.decoy.y-ST.SH/2-cy)<r*2)ST.decoy.hp-=(opt.dmg??5)*1.5;}else damageEnemies(cx,cy,r*1.7/(ST.aoeC||1),r*3.2);
+  if(opt.enemy){if(dd<r*1.8)hurt(opt.dmg??5);if(ST.decoy&&Math.hypot(ST.decoy.x-cx,ST.decoy.y-ST.SH/2-cy)<r*2)ST.decoy.hp-=(opt.dmg??5)*1.5;}else{const tg=ST.dmgTag;if(fire>0&&!green)ST.dmgTag='fire';damageEnemies(cx,cy,r*1.7/(ST.aoeC||1),r*3.2);ST.dmgTag=tg;}
   if(r>=9&&!opt.quiet)shockFx(cx,cy,Math.min(1.4,r/18));
   if(r>=5)for(let n=0;n<r*r*1.6;n++){const an=R()*6.283,d=r*(.95+R()*.4),X=cx+Math.cos(an)*d|0,Y=cy+Math.sin(an)*d|0;if(X<0||X>=W||Y<0||Y>=H)continue;const i=Y*W+X;if(KIND[t[i]]===S&&t[i]!==ICE&&t[i]!==NEON)col[i]=shade(col[i],.55+R()*.25);} // scorched crater rim
   for(const b of bodies){const ddx=b.x-cx,ddy=b.y-cy,d=Math.hypot(ddx,ddy)||1;if(d<r*4+b.rmax){const f=r*3/(d+8)*Math.min(1,300/b.n);b.vx+=ddx/d*f;b.vy+=ddy/d*f-.3;b.va+=(R()-.5)*f*.04;}}
