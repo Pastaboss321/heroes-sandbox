@@ -35,7 +35,7 @@ export function armMode(p){
   const pw=ST.CH.powers[ST.cur];
   if(mouse.down&&ST.GS==='play'&&pw){if(pw.n==='Unibeam')return'chest';if(ARM_BOTH.has(pw.n))return'both';if(ARM_UP.has(pw.n))return'up';if(ARM_VISOR.has(pw.n))return'visor';if(pw.n==='Healing Factor')return'back';return'aim';}
   if(p.castF>0)return'aim';
-  if(p.fly&&ST.CH.id==='iceman')return'slide';
+  if(p.fly&&(ST.CH.id==='iceman'||ST.CH.board))return'slide'; // surfing stance: Iceman's slide, the Surfer's board
   if(p.fly&&(p.boost>0||Math.hypot(p.vx,p.vy)>2.6))return'super';
   return null;
 }
@@ -95,7 +95,7 @@ export function posePlayer(p){
     if(blink&&ch===A.blink)ch=A.lid;
     if(y<A.leg||(A.cape&&A.cape.includes(ch))){put(x,y+(y<A.leg?up:0),ch);continue;}
     const k=(y-A.leg+1)/n,side=x<A.mid?1:-1;let dx=0,dy=0;
-    if(p.fly&&ST.CH.id==='iceman'){dx=-side*Math.round(k*1.2);dy=0;}                // surfing stance on the slide
+    if(p.fly&&(ST.CH.id==='iceman'||ST.CH.board)){dx=-side*Math.round(k*1.2);dy=0;}                // surfing stance on the slide
     else if(p.fly){dx=-Math.round(k*2.4);dy=-Math.round(k*.6);}                       // legs trail behind in flight
     else if(air){if(p.vy<0){dx=-side*Math.round(k);dy=-Math.round(k*2.2);}           // tuck on the way up
                  else dx=-side*Math.round(k*1.6);}                                   // spread on the way down

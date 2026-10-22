@@ -128,7 +128,7 @@ export function updPlayer(){
     p.boring=sp>FS*1.25; if(p.boring)bore(p,sp);
     if(ST.frame%2===0)spawn(p.x-p.vx*2+(R()-.5)*3,p.y-4-p.vy*2,-p.vx*.3+(R()-.5)*.5,-p.vy*.3+.4,ST.CH.thrust(),8+R()*8,0,1,0,1);
     if(ST.CH.id==='iron'&&ST.frame%2===0)for(const fx of [-2,2])spawn(p.x+fx,p.y,(R()-.5)*.4+p.vx*-.2,1.5+R(),R()<.5?rgb(255,220,150):rgb(255,255,255),6,0,1,0);
-    const target=ST.CH.id==='iceman'?p.vx*.09:sp>1.2?Math.atan2(p.vx,-p.vy)*.85:p.vx*.15;
+    const target=ST.CH.id==='iceman'?p.vx*.09:ST.CH.board?Math.max(-.18,Math.min(.18,p.vx*.05)):sp>1.2?Math.atan2(p.vx,-p.vy)*.85:p.vx*.15;
     if(ST.CH.id==='iceman')iceSlideStep(p);
     p.ang+=(target-p.ang)*.2;
     if(ay>0&&p.ground&&!boosting){ // touch down
