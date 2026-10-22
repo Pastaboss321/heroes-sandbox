@@ -8,6 +8,7 @@ import { SURF, bgRect, clearAll, disc, fill, makeFar, tint } from './gen.js';
 import { noise2 } from './city.js';
 import { tree } from './forest.js';
 import { spawn } from '../world/particles.js';
+import { agArena, agColossus, agDomeTower, agHall, dress, free, yggdrasil } from './realms.js';
 
 export const ASG={gy:360,b0:0,b1:0,falls:0};
 const RAIN=[[255,70,70],[255,160,60],[255,230,80],[90,230,110],[70,170,255],[150,90,255]];
@@ -66,15 +67,17 @@ export function genAsgard(){
     fill(ox-30,gy-8,ox+30,gy,GOLD);for(let x=ox-6;x<ox+6;x++)for(let y=gy-30;y<gy-8;y++){const i=y*W+x;setc(i,NEON);col[i]=rgb(255,240,200);}fill(ox-4,gy-34,ox+4,gy-30,STEEL);}
   // the city: halls and spires; the palace near the middle
   const PX=W*.55|0;
-  for(let x=b1+60;x<W*.8;){if(Math.abs(x-PX)<230){x=PX+230;continue;}
-    const r=R();if(r<.55){const w=24+R()*40|0,h=70+R()*170|0;spire(x+w/2|0,w,h,hm[x+(w>>1)]);x+=w+10+(R()*20|0);}
-    else if(r<.8){const w=50+R()*60|0,h=24+R()*20|0,gy=hm[x];fill(x,gy-h,x+w,gy,GOLD);tint(x,gy-h,x+w,gy,190,146,58,12);bgRect(x+3,gy-h+5,x+w-3,gy-1,rgb(90,64,30));fill(x+3,gy-h+5,x+w-3,gy-1,EMPTY);for(let k=x;k<x+w;k++){const hh=Math.round(10*Math.sin((k-x)/w*Math.PI));for(let y=0;y<hh;y++)sxy(k,gy-h-1-y,GOLD);}x+=w+12;}
-    else{tree(x+6,hm[x+6]);x+=26;}}
+  // the city: spires, domed towers, mead halls, colossi of the old kings, an arena, trees (maps/realms.js)
+  {const sp=(x,h,x1)=>{const w=24+R()*44|0,hh=110+R()*200|0;if(x+w>x1||!free(x-6,x+w+6,h,hh+20))return 0;spire(x+w/2|0,w,hh,h[x+(w>>1)]);return w;},
+    tr=(x,h,x1)=>{if(x+16>x1||!free(x,x+16,h,80))return 0;tree(x+6,h[x+6]);return 16;},
+    TAB=[[.3,sp],[.2,agDomeTower],[.17,agHall],[.07,agColossus],[.06,agArena],[.2,tr]];
+    dress(hm,b1+60,PX-240,TAB,[6,24]);dress(hm,PX+240,W*.8,TAB,[6,24]);}
   palace(PX,Math.min(hm[PX-180],hm[PX+180]));
   // golden statues of the old kings along the river, a river that runs to the rim and pours off it
   for(const sx of [W*.82|0,W*.86|0]){const gy=hm[sx];fill(sx-5,gy-60,sx+5,gy,GOLD);disc(sx,gy-66,6,GOLD);fill(sx-14,gy-50,sx+14,gy-44,GOLD);fill(sx+12,gy-90,sx+15,gy-44,STEEL);for(let y=gy-90;y<gy;y++)for(let x=sx-14;x<=sx+15;x++)if(t[y*W+x]===GOLD)col[y*W+x]=goldCol(x,y,.9);}
   for(let x=W*.8|0;x<W;x++){const h=hm[x];for(let y=h;y<h+5;y++)setc(y*W+x,y<h+1?EMPTY:WATER);fill(x,h+5,x+1,h+8,STONE);}
   ASG.falls=hm[W-2];
+  yggdrasil(W*.88|0,hm,W-10); // the world tree by the rim
   for(let x=W*.8|0;x<W-30;x+=24+R()*30|0)if(R()<.5)tree(x,hm[x]);
   for(let x=b1+20;x<W*.8;x+=60)if(t[(hm[x]-1)*W+x]===0&&R()<.4)for(let k=1;k<4;k++)sxy(x,hm[x]-k,GRASS);
   ST.SPAWNX=b1+80;

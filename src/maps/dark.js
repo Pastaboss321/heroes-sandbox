@@ -6,6 +6,7 @@ import { H, VH, VW, W, bg, bgD, col, setc, sxy, t } from '../world/grid.js';
 import { SURF, clearAll, makeFar } from './gen.js';
 import { noise2 } from './city.js';
 import { spawn } from '../world/particles.js';
+import { dkArch, dkFang, dkSpires, dkStairs, dkTemple, dress } from './realms.js';
 
 const dk=(x,y,s)=>{const n=noise2(x*.2,y*.2,s)*18;return rgb(46+n,28+n*.6,64+n);};
 export function genDark(){
@@ -28,6 +29,7 @@ export function genDark(){
   for(let k=0;k<18;k++){const x0=R()*W|0,h=90+R()*220|0,w0=10+R()*14,curl=(R()-.5)*.03;let cx=x0,a=-Math.PI/2+(R()-.5)*.4;
     for(let st=0;st<h;st++){a+=curl;cx+=Math.cos(a);const cy=hm[x0]+4+Math.sin(a)*st*-.0+(-st),w=w0*(1-st/h)+1.5;
       for(let x=-w;x<=w;x++){const X=cx+x|0,Y=cy|0;if(X<0||X>=W||Y<0||Y>=H)continue;const i=Y*W+X;setc(i,OBSID);col[i]=dk(X,Y,s+1);if(Math.abs(x)<1&&st%9===0&&st>8){t[i]=NEON;col[i]=rgb(255,140,40);}}}}
+  dress(hm,40,W-40,[[.3,dkSpires],[.1,dkTemple],[.14,dkArch],[.24,dkFang],[.1,dkStairs],[.12,()=>0]],[8,40]); // maps/realms.js
   for(let x=0;x<W;x++)SURF[x]=hm[x]+30;ST.SPAWNX=200;
 }
 export function ambDark(){

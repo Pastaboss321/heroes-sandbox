@@ -21,30 +21,30 @@ const HF=[255,130,30],HFE=[255,170,60];
 const burnAt=(x,y)=>{const X=x|0,Y=y|0;if(X<0||X>=W||Y<0||Y>=H-6)return;const i=Y*W+X;if(t[i]===0){if(R()<.4)setc(i,FIRE);}else if(FLAM[t[i]]>0)ignite(i);};
 // ================= GHOST RIDER =================
 const SPR_RIDER=[
-"....F.f.F....",
-"...FfFfFfF...",
-"...FsssssF...",
-"...ssesess...",
-"...sssssss...",
-"....sksks....",
-"..kKKcKKKKk..",
-".kKKKcKKKKKk.",
-".kKKKKcKKKKk.",
-".KKkKKKcKkKK.",
-".KKkKKKKKkKK.",
-".KKkcccccKKK.",
-".ss.KKKKK.ss.",
-".ss.kKKKk.ss.",
-"....KK.KK....",
-"....KK.KK....",
-"...KK...KK...",
-"...KK...KK...",
-"...kk...kk...",
-"..kkk...kkk..",
-"..FFF...FFF..",
-"............."];
-const PAL_RIDER={F:rgb(255,130,30),f:rgb(255,220,90),s:rgb(236,230,210),e:rgb(255,110,20),k:rgb(26,22,24),K:rgb(56,48,50),c:rgb(176,176,186)};
-ANIM.rider={leg:14,mid:6,armC:'KKk',tipC:'sss',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null};
+"...@.*@*.@...",
+"...@*@*@*@...",
+"....w@w@g....",
+"....wwwgg....",
+".....kwk.....",
+"...sLKKKKs...",
+".sLKKsKKKKKs.",
+".LKLKKsKKKKk.",
+".LKLKKKsKKKk.",
+".LK.LKKKs.Kk.",
+".LK.LKKKK.Kk.",
+".kk.nnsnn.kk.",
+".kk.DDDDd.kk.",
+"....DDDDd....",
+"....DD.Dd....",
+"....DD.Dd....",
+"....DD.Dd....",
+"...DD...Dd...",
+"...KK...Kk...",
+"...KK...Kk...",
+"...KK...Kk...",
+"..sKK...Kks.."];
+const PAL_RIDER={'*':rgb(255,236,120),'@':rgb(255,140,30),w:rgb(240,234,214),g:rgb(170,160,140),k:rgb(18,16,18),K:rgb(52,46,48),L:rgb(96,88,90),s:rgb(200,200,210),n:rgb(100,70,40),D:rgb(42,46,62),d:rgb(26,28,40)};
+ANIM.rider={leg:14,mid:6,armC:'LKk',tipC:'kkk',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null};
 // the chain: a whip of segments from the hand that bends toward the cursor; every segment is a cut
 function chainLash(a,p,len,o={}){const segs=12,ang0=Math.atan2(a.dy,a.dx),sw=(o.swing??.6)*(p.face||1);let x=a.h.x,y=a.h.y;const pts=[[x,y]];
   for(let k=1;k<=segs;k++){const u=k/segs,an=ang0+sw*(1-u)*Math.sin(ST.frame*.3)+(o.curl||0)*u,L=len/segs;const nx=x+Math.cos(an)*L,ny=y+Math.sin(an)*L;
@@ -94,30 +94,30 @@ export const CHAR_RIDER={id:'rider',name:'Ghost Rider',spr:SPR_RIDER,pal:PAL_RID
 
 // ================= DEADPOOL =================
 const SPR_POOL=[
-"....rRRRr....",
-"...rRRRRRr...",
-"...RkkRkkR...",
-"...RkwRwkR...",
-"...RRRRRRR...",
-"....rRRRr....",
-"..rRRRkRRRr..",
-".rRRRkkkRRRr.",
-".rRRRRkRRRRr.",
-".RRrRRRRRrRR.",
-".RRrRRRRRrRR.",
-".RRrgggggrRR.",
-".kk.RRRRR.kk.",
-".kk.rRRRr.kk.",
-"....RR.RR....",
-"....RR.RR....",
-"...RR...RR...",
-"...Rk...kR...",
+"..g.LRRRr.g..",
+"..g.LRRRr.g..",
+"...gkwRwkg...",
+"....kkRkk....",
+".....RRr.....",
+"...kLRRRrk...",
+".LRRkRRRkRRr.",
+".LRkkRRRkkRr.",
+".LRkLRRRrkRr.",
+".LR.kRRRk.Rr.",
+".LR.kRRrk.Rr.",
+".kk.nnOnn.kk.",
+".kk.kRRrk.kk.",
+"....kRRrk....",
+"....kR.rk....",
+"....nR.rn....",
+"....kR.rk....",
+"...kR...rk...",
 "...kk...kk...",
-"..kkk...kkk..",
-"..kkk...kkk..",
-"............."];
-const PAL_POOL={R:rgb(196,30,40),r:rgb(118,16,24),k:rgb(26,22,24),w:rgb(250,250,250),g:rgb(120,110,96)};
-ANIM.pool={leg:14,mid:6,armC:'RRr',tipC:'kkk',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null};
+"...kk...kk...",
+"...kk...kk...",
+"..kkk...kkk.."];
+const PAL_POOL={R:rgb(200,32,42),r:rgb(124,18,26),L:rgb(236,84,84),k:rgb(22,20,22),w:rgb(250,250,250),n:rgb(90,70,50),O:rgb(220,180,60),g:rgb(96,90,84)};
+ANIM.pool={leg:14,mid:6,armC:'LRr',tipC:'kkk',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null};
 const STEELC=[230,232,240];
 const QUIPS=['MAXIMUM EFFORT!','CHIMICHANGAS!','HI, MOM!','THAT WAS AWESOME','*FOURTH WALL*','SAY MY NAME!','PEW PEW!','I FEEL A CRITICAL HIT COMING'];
 const quip=(p,s)=>fxWord(p.x,p.y-ST.PH-10,s||QUIPS[R()*QUIPS.length|0],.85,'#ff6b5c',true);

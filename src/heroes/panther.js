@@ -16,30 +16,30 @@ import { carve, mouse } from '../player.js';
 import { damageCone, damageEnemies, damageLine, enemies, hitEnemy, nearestEnemy } from '../enemies/core.js';
 
 const SPR_PANTHER=[
-"...k.....k...",
-"...kKkkkKk...",
-"...KKKKKKK...",
-"...KeKKKeK...",
-"...KKKKKKK...",
-"....kVsVk....",
-"..kKVsssVKk..",
-".kKKKVKVKKKk.",
-".kKKKKVKKKKk.",
-".KKkKKVKKkKK.",
-".KKkKKKKKkKK.",
-".KKkKVKVKkKK.",
-".ss.KKKKK.ss.",
-".cc.kKKKk.cc.",
-"....KK.KK....",
-"....KK.KK....",
-"...KK...KK...",
-"...KV...VK...",
-"...KK...KK...",
-"..kKK...KKk..",
-"..kkk...kkk..",
-"............."];
-const PAL_PANTHER={k:rgb(14,12,20),K:rgb(36,34,46),V:rgb(160,100,240),s:rgb(170,170,190),c:rgb(236,236,250),e:rgb(230,230,255)};
-ANIM.panther={leg:14,mid:6,armC:'KKk',tipC:'csc',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null};
+"....k...k....",
+"....KKKKK....",
+"....LeKeK....",
+"....LKKKk....",
+".....KKk.....",
+"...KsSsSsk...",
+".LKKKKsKKKKk.",
+".LKLKVKVKKKk.",
+".LKLKKVKKKKk.",
+".LK.LKVKk.Kk.",
+".LK.LKVKk.Kk.",
+".ss.SsSsS.sS.",
+".SS.LKKKk.SS.",
+"....LKKKk....",
+"....LK.Kk....",
+"....LK.KV....",
+"....LK.Kk....",
+"...LK...Kk...",
+"...LK...KV...",
+"...LK...Kk...",
+"...KK...Kk...",
+"..KKK...KKk.."];
+const PAL_PANTHER={k:rgb(14,14,20),K:rgb(38,38,52),L:rgb(78,80,102),s:rgb(204,208,224),S:rgb(132,136,154),V:rgb(170,100,255),e:rgb(232,232,255)};
+ANIM.panther={leg:14,mid:6,armC:'LKk',tipC:'sSS',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null};
 const VIB=[180,120,255],EDGE=[200,170,255];
 const kin=(p,v)=>{p.kin=Math.min(100,(p.kin||0)+v);};
 const slashFx=(x,y,ux,uy,len)=>{for(let k=0;k<8;k++){const u=R()*len;spawn(x+ux*u,y+uy*u,(R()-.5)*1.5,(R()-.5)*1.5,R()<.5?rgb(230,220,255):rgb(170,120,255),10,0,1,0,1);}};

@@ -7,6 +7,7 @@ import { H, VH, VW, W, bg, bgD, col, setc, sxy, t } from '../world/grid.js';
 import { SURF, bgRect, clearAll, disc, fill, makeFar, tint } from './gen.js';
 import { noise2 } from './city.js';
 import { spawn } from '../world/particles.js';
+import { dress, free, jungleTree, room, roundHouse, wkMarket, wkPalace, wkTower } from './realms.js';
 
 export const WAK={fx:0,fy:0,pool:[0,0,0],mx:0};
 const vib=(x,y)=>{const n=noise2(x,y,11);return rgb(120+n*40|0,70+n*30|0,210+n*40|0);};
@@ -18,7 +19,7 @@ function wTower(x,w,h,gy){ // tall tower: tiered ledges with gardens, a glass co
   for(let y=top;y<top+20;y++){const hw=Math.max(1,(w/2)*((y-top)/20))|0;for(let k=cx-hw;k<=cx+hw;k++){const i=y*W+k;setc(i,VIBR);col[i]=vib(k,y);}}
   for(let k=0;k<10;k++){const i=(top-k)*W+cx;setc(i,NEON);col[i]=rgb(180,120,255);}
   bgRect(x+2,top+24,x+w-2,gy-1,rgb(70,58,52));
-  for(let y=top+30;y<gy-4;y+=26)fill(x+2,y,x+w-2,y+16,EMPTY);
+  for(let y=top+30;y<gy-4;y+=26)room(x+2,y,x+w-2,y+16,rgb(70,58,52)); // furnished floors (maps/realms.js)
 }
 function hut(x,gy){const w=22;fill(x,gy-12,x+w,gy,DIRT);tint(x,gy-12,x+w,gy,150,96,60,12);for(let k=0;k<w+8;k++){const hh=Math.round(9*Math.sin(k/(w+8)*Math.PI));for(let y=0;y<hh;y++)sxy(x-4+k,gy-13-y,WOOD);}bgRect(x+3,gy-10,x+w-3,gy-1,rgb(60,40,26));fill(x+8,gy-9,x+14,gy,EMPTY);}
 function palm(x,gy){const h=30+R()*30|0;for(let k=0;k<h;k++)sxy(x+Math.round(Math.sin(k*.06)*3),gy-k,WOOD);const tx=x+Math.round(Math.sin(h*.06)*3),ty=gy-h;
@@ -50,9 +51,10 @@ export function genWakanda(){
   WAK.pool=[FX+10,FX+160,hm[FX+85]+22];
   for(let y=hm[FX];y<GY;y++){fill(FX-2,y,FX,y+1,STONE);}
   // the Golden City
-  for(let x=FX+200;x<MX-MR-40;){const r=R();
-    if(r<.5){const w=30+R()*30|0,h=120+R()*200|0;wTower(x,w,h,hm[x+(w>>1)]);x+=w+16+(R()*24|0);}
-    else if(r<.75){hut(x,hm[x]);x+=34;}else{palm(x+4,hm[x+4]);x+=20;}}
+  // the palace at the heart, then a dense skyline of towers, markets, huts and palms (maps/realms.js)
+  {const c0=FX+200,c1=MX-MR-40,cx=(c0+c1)/2|0;wkPalace(cx-140,hm,cx+140);
+    dress(hm,c0,c1,[[.34,wkTower],[.2,(x,h,x1)=>{const w=30+R()*30|0,hh=120+R()*200|0;if(x+w>x1||!free(x-4,x+w+4,h,hh+30))return 0;wTower(x,w,hh,h[x+(w>>1)]);return w;}],
+      [.14,wkMarket],[.1,(x,h,x1)=>{if(x+30>x1||!free(x-4,x+30,h,30))return 0;hut(x,h[x]);return 30;}],[.12,(x,h,x1)=>{if(x+12>x1||!free(x-2,x+12,h,64))return 0;palm(x+4,h[x+4]);return 12;}],[.1,roundHouse]],[6,22]);}
   // maglev: a thin elevated rail across the city with a sleek train
   {const ry=GY-64;for(let x=FX+190;x<MX-MR;x++){if(t[ry*W+x]||t[(ry+1)*W+x])continue;sxy(x,ry,STEEL);const i=(ry+1)*W+x;setc(i,NEON);col[i]=rgb(170,110,255);if(x%120===0)for(let y=ry+2;y<hm[x];y++)if(!t[y*W+x])sxy(x,y,STEEL);}
     const tx=FX+400+R()*600|0;for(let c=0;c<3;c++){const x=tx+c*40;for(let y=ry-8;y<ry;y++)for(let k=x;k<x+38;k++)if(!t[y*W+k]){setc(y*W+k,STEEL);col[y*W+k]=rgb(40,30,56);}for(let k=x+3;k<x+35;k+=6){const i=(ry-6)*W+k;if(t[i]===STEEL){t[i]=GLASS;col[i]=rgb(160,130,255);}}}}
@@ -60,6 +62,7 @@ export function genWakanda(){
   {const sx=MX-MR-10,gy=hm[sx];for(let y=-80;y<0;y++)for(let x=-20;x<20;x++){const body=(x*x)/(400)+((y+40)*(y+40))/1600<1,head=(x+6)*(x+6)+(y+86)*(y+86)<120;if(body||head){const i=(gy+y)*W+sx+x;setc(i,STONE);col[i]=rgb(34,30,40);}}
     for(const ex of [-10,-2]){const i=(gy-88)*W+sx+ex;t[i]=NEON;col[i]=rgb(200,150,255);}}
   for(let x=FX+170;x<FX+200;x+=8)palm(x,hm[x]);
+  dress(hm,MX+MR+10,W-12,[[.65,jungleTree],[.35,roundHouse]],[0,20]); // the jungle beyond the mound
   for(let x=10;x<FX;x+=14+R()*20|0)if(R()<.7)palm(x,hm[x]);
   ST.SPAWNX=FX+230;
 }

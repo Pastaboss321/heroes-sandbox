@@ -27,31 +27,35 @@ const ghostOf=(spr,pal,x,y,face,c)=>{ST.TG=c;drawSprite(x,y,0,face,true,spr,pal)
 const melee=(p,r,dmg,kx,ky)=>{const x=p.x+p.face*(ST.PW/2+5),y=p.y-ST.PH/2;carve(x,y,r*.5,p.face*4,0);damageEnemies(x,y,r,dmg,p.face*kx,ky);p.punchF=8;return [x,y];};
 
 // ================= THANOS =================
-const SPR_THANOS=[
-"...gGGGGGg...",
-"...GGgggGG...",
-"...GPPPPPG...",
-"...GPePePG...",
-"...gPPPPPg...",
-"....PpPpP....",
-"..GGBBBBBGG..",
-".gGBBBGBBBGg.",
-".PPBBGGGBBPP.",
-".PPBBBGBBBGG.",
-".PPBBBBBBBGG.",
-".PPbGGGGGbGG.",
-".PP.BBBBB.G*.",
-".pp.bBBBb.GG.",
-"....BB.BB....",
-"....BB.BB....",
-"...BB...BB...",
-"...BB...BB...",
-"...GG...GG...",
-"..gGG...GGg..",
-"..ggg...ggg..",
-"............."];
-const PAL_THANOS={g:rgb(150,110,40),G:rgb(222,178,62),P:rgb(150,96,170),p:rgb(100,60,120),e:rgb(240,240,250),B:rgb(52,74,150),b:rgb(30,44,100),'*':rgb(255,80,220)};
-ANIM.thanos={leg:14,mid:6,armC:'PPp',tipC:'GG*',aw:3,al:6,fs:3,sh:[10,7],hide:rect(10,11,7,13),blink:null};
+export const SPR_THANOS=[
+"........G........",
+"......GYYYy......",
+".....YYYYYYy.....",
+".....YPePePy.....",
+".....yPPPPPy.....",
+"......PwwwP......",
+".....ppPpPpp.....",
+".GGYYYYpPpYYYYyy.",
+"LBGYYYYbBbYYYYyBb",
+"LBBGYYYLBBYYYyBBb",
+"LBBbLGYLBBBYyBBbb",
+"LBBbLLBGYyBBBbBbb",
+"LBB.bLBBYBBbb.Bbb",
+"LBB.bLLBYBLBb.Bbb",
+"LBB.yYYYGYYYy.Bbb",
+"LBB.bGYbBbYyb.Bbb",
+"bbb.bLBByBBBb.GY*",
+"bbb.LBBB.BBBb.YYy",
+"....LBBB.BBBb....",
+"....LBBb.LBBb....",
+"....LBBb.LBBb....",
+"...LBBb...LBBb...",
+"...LBBb...LBBb...",
+"...bBBb...bBBb...",
+"..bBBBb...bBBBb..",
+"..bbbbb...bbbbb.."];
+export const PAL_THANOS={Y:rgb(232,186,64),y:rgb(160,116,36),G:rgb(255,228,140),P:rgb(156,100,180),p:rgb(104,62,128),e:rgb(255,60,40),w:rgb(240,236,226),L:rgb(92,124,214),B:rgb(54,84,180),b:rgb(30,48,116),'*':rgb(255,90,220)};
+ANIM.thanos={leg:17,mid:8,armC:'LBb',tipC:'GY*',aw:3,al:8,fs:4,sh:[14,8],hide:rect(14,16,8,17),blink:null};
 const STONE_C={power:[170,60,255],space:[60,140,255],reality:[255,40,50],soul:[255,150,30],time:[60,255,110],mind:[255,220,40]};
 const sc=k=>STONE_C[k];
 const THANOS_POWERS=[
@@ -77,34 +81,34 @@ const THANOS_POWERS=[
  {n:'The Snap',ult:true,fn:(a,p,use)=>{ST.cd=200;flash(p.x,p.y,600,[255,255,255],30);ST.hitstop=Math.max(ST.hitstop,30);snd('boom',p.x,p.y,{size:2.5});fxWord(p.x,p.y-60,'*SNAP*',2.4,'#ffc93c',true);
    for(const e of enemies){if(Math.abs(e.x-p.x)>300||Math.abs(e.y-p.y)>200)continue;if(e.def.titan){hitEnemy(e,e.def.hp*.15,0,0);continue;}if(R()<.5){for(let k=0;k<12;k++)spawnFlake(e.x+(R()-.5)*e.def.w,e.y+(R()-.5)*e.def.h,.4+R()*.6,-.3,rgb(120,100,80),160,0);e.hp=0;}else hitEnemy(e,60,0,0);}}},
 ];
-export const CHAR_THANOS={id:'thanos',name:'Thanos',spr:SPR_THANOS,pal:PAL_THANOS,pw:8,ph:19,fly:false,fs:2.2,boost:2,run:1.7,jump:5.2,hp:620,armor:.5,glow:[200,100,255],cape:null,thrust:()=>rgb(200,100,255),powers:THANOS_POWERS};
+export const CHAR_THANOS={id:'thanos',name:'Thanos',spr:SPR_THANOS,pal:PAL_THANOS,pw:9,ph:23,fly:false,fs:2.2,boost:2,run:1.7,jump:5.2,hp:620,armor:.5,glow:[200,100,255],cape:null,thrust:()=>rgb(200,100,255),powers:THANOS_POWERS};
 
 // ================= HELA =================
 const SPR_HELA=[
-".A.A...A.A...",
-"..AAA.AAA....",
-"...KKKKKKK...",
-"...KseKesK...",
-"...KsssssK...",
-"....KsssK....",
-"..KGGGKGGGK..",
-".KGGgGKGgGGK.",
-".KGGGgKgGGGK.",
-".KKGGGKGGGKK.",
-".KKgGGKGGgKK.",
-".KKGgGKGgGKK.",
-".ss.GGKGG.ss.",
-".ss.gGKGg.ss.",
-"....GG.GG....",
-"....GG.GG....",
-"...GG...GG...",
-"...Gg...gG...",
-"...KK...KK...",
-"..KKK...KKK..",
-"..KKK...KKK..",
-"............."];
-const PAL_HELA={A:rgb(20,20,26),K:rgb(26,26,32),s:rgb(222,222,214),e:rgb(120,255,160),G:rgb(40,140,70),g:rgb(20,80,40)};
-ANIM.hela={leg:14,mid:6,armC:'GGg',tipC:'sss',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null};
+".k..k...k..k.",
+"..k.kGkGk.k..",
+"...kGkkkGk...",
+"....kfffk....",
+"....kefeF....",
+".....fFf.....",
+"ckGGGkGkGGGk.",
+"cKGkGGkGGkGk.",
+"cKGgkGGGkgGk.",
+"cKG.kGkGk.Gk.",
+"cKG.gGGGg.Gk.",
+"ckk.kGkGk.kk.",
+"ckk.kGGGk.kk.",
+"c...kGGGk....",
+"c...kG.Gk....",
+"c...kG.Gk....",
+"c...kG.Gk....",
+"c..kG...Gk...",
+"c..kG...Gk...",
+"c..kk...kk...",
+"...kk...kk...",
+"..kkk...kkk.."];
+const PAL_HELA={k:rgb(16,20,18),K:rgb(40,46,44),G:rgb(46,152,78),g:rgb(24,92,46),f:rgb(222,224,216),F:rgb(170,172,166),e:rgb(140,255,170),c:rgb(22,64,36)};
+ANIM.hela={leg:14,mid:6,armC:'GGg',tipC:'kkk',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null,cape:'c'};
 const NG=[120,255,160],NGE=[150,255,190];
 function necroShot(x,y,vx,vy){let lx=x,ly=y;const s={x,y,vx,vy,type:'necro',life:70,col:NG,boom:4,ecol:NG};shots.push(s);ACT.push(()=>{if(!shots.includes(s))return false;sliceLine(lx,ly,s.x,s.y,{edge:NGE,quiet:true,push:1.2});lx=s.x;ly=s.y;return true;});}
 function drawWolf(s){const x=s.x,y=s.y,f=s.face,o={},F=rgb(70,74,84),D=rgb(40,42,50);TK.begin();TK.ell(x,y-16,20,9,F,o);TK.ell(x+f*20,y-22,9,7,F,o);TK.cap(x+f*26,y-22,x+f*32,y-19,4,2,D,o);TK.cap(x-f*18,y-18,x-f*30,y-24,3,1,D,o);
@@ -142,30 +146,30 @@ export const CHAR_HELA={id:'hela',name:'Hela',spr:SPR_HELA,pal:PAL_HELA,pw:7,ph:
 
 // ================= MOON KNIGHT =================
 const SPR_MOON=[
-"....wWWWw....",
-"...wWWWWWw...",
-"...WWWWWWW...",
-"...WkWWWkW...",
-"...WWWWWWW...",
-"....wWWWw....",
-"..wWWWcWWWw..",
-".wWWWcccWWWw.",
-".wWWWWcWWWWw.",
-".WWwWWWWWwWW.",
-".WWwWWWWWwWW.",
-".WWwkkkkkwWW.",
-".ww.WWWWW.ww.",
-".ww.wWWWw.ww.",
-"....WW.WW....",
-"....WW.WW....",
-"...WW...WW...",
-"...Ww...wW...",
-"...ww...ww...",
-"..www...www..",
-"..kkk...kkk..",
-"............."];
-const PAL_MOON={W:rgb(236,236,240),w:rgb(170,172,182),k:rgb(22,22,28),c:rgb(200,214,236)};
-ANIM.moon={leg:14,mid:6,armC:'WWw',tipC:'www',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null,cape:'Ww'};
+"....WWWWw....",
+"...WWwwwwd...",
+"...WwkWkwd...",
+"...WwwwwwC...",
+"...CWwwwdC...",
+"c..CWWWdC....",
+"cWWWWWWWWwwd.",
+"cWWWw+wwwWwd.",
+"cWWW+wwwwWwd.",
+"cWW.w+wwd.wd.",
+"cWW.wwwwd.wd.",
+"cww.kk+kk.ww.",
+"cww.Wwwwd.wd.",
+"c...Wwwwd....",
+"c...Ww.wd....",
+"c...Ww.wd....",
+"c...Ww.wd....",
+"c..Ww...wd...",
+"c..Ww...wd...",
+"c..Ww...wd...",
+"...kk...kk...",
+"..kkk...kkk.."];
+const PAL_MOON={W:rgb(240,240,246),w:rgb(200,202,214),d:rgb(150,152,166),k:rgb(22,22,28),'+':rgb(220,232,255),c:rgb(178,180,194),C:rgb(130,132,146)};
+ANIM.moon={leg:14,mid:6,armC:'Wwd',tipC:'wwd',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null,cape:'cC'};
 const ML=[220,232,255];
 function crescent(x,y,vx,vy,back){let k=0;const s={x,y,vx,vy,type:'crescent',life:80,col:ML,boom:4,ecol:ML};shots.push(s);if(back)ACT.push(()=>{if(!shots.includes(s))return false;k++;if(k>22){const dx=pl_.x-s.x,dy=pl_.y-8-s.y,d=Math.hypot(dx,dy)||1;s.vx+=dx/d*.7;s.vy+=dy/d*.7;if(d<8){shots.splice(shots.indexOf(s),1);return false;}}return true;});}
 function drawKhonshu(s){const x=s.x,y=s.y,o={},Wc=rgb(230,232,240),G=rgb(150,156,170);TK.begin();TK.cap(x-14,y-40,x-16,y,8,6,G,o);TK.cap(x+14,y-40,x+16,y,8,6,G,o);TK.ell(x,y-80,30,44,Wc,o);
@@ -196,28 +200,28 @@ export const CHAR_MOON={id:'moon',name:'Moon Knight',spr:SPR_MOON,pal:PAL_MOON,p
 const SPR_SHANG=[
 "....hhhhh....",
 "...hhhhhhh...",
-"...hffffhh...",
-"...hfkfkfh...",
-"...hfffffh...",
-"....fffff....",
-"..RRRyRRRRR..",
-".RRRRyyRRRRR.",
-".RRRRRyRRRRR.",
-".ccRRRRRRRcc.",
-".ccRRRRRRRcc.",
-".ffRyyyyyRff.",
-".ff.KKKKK.ff.",
-".cc.KKKKK.cc.",
-"....KK.KK....",
-"....KK.KK....",
-"...KK...KK...",
-"...KK...KK...",
-"...KK...KK...",
-"..kkk...kkk..",
-"..kkk...kkk..",
-"............."];
-const PAL_SHANG={h:rgb(24,22,26),f:rgb(230,190,150),k:rgb(20,18,22),R:rgb(190,40,40),y:rgb(232,192,70),c:rgb(120,220,255),K:rgb(36,34,40)};
-ANIM.shang={leg:14,mid:6,armC:'RRf',tipC:'ccf',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null};
+"...hfofoF....",
+"....ffffF....",
+".....fFF.....",
+"...rLYfYRr...",
+".LRRRRYRRRRr.",
+".LRRYRRRYRRr.",
+".LRRRYRYRRrr.",
+".++.LRYRr.++.",
+".LR.LRRRr.Rr.",
+".ff.kkYkk.fF.",
+".fF.KkkkK.fF.",
+"....Kkkkk....",
+"....Kk.kk....",
+"....Kk.kk....",
+"....Kk.kk....",
+"...Kk...kk...",
+"...Kk...kk...",
+"...Kk...kk...",
+"...kk...kk...",
+"..kkk...kkk.."];
+const PAL_SHANG={h:rgb(24,22,26),f:rgb(232,192,152),F:rgb(190,146,110),o:rgb(30,24,24),R:rgb(196,40,40),r:rgb(130,24,26),L:rgb(236,92,80),Y:rgb(236,196,80),'+':rgb(120,220,255),k:rgb(20,18,22),K:rgb(48,46,54)};
+ANIM.shang={leg:14,mid:6,armC:'LRr',tipC:'ffF',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null};
 const RC=[120,220,255];
 function ringShot(x,y,vx,vy,bounces){const s={x,y,vx,vy,type:'ring',life:120,col:RC,bounces,hit:new Set(),draw:drawRing};shots.push(s);return s;}
 function drawRing(s,pix){const c=rgb(140,230,255),g=rgb(60,170,255);for(let k=0;k<10;k++){const an=k/10*6.283;pix(s.x+Math.cos(an)*2.6,s.y+Math.sin(an)*2.6,c,g);}}

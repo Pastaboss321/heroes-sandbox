@@ -26,30 +26,30 @@ const melee=(p,r,dmg,kx,ky)=>{const x=p.x+p.face*(ST.PW/2+5),y=p.y-ST.PH/2;carve
 
 // ================= GAMBIT =================
 const SPR_GAMBIT=[
-"....hhhhh....",
-"...hkkkkkh...",
-"...kffffkh...",
-"...kfefefk...",
-"...kfffffh...",
-"....fffff....",
-"..TTPPPPPTT..",
-".TTTPPPPPTTT.",
-".TTtPPPPPtTT.",
-".TTtPPPPPtTT.",
-".TTtPPPPPtTT.",
-".TTtkkkkktTT.",
-".ff.TTTTT.fc.",
-".tt.TTTTT.tt.",
-"....TT.TT....",
-"....tT.Tt....",
-"...TT...TT...",
-"...Tt...tT...",
-"...kk...kk...",
-"..kkk...kkk..",
-"..kkk...kkk..",
-"............."];
-const PAL_GAMBIT={h:rgb(120,60,40),k:rgb(40,40,50),f:rgb(230,188,156),e:rgb(255,40,40),T:rgb(120,78,46),t:rgb(80,50,30),P:rgb(200,70,140),c:rgb(255,90,200)};
-ANIM.gambit={leg:14,mid:6,armC:'TTt',tipC:'ffc',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null};
+"...nnMMMn....",
+"..nnMkkkM....",
+"..n.MeFeM....",
+"....MfffM....",
+".....fFf.....",
+"...cMMMMmc...",
+".ccMMMMMMmcC.",
+".cckMMMMmkcC.",
+".cckkMMmkkcC.",
+".cc.KkkkK.cC.",
+".cc.Kkkkk.cC.",
+".cc.bbbbb.c*.",
+".kk.Kkkkk.kk.",
+".T..Kkkkk..T.",
+".T..Kk.kk..T.",
+".T..Kk.kk..T.",
+".T..Kk.kk..T.",
+".T.Kk...kk.T.",
+"...bb...bb...",
+"...bb...bb...",
+"...bb...bb...",
+"..bbb...bbb.."];
+const PAL_GAMBIT={n:rgb(120,64,40),M:rgb(208,72,148),m:rgb(140,40,100),k:rgb(30,30,40),K:rgb(54,54,70),f:rgb(232,188,156),F:rgb(190,146,116),e:rgb(255,40,40),c:rgb(134,88,52),C:rgb(88,56,32),T:rgb(110,72,42),'*':rgb(255,90,200),b:rgb(90,60,36)};
+ANIM.gambit={leg:14,mid:6,armC:'ccC',tipC:'ff*',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null,cape:'T'};
 const KC=[255,90,200];
 const card=(x,y,vx,vy,boom=7)=>shots.push({x,y,vx,vy,type:'card',life:90,boom,col:KC,ecol:KC,fire:.1});
 // a charged thing glows, then goes off: cells or a chunk
@@ -78,30 +78,30 @@ const pixC=(x,y,c)=>pix(x,y,c,c);
 
 // ================= NIGHTCRAWLER =================
 const SPR_KURT=[
-"....bbbbb....",
-"...bBBBBBb...",
-"...BBBBBBB...",
-"...BeBBBeB...",
-"...BBBBBBB...",
-"....bBBBb....",
-"..rRRRkRRRr..",
-".rRRRkkkRRRr.",
-".rRRRRkRRRRr.",
-".BBrRRRRRrBB.",
-".BBrRRRRRrBB.",
-".BBrrrrrrrBB.",
-".kk.RRRRR.kk.",
-".kk.rRRRr.kk.",
-"....RR.RR....",
-"..b.RR.RR....",
-".b.RR...RR...",
-"b..Rr...rR...",
-"...BB...BB...",
-"..BBB...BBB..",
-"..bbb...bbb..",
-"............."];
-const PAL_KURT={b:rgb(24,36,90),B:rgb(44,64,146),e:rgb(255,230,90),r:rgb(110,20,26),R:rgb(170,30,40),k:rgb(20,20,26)};
-ANIM.kurt={leg:14,mid:6,armC:'BBb',tipC:'kkk',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null};
+"....hhhhh....",
+"...bhhhhhb...",
+"....BeBeb....",
+"....BBBBb....",
+".....BbB.....",
+"...kRBBbRk...",
+".KkRRkkkRRkk.",
+".KkkRRkRRkkk.",
+".KkkkRRRkkkk.",
+".Kk.KkRkk.kk.",
+".Kk.Kkkkk.kk.",
+".BB.RRRRr.Bb.",
+".Bb.Kkkkk.Bb.",
+"..t.Kkkkk....",
+".t..Kk.kk....",
+"t...Kk.kk....",
+"t...Kk.kk....",
+".t.Kk...kk...",
+"TT.KR...Rk...",
+"T..Kk...kk...",
+"...kk...kk...",
+"..kkk...kkk.."];
+const PAL_KURT={h:rgb(22,24,50),b:rgb(32,42,104),B:rgb(54,74,164),e:rgb(255,230,90),k:rgb(20,20,26),K:rgb(50,50,62),R:rgb(182,32,42),r:rgb(116,20,28),t:rgb(40,56,130),T:rgb(54,74,164)};
+ANIM.kurt={leg:14,mid:6,armC:'Kkk',tipC:'BBb',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null,cape:'tT'};
 const puff=(x,y)=>{for(let k=0;k<18;k++){const an=R()*6.283,sp=R()*2;spawn(x,y,Math.cos(an)*sp,Math.sin(an)*sp-.4,R()<.5?rgb(70,40,90):rgb(40,30,50),30+R()*20,0,0,0,1);}snd('pop',x,y,{pitch:.6,v:.6});};
 function bamf(p,x,y){puff(p.x,p.y-ST.PH/2);x=Math.max(6,Math.min(W-6,x));y=Math.max(-800,Math.min(H-8,y));if(boxHit(x,y))carve(x,y-ST.PH/2,ST.PH*.6,0,0);p.x=x;p.y=y;p.vx=p.vy=0;puff(x,y-ST.PH/2);fxWord(x,y-ST.PH-6,'BAMF!',.8,'#c8a0ff',true);}
 const KURT_POWERS=[
@@ -124,30 +124,30 @@ export const CHAR_KURT={id:'kurt',name:'Nightcrawler',spr:SPR_KURT,pal:PAL_KURT,
 
 // ================= STAR-LORD =================
 const SPR_QUILL=[
-"....kMMMk....",
-"...kMMMMMk...",
-"...MmMMMmM...",
-"...MeMMMeM...",
-"...MMmmmMM...",
-"....kMMMk....",
-"..JJJkkkJJJ..",
-".JJJJkgkJJJJ.",
-".JJjJkkkJjJJ.",
-".JJjJkkkJjJJ.",
-".JJjJkkkJjJJ.",
-".JJjkkkkkjJJ.",
-".gg.kkkkk.gg.",
-".gg.kkkkk.gg.",
-"....kk.kk....",
-"....kk.kk....",
-"...kk...kk...",
-"...kk...kk...",
-"...jj...jj...",
-"..jjj...jjj..",
-"..jjj...jjj..",
-"............."];
-const PAL_QUILL={k:rgb(30,30,34),M:rgb(180,40,40),m:rgb(110,24,24),e:rgb(255,130,60),J:rgb(150,52,40),j:rgb(90,30,24),g:rgb(170,170,180)};
-ANIM.quill={leg:14,mid:6,armC:'JJj',tipC:'ggg',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null};
+"....sssss....",
+"...SsssssS...",
+"....eeSee....",
+"....SsSsS....",
+".....gSg.....",
+"...cLDDDcC...",
+".LccLDDDccCC.",
+".LcLcDDDcCcC.",
+".LcLcDDDcCcC.",
+".Lc.cDDDc.cC.",
+".Lc.cDDDc.cC.",
+".kk.nnYnn.GG.",
+".kk.KkkkK.GK.",
+".T..Kkkkk..T.",
+".T..Kk.kk..T.",
+".T..Kk.kk..T.",
+"....Kk.kk....",
+"...Kk...kk...",
+"...bb...bb...",
+"...bb...bb...",
+"...ss...sS...",
+"..sss...sSS.."];
+const PAL_QUILL={s:rgb(192,192,202),S:rgb(130,130,142),e:rgb(255,60,50),g:rgb(80,80,90),c:rgb(150,56,42),C:rgb(96,34,26),L:rgb(192,88,66),D:rgb(62,42,42),k:rgb(28,28,32),K:rgb(54,54,62),n:rgb(110,74,40),Y:rgb(222,190,80),G:rgb(152,152,162),b:rgb(100,66,40),T:rgb(122,44,34)};
+ANIM.quill={leg:14,mid:6,armC:'LcC',tipC:'GGK',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null,cape:'T'};
 const egun=(a,c,el)=>shots.push({x:a.h.x,y:a.h.y,vx:a.dx*8,vy:a.dy*8,type:'egun',life:70,col:c,ecol:c,boom:3,onHit:s=>{explode(s.x|0,s.y|0,4,{self:true,quiet:true,col:c,fire:el==='fire'?.4:0});tagged(el,()=>damageEnemies(s.x,s.y,10,12,0,0));}});
 function drawMilano(s){const x=s.x,y=s.y,f=s.face,o={},B=rgb(60,90,170),O=rgb(240,140,40),G=rgb(180,190,200);TK.begin();TK.ell(x,y,26,6,B,o);TK.poly([[x-f*20,y-4],[x-f*34,y-14],[x-f*10,y-4]],O,o);TK.poly([[x-f*20,y+4],[x-f*34,y+12],[x-f*10,y+4]],O,o);TK.ell(x+f*12,y-3,8,4,G,o);TK.end();for(let k=0;k<3;k++)spawn(x-f*28,y+(R()-.5)*4,-f*3,0,R()<.5?rgb(150,200,255):rgb(255,255,255),8,0,1,0,1);}
 const QUILL_POWERS=[
@@ -174,30 +174,30 @@ export const CHAR_QUILL={id:'quill',name:'Star-Lord',spr:SPR_QUILL,pal:PAL_QUILL
 
 // ================= MILES MORALES =================
 const SPR_MILES=[
-"....KKKKK....",
-"...KKrKrKK...",
-"...KrKKKrK...",
-"...KwwKwwK...",
-"...KKrKrKK...",
-"....KKrKK....",
-"..KKKrrrKKK..",
-".KKrKrrrKrKK.",
-".KKKKKrKKKKK.",
-".KKrKKKKKrKK.",
-".KKKKrKrKKKK.",
-".KKrKKKKKrKK.",
-".rr.KKKKK.rr.",
-".rr.KrKrK.rr.",
-"....KK.KK....",
-"....Kr.rK....",
-"...KK...KK...",
-"...rK...Kr...",
-"...KK...KK...",
-"..rrr...rrr..",
-"..KKK...KKK..",
-"............."];
-const PAL_MILES={K:rgb(26,24,30),r:rgb(206,30,44),w:rgb(240,240,250)};
-ANIM.miles={leg:14,mid:6,armC:'KKr',tipC:'rrr',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null};
+"....KkrkK....",
+"....kkrkk....",
+"....wwkww....",
+"....kkrkk....",
+".....krk.....",
+"...KkkrkkK...",
+".KkKkkrkkKkk.",
+".KkkrkrkrkKk.",
+".Kkkkrrrkkkk.",
+".Kk.rkrkr.kk.",
+".Kk.Kkkkk.kk.",
+".Kk.Kkkkk.kk.",
+".rr.Kkkkk.rr.",
+"....Kkkkk....",
+"....Kk.kk....",
+"....Kk.kk....",
+"....Kk.kk....",
+"...Kk...kk...",
+"...Kk...kk...",
+"...Kk...kk...",
+"...Kk...kk...",
+"..rrr...rrr.."];
+const PAL_MILES={k:rgb(18,18,24),K:rgb(50,50,64),r:rgb(216,32,46),R:rgb(150,20,32),w:rgb(244,244,252)};
+ANIM.miles={leg:14,mid:6,armC:'Kkk',tipC:'rrR',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null};
 const VC=[255,230,120];
 const venomZap=(x0,y0,x1,y1)=>zap(x0,y0,x1,y1,[255,250,200],[255,210,60]);
 const MILES_POWERS=[

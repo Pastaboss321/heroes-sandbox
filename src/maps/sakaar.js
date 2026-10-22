@@ -10,6 +10,7 @@ import { bodies } from '../world/support.js';
 import { finishBody } from '../world/bodies.js';
 import { spawn } from '../world/particles.js';
 import { mix3 } from '../render/look.js';
+import { dress, skMountain, skPylon, skShanty, skShip } from './realms.js';
 
 const JUNK=[[150,70,60],[90,110,130],[180,150,70],[70,90,80],[160,160,170],[120,60,120]];
 const junkCol=(x,y)=>{const c=JUNK[((noise2(x*.2,y*.2,3)+1)*3|0)%JUNK.length],n=R()*30-15;return rgb(Math.max(0,c[0]+n),Math.max(0,c[1]+n),Math.max(0,c[2]+n));};
@@ -47,6 +48,7 @@ export function genSakaar(){
   // scrap mountains and crashed ships
   for(let k=0;k<14;k++){const cx=R()*W|0;if(Math.abs(cx-AX)<AW+80||Math.abs(cx-W*.78)<80)continue;scrapHeap(cx,60+R()*120|0,40+R()*120|0,hm);}
   for(let k=0;k<5;k++){const x=R()*(W-200)|0;if(Math.abs(x-AX)<AW+120)continue;hulk(x,hm[x+60]);}
+  {const TAB=[[.32,skMountain],[.24,skShanty],[.14,skShip],[.14,skPylon],[.16,()=>0]];dress(hm,40,AX-AW-30,TAB,[10,50]);dress(hm,AX+AW+30,W-40,TAB,[10,50]);} // junk mountains, shanties, wrecks (maps/realms.js)
   for(let x=0;x<W;x++)SURF[x]=hm[x]+30;
   ST.SPAWNX=AX-AW*.4|0;
 }

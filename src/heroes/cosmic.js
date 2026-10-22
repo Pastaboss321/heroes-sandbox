@@ -17,30 +17,30 @@ import { damageEnemies, damageLine, enemies, hitEnemy, nearestEnemy } from '../e
 
 // ================= CAPTAIN MARVEL =================
 const SPR_MARVEL=[
-"....hhhhh....",
-"...hhhhhhh...",
-"...hhfffhh...",
-"...hfefefh...",
-"...hfffffh...",
-"...h.fff.h...",
-"..BBRRYRRBB..",
-".BBRRYYYRRBB.",
-".BBRRRYRRRBB.",
-".RRBRRRRRBRR.",
-".RRBBRRRBBRR.",
-".RRBBYYYBBRR.",
-".RR.BBBBB.RR.",
-".rr.BBBBB.rr.",
-"....BB.BB....",
-"....BB.BB....",
-"...BB...BB...",
-"...RR...RR...",
-"...RR...RR...",
-"..RRR...RRR..",
-"..rrr...rrr..",
-"............."];
-const PAL_MARVEL={h:rgb(236,200,110),f:rgb(236,190,160),e:rgb(255,236,170),B:rgb(36,58,140),R:rgb(200,40,48),r:rgb(120,20,28),Y:rgb(245,205,70)};
-ANIM.marvel={leg:14,mid:6,armC:'RRr',tipC:'RRr',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null};
+"....hhhhH....",
+"...hhhhhHH...",
+"...hfeFeFH...",
+"...HffffFH...",
+"...Hh.fF.H...",
+"...hBYYYBH...",
+".BBBRRYRRBBb.",
+".BBRRYYYRRBb.",
+".BBRRRYRRrBb.",
+".BB.RRYRr.Bb.",
+".BB.BRRrb.Bb.",
+".RR.YYYYy.Rr.",
+".Rr.BRRrb.Rr.",
+"....BRRrb....",
+"....BR.rb....",
+"....BR.rb....",
+"....BR.rb....",
+"...RR...Rr...",
+"...RR...Rr...",
+"...RR...Rr...",
+"...RR...Rr...",
+"..RRr...Rrr.."];
+const PAL_MARVEL={h:rgb(248,216,124),H:rgb(200,160,72),f:rgb(236,190,160),F:rgb(196,150,120),e:rgb(255,240,200),R:rgb(208,40,50),r:rgb(132,22,30),B:rgb(40,62,150),b:rgb(24,36,96),Y:rgb(250,210,80),y:rgb(190,150,40)};
+ANIM.marvel={leg:14,mid:6,armC:'BBb',tipC:'RRr',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null};
 const PH=[255,210,110],PHC=[255,245,200];
 const binary=p=>p.binary>0;
 const MARVEL_POWERS=[
@@ -84,30 +84,30 @@ export const CHAR_MARVEL={id:'marvel',name:'Captain Marvel',spr:SPR_MARVEL,pal:P
 
 // ================= SILVER SURFER =================
 const SPR_SURFER=[
-"....sSSSs....",
-"...sSSSSSs...",
-"...SSSSSSS...",
-"...SeSSSeS...",
-"...SSSSSSS...",
-"....sSSSs....",
-"..sSSSSSSSs..",
-".sSSSdSdSSSs.",
-".sSSSSdSSSSs.",
-".sSsSSSSSsSs.",
-".sSsSSdSSsSs.",
-".sSsSSSSSsSs.",
-".SS.SSSSS.SS.",
-".ss.sSSSs.ss.",
-"....SS.SS....",
-"....SS.SS....",
-"...SS...SS...",
-"...Ss...sS...",
-"...SS...SS...",
-"..sSS...SSs..",
-"..sss...sss..",
-"............."];
-const PAL_SURFER={S:rgb(214,220,234),s:rgb(150,156,172),d:rgb(96,102,118),e:rgb(255,255,255)};
-ANIM.surfer={leg:14,mid:6,armC:'SSs',tipC:'SSs',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null};
+".....wSs.....",
+"....wSSSs....",
+"....SeSes....",
+"....wSSSs....",
+".....SSs.....",
+"...sSSSSSd...",
+".wSSwSSwSSsd.",
+".wSwwSdwwSsd.",
+".wSSSSdSSSsd.",
+".wS.wSdSs.sd.",
+".wS.SwdSs.sd.",
+".SS.sSSSd.ss.",
+".Ss.SSdSs.sd.",
+"....wSSSs....",
+"....wS.Ss....",
+"....wS.Ss....",
+"....SS.sd....",
+"...wS...Ss...",
+"...wS...Ss...",
+"...SS...sd...",
+"...SS...sd...",
+"..sSS...Ssd.."];
+const PAL_SURFER={w:rgb(250,252,255),S:rgb(206,212,228),s:rgb(146,152,170),d:rgb(90,96,114),e:rgb(220,240,255)};
+ANIM.surfer={leg:14,mid:6,armC:'wSs',tipC:'Sss',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null};
 const CO=[150,220,255],COW=[230,250,255];
 const SURFER_POWERS=[
  {n:'Cosmic Bolt',fn:(a,p,use)=>{if(!use(4))return;ST.cd=7;shots.push({x:a.h.x,y:a.h.y,vx:a.dx*9,vy:a.dy*9,type:'cosmic',life:90,boom:7,col:CO,ecol:CO});}},
@@ -148,30 +148,30 @@ export const CHAR_SURFER={id:'surfer',name:'Silver Surfer',spr:SPR_SURFER,pal:PA
 
 // ================= CAPTAIN AMERICA =================
 const SPR_CAP=[
-"....bbbbb....",
-"...bBBABBb...",
-"...WBBBBBW...",
-"...bBeBeBb...",
-"...bfffffb...",
-"....fffff....",
-"..bBBBABBBb..",
-".bBBBAAABBBb.",
-".bBBBBABBBBb.",
-".BBbWRWRWbBB.",
-".BBbWRWRWbBB.",
-".BBbRWRWRbBB.",
-".rr.kkkkk.rr.",
-".rr.BBBBB.rr.",
-"....BB.BB....",
-"....BB.BB....",
-"...BB...BB...",
-"...BB...BB...",
-"...rr...rr...",
-"..rrr...rrr..",
-"..rrr...rrr..",
-"............."];
-const PAL_CAP={b:rgb(24,40,100),B:rgb(44,74,160),W:rgb(236,236,244),R:rgb(196,40,48),r:rgb(150,28,36),k:rgb(40,32,30),f:rgb(232,188,156),A:rgb(220,224,232),e:rgb(255,255,255)};
-ANIM.cap={leg:14,mid:6,armC:'BBb',tipC:'rrr',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null};
+"....VBBBb....",
+"...wVBwBb....",
+"...wBwBwb....",
+"....ffffF....",
+".....fFF.....",
+"...bVBBBBb...",
+".VVBBBwBBBBb.",
+".VBBBwwwBBBb.",
+".VBBBwBwBBbb.",
+".VB.RWRWr.Bb.",
+".VB.RWRWr.Bb.",
+".RR.nnnnn.Rr.",
+".Rr.VBBBb.Rr.",
+"....VBBBb....",
+"....VB.Bb....",
+"....VB.Bb....",
+"....VB.Bb....",
+"...RR...Rr...",
+"...RR...Rr...",
+"...RR...Rr...",
+"...RR...Rr...",
+"..RRr...Rrr.."];
+const PAL_CAP={V:rgb(86,126,216),B:rgb(44,74,160),b:rgb(24,40,100),w:rgb(246,246,252),W:rgb(226,226,234),R:rgb(202,36,46),r:rgb(140,24,32),f:rgb(232,188,156),F:rgb(190,140,112),n:rgb(112,76,42)};
+ANIM.cap={leg:14,mid:6,armC:'VBb',tipC:'RRr',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null};
 const SH_R=[200,40,48];
 export function drawShield(s,pix){const R0=4;for(let y=-R0;y<=R0;y++)for(let x=-R0;x<=R0;x++){const d=Math.hypot(x,y);if(d>R0+.3)continue;const c=d<1.3?rgb(236,236,244):d<2.2?rgb(44,74,160):d<3.2?rgb(196,40,48):d<3.9?rgb(236,236,244):rgb(196,40,48);pix(s.x+x,s.y+y,c);}}
 function throwShield(p,a,bounces,cut){shots.push({x:a.h.x,y:a.h.y,vx:a.dx*8,vy:a.dy*8,type:'shield',life:200,boom:0,bounces,cut,hit:new Set(),

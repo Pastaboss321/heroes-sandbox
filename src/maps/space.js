@@ -8,6 +8,7 @@ import { H, VH, VW, W, bg, bgD, col, setc, sxy, t } from '../world/grid.js';
 import { SURF, bgRect, clearAll, disc, fill, makeFar, tint } from './gen.js';
 import { noise2 } from './city.js';
 import { spawn, spawnFlake } from '../world/particles.js';
+import { dress, free, khMuseum, khRig, khSpire, khTown, khVats, mnBase, mnCrystals, mnLander, mnObelisk, mnPyramid, mnSpire, ttColonnade, ttDome, ttRing, ttTower } from './realms.js';
 
 function stars(n,c=[220,225,255]){for(let k=0;k<n;k++){const x=R()*ST.FW|0,y=R()*H|0,b=.4+R()*.6;ST.far[y*ST.FW+x]=rgb(c[0]*b,c[1]*b,c[2]*b);}}
 function planet(cx,cy,r,c0,c1,ring){
@@ -30,11 +31,12 @@ export function genTitan(){
     for(let y=h+3;y<H;y++)bg[y*W+x]=rgb(50-(y-h)/12,28-(y-h)/16,22-(y-h)/16);}
   bgD.set(bg);
   for(let y=GY+60;y<H-8;y++)for(let x=0;x<W;x++){const i=y*W+x;if(t[i]&&noise2(x,y,s+4)>.42)setc(i,y>H-40?LAVA:EMPTY);}
-  // half-buried leaning towers and a fallen ring arch
-  for(let k=0;k<9;k++){const x=150+R()*(W-300)|0,w=20+R()*30|0,h=60+R()*160|0,lean=(R()-.5)*.5,gy=hm[x];
+  // a fallen ring arch, then a dead city of leaning towers, standing rings, domes and colonnades (maps/realms.js)
+  if(0)for(let k=0;k<9;k++){const x=150+R()*(W-300)|0,w=20+R()*30|0,h=60+R()*160|0,lean=(R()-.5)*.5,gy=hm[x];
     for(let y=0;y<h;y++)for(let c=0;c<w;c++){const X=x+c+Math.round(y*lean),Y=gy-y+10;const i=Y*W+X;if(X<0||X>=W||Y<0)continue;setc(i,c<2||c>w-3||y%18<2?CONC:STONE);col[i]=rgb(120+R()*16,70+R()*10,56);}
     for(let y=14;y<h-6;y+=18)for(let c=3;c<w-3;c++){const X=x+c+Math.round(y*lean),Y=gy-y;const i=Y*W+X;if(X>=0&&X<W&&Y>=0){t[i]=0;bg[i]=rgb(44,26,22);}}}
   {const cx=W*.6|0,r=170,gy=hm[cx];for(let a=Math.PI*1.05;a<Math.PI*1.95;a+=.002)for(let w=0;w<12;w++){const X=cx+Math.cos(a)*(r-w)|0,Y=gy+12+Math.sin(a)*(r-w)|0;sxy(X,Y,STEEL);if(X>=0&&X<W&&Y>=0&&Y<H)col[Y*W+X]=rgb(110,90,80);}}
+  dress(hm,40,W-40,[[.36,ttTower],[.12,ttRing],[.14,ttDome],[.16,ttColonnade],[.22,()=>0]],[8,40]);
   for(let x=0;x<W;x++)SURF[x]=hm[x]+30;ST.SPAWNX=200;
 }
 export function ambTitan(){for(let k=0;k<2;k++)spawnFlake(ST.camX+R()*VW,ST.camY+R()*VH,.6+R()*.4,(R()-.5)*.2,rgb(200,120,70),200,0);}
@@ -53,10 +55,13 @@ export function genKnowhere(){
   for(let y=GY+50;y<H-8;y++)for(let x=0;x<W;x++){const i=y*W+x;if(t[i]&&noise2(x,y,s+1)>.4)setc(i,EMPTY);}
   // pits of glowing Celestial ooze (acid-green neon pools)
   for(let k=0;k<6;k++){const cx=100+R()*(W-200)|0,r=24+R()*30|0;for(let x=cx-r;x<cx+r;x++){const d=1-Math.abs(x-cx)/r;for(let y=hm[x];y<hm[x]+d*20;y++){const i=y*W+x;if(y<hm[x]+2)setc(i,EMPTY);else{setc(i,NEON);col[i]=rgb(120+R()*30,255,170);}}}}
+  // the mining town (maps/realms.js), plus the old scaffolds, bars and containers in between
+  {const scaf=(x,h,x1)=>{const w=30+R()*30|0,hh=60+R()*90|0;if(x+w>x1||!free(x-2,x+w+2,h,hh+4))return 0;const gy=h[x];for(let y=gy-hh;y<gy;y++){sxy(x,y,STEEL);sxy(x+w,y,STEEL);}for(let y=gy-hh;y<gy;y+=14){for(let c=x;c<=x+w;c++)sxy(c,y,STEEL);for(let c=0;c<w;c+=2)sxy(x+c,y+(c*14/w|0),STEEL);}return w;};
+    dress(hm,120,W-120,[[.3,khTown],[.14,khRig],[.16,khSpire],[.06,khMuseum],[.12,khVats],[.14,scaf],[.08,()=>0]],[8,30]);}
   // ribs arching overhead
   for(let k=0;k<8;k++){const cx=200+k*(W-400)/7|0,r=150+R()*60|0,gy=hm[cx];for(let a=Math.PI*1.02;a<Math.PI*1.98;a+=.0025)for(let w=0;w<10;w++){const X=cx+Math.cos(a)*(r-w)*1.4|0,Y=gy+8+Math.sin(a)*(r-w)|0;if(X<0||X>=W||Y<0||Y>=H)continue;const i=Y*W+X;setc(i,BONE);col[i]=bone(X,Y);}}
   // the mining town: scaffold towers, a bar with neon signs, cargo containers
-  for(let x=120;x<W-120;){const r=R();const gy=hm[x];
+  for(let x=120;x<W-120;){const r=R();const gy=hm[x];if(!free(x-2,x+92,hm,70)){x+=30;continue;}
     if(r<.4){const w=30+R()*30|0,h=60+R()*90|0;for(let y=gy-h;y<gy;y++){sxy(x,y,STEEL);sxy(x+w,y,STEEL);}for(let y=gy-h;y<gy;y+=14){for(let c=x;c<=x+w;c++)sxy(c,y,STEEL);for(let c=0;c<w;c+=2){sxy(x+c,y+(c*14/w|0),STEEL);}}x+=w+30;}
     else if(r<.65){const w=50+R()*40|0,h=26+R()*16|0;fill(x,gy-h,x+w,gy,STEEL);tint(x,gy-h,x+w,gy,70,60,74,8);bgRect(x+3,gy-h+3,x+w-3,gy-1,rgb(40,30,46));fill(x+3,gy-h+3,x+w-3,gy-1,EMPTY);
       const nc=[rgb(255,80,170),rgb(80,230,255),rgb(255,200,60)][R()*3|0];for(let c=x+6;c<x+w-6;c++){const i=(gy-h-3)*W+c;setc(i,NEON);col[i]=nc;}x+=w+24;}
@@ -86,6 +91,7 @@ export function genMoon(){
   {const cx=W*.7|0,gy=hm[cx],r=260;for(let a=Math.PI;a<Math.PI*2;a+=.0015){const X=cx+Math.cos(a)*r|0,Y=gy+Math.sin(a)*r*.7|0;if(R()<.85)for(let w=0;w<2;w++)sxy(X,Y+w,GLASS);}
     for(let x=cx-220;x<cx+220;){const w=14+R()*22|0,h=30+R()*130*(1-Math.abs(x-cx)/240)|0,g=hm[x];for(let y=g-h;y<g;y++)for(let c=x;c<x+w;c++){const i=y*W+c;setc(i,y<g-h+4?GOLD:CONC);col[i]=y<g-h+4?rgb(220,180,90):rgb(170+R()*14,180+R()*14,200);}
       for(let y=g-h+8;y<g-4;y+=10)fill(x+3,y,x+w-3,y+5,EMPTY);x+=w+6+(R()*10|0);}}
+  dress(hm,40,W-40,[[.25,mnSpire],[.12,mnBase],[.14,mnObelisk],[.07,mnLander],[.12,mnCrystals],[.12,mnPyramid],[.18,()=>0]],[10,50]); // maps/realms.js
   for(let x=0;x<W;x++)SURF[x]=hm[x]+30;ST.SPAWNX=W*.25+160|0;
 }
 export function ambMoon(){}
