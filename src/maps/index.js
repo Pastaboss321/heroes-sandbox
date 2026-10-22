@@ -74,7 +74,9 @@ export function regen(){
   unq.length=0;
   ST.nxt.fill(1);
   ST.dfar=[];ST.dx0=0;ST.dy0=0;ST.dx1=W-1;ST.dy1=H-1;supportCheck(true);
-  ST.dx0=0;ST.dy0=0;ST.dx1=W-1;ST.dy1=H-1; // whole map gets one runtime pass on the first tick: anything left floating falls
+  // whole map gets one runtime pass: anything left floating falls. Done here behind the loading card
+  // (~100 ms on the long maps) rather than as a hitch on the first play tick.
+  ST.dx0=0;ST.dy0=0;ST.dx1=W-1;ST.dy1=H-1;supportCheck(false);
   R0gen=rcount.length;
   ST.T0=t.slice();ST.C0=col.slice();ST.B0=bg.slice(); // the untouched map, for Scarlet Witch's Reweave
   applyTOD();

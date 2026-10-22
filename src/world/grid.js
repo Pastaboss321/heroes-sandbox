@@ -36,13 +36,15 @@ export function wake(i){
   const xa=cx>0?cx-1:0,xb=cx<CW-1?cx+1:cx,ya=cy>0?cy-1:0,yb=cy<CHN-1?cy+1:cy;
   for(let yy=ya;yy<=yb;yy++)for(let xx=xa;xx<=xb;xx++)ST.nxt[yy*CW+xx]=1;
 }
-// dirty areas: one main box plus up to 8 far ones, so damage on opposite ends of a long map (a titan's
-// footstep, lava crusting over somewhere deep) doesn't merge into one huge box for the support check
-const DM=96;
+// dirty areas: one main box plus up to 32 far ones, so damage on opposite ends of a long map (a titan's
+// footstep, lava crusting over somewhere deep) doesn't merge into one huge box for the support check.
+// When all are taken, a new spot joins the box it grows least: always joining the last one made it
+// swallow every scattered change into a map-wide box (1-2 million floods, 250 ms ticks in the sweep).
+const DM=96,DFAR=32;
 export function markDirty(i){const x=i%W,y=(i/W)|0;
   if(ST.dx1<0||(x>ST.dx0-DM&&x<ST.dx1+DM&&y>ST.dy0-DM&&y<ST.dy1+DM)){if(x<ST.dx0)ST.dx0=x;if(x>ST.dx1)ST.dx1=x;if(y<ST.dy0)ST.dy0=y;if(y>ST.dy1)ST.dy1=y;}
   else{const L=ST.dfar||(ST.dfar=[]);let r=null;for(const b of L)if(x>b[0]-DM&&x<b[2]+DM&&y>b[1]-DM&&y<b[3]+DM){r=b;break;}
-    if(!r){if(L.length<8)L.push(r=[x,y,x,y]);else r=L[L.length-1];}
+    if(!r){if(L.length<DFAR)L.push(r=[x,y,x,y]);else{let best=Infinity;for(const b of L){const g=(Math.max(b[2],x)-Math.min(b[0],x)+1)*(Math.max(b[3],y)-Math.min(b[1],y)+1)-(b[2]-b[0]+1)*(b[3]-b[1]+1);if(g<best){best=g;r=b;}}}}
     if(x<r[0])r[0]=x;if(x>r[2])r[2]=x;if(y<r[1])r[1]=y;if(y>r[3])r[3]=y;}
   if(pin[i]===2||pin[i-1]===2||pin[i+1]===2||pin[i-W]===2||pin[i+W]===2)unq.push(i);}
 export function lifeOf(m){switch(m){case FIRE:return 15+R()*35;case GFIRE:return 40+R()*60;case SMOKE:return 50+R()*90;case STEAM:return 90+R()*120;case EMBER:return 80+R()*120;default:return 0;}}

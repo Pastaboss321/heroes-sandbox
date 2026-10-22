@@ -75,6 +75,21 @@ function downToBedrock(s,sameGnd){const g0=gnd[s],mk=sameGnd?vis:vis2,lo=sameGnd
     for(const sg of (n&1?[1,-1]:[-1,1])){for(let d=1;d<=96;d++){const X=x+sg*d;if(X<0||X>=W)break;const k=i+sg*d;if(KIND[t[k]]!==S||sameGnd&&gnd[k]!==g0)break;const kb=k+W;if(KIND[t[kb]]===S&&(!sameGnd||gnd[kb]===g0)){nx=kb;break;}}if(nx>=0)break;}
     if(nx<0)return false;i=nx;}
   return false;}
+// big passes (the whole map right after it loads): one scanline fill up from the world floor and the
+// bedrock band marks every cell it reaches as proven (mk[i]=id), so the per-cell floods only visit what
+// is left. Without it every cell of a huge connected landscape costs its own little flood (350 ms on the
+// 7200-wide City). sameGnd: one fill per kind (ground vs built), only through cells of that kind, like the
+// strength pass's structures. If the span stack ever overflows the fill just stops early: whatever it
+// marked is still truly anchored, and the floods prove the rest.
+function seedFromFloor(mk,id,sameGnd){const SN=stk.length;
+  for(const g of sameGnd?[0,1]:[-1]){let sp=0;
+    const ok=j=>KIND[t[j]]===S&&(g<0||gnd[j]===g)&&mk[j]!==id;
+    for(let i=N-40*W;i<N;i++)if((i>=N-W||gnd[i])&&ok(i)){if(sp>=SN)return;stk[sp++]=i;}
+    while(sp>0){const i=stk[--sp];if(mk[i]===id)continue;const row=i-i%W;
+      let a=i,b=i;while(a>row&&ok(a-1))a--;while(b<row+W-1&&ok(b+1))b++;
+      for(let k=a;k<=b;k++)mk[k]=id;
+      for(const off of [-W,W]){if(row+off<0||row+off>=N)continue;let run=false;
+        for(let k=a+off;k<=b+off;k++){if(ok(k)){if(!run){if(sp>=SN)return;stk[sp++]=k;run=true;}}else run=false;}}}}}
 function anchorFlood(s,init){
   ST.scN&&ST.scN[0]++;if(useProbe&&downToBedrock(s,false)){ST.scN&&ST.scN[1]++;return;}
   const id=++ggen;let sp=0,tl=0,npc=0;stk[sp++]=s;q[tl++]=s;vis2[s]=id;
@@ -125,15 +140,17 @@ export function supportCheck(init){
   const boxes=[];if(ST.dx1>=0)boxes.push([ST.dx0,ST.dy0,ST.dx1,ST.dy1]);if(ST.dfar&&ST.dfar.length){for(const b of ST.dfar)boxes.push(b);ST.dfar=[];}
   if(!boxes.length){if(!init)sweepBg();return;}
   ST.lastBoxes=boxes; // debug: GAME.ST.lastBoxes
-  {let area=0;for(const b of boxes)area+=(b[2]-b[0]+5)*(b[3]-b[1]+5);useProbe=!init&&area<60000;}
+  let area=0;for(const b of boxes)area+=(b[2]-b[0]+5)*(b[3]-b[1]+5);useProbe=!init&&area<60000;const big=area>N/4&&!ST.noSeed; // ST.noSeed: debug switch to compare against plain floods
   ST.dx0=W;ST.dy0=H;ST.dx1=-1;ST.dy1=-1; collapses=0;
   // 1) nothing may hang in the sky: every solid must connect, through solids of ANY material,
   //    to the world floor / bedrock or rest on loose debris. Whatever doesn't becomes chunks or dust.
   gstart=++ggen;const T0=performance.now();ST.scN=[0,0,0,0];
+  if(big)seedFromFloor(vis2,++ggen,false);
   for(const b of boxes){const x0=Math.max(0,b[0]-2),x1=Math.min(W-1,b[2]+2),y0=Math.max(0,b[1]-2),y1=Math.min(H-1,b[3]+2);
     for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const i=y*W+x;if(KIND[t[i]]===S&&vis2[i]<gstart)anchorFlood(i,init);}}
   // 2) structural strength: each structure (ground vs built) must carry its own weight
   const T1=performance.now();vstart=++ST.vgen;
+  if(big&&!init)seedFromFloor(vis,++ST.vgen,true); // the generation pass must walk every structure to set its strength
   for(const b of boxes){const x0=Math.max(0,b[0]-2),x1=Math.min(W-1,b[2]+2),y0=Math.max(0,b[1]-2),y1=Math.min(H-1,b[3]+2);
     for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const i=y*W+x;if(KIND[t[i]]===S&&vis[i]<vstart)flood(i,init);}}
   ST.scT=[T1-T0,performance.now()-T1]; // debug timing: anchor pass, strength pass
@@ -146,8 +163,10 @@ const ob=[W,-1,H,-1]; // where structure was actually destroyed since the last b
 const obs=[];
 export function obAdd(x,y){if(ob[1]<0||(x>ob[0]-96&&x<ob[1]+96&&y>ob[2]-96&&y<ob[3]+96)){if(x<ob[0])ob[0]=x;if(x>ob[1])ob[1]=x;if(y<ob[2])ob[2]=y;if(y>ob[3])ob[3]=y;return;}
   for(const b of obs)if(x>b[0]-96&&x<b[1]+96&&y>b[2]-96&&y<b[3]+96){if(x<b[0])b[0]=x;if(x>b[1])b[1]=x;if(y<b[2])b[2]=y;if(y>b[3])b[3]=y;return;}
-  if(obs.length<8)obs.push([x,x,y,y]);else{const b=obs[obs.length-1];if(x<b[0])b[0]=x;if(x>b[1])b[1]=x;if(y<b[2])b[2]=y;if(y>b[3])b[3]=y;}}
-function sweepBg(){if(ST.frame%8!==0||ob[1]<0&&!obs.length)return;if(ob[1]>=0)orphanBg(ob[0]-70,ob[1]+70,ob[2]-70,ob[3]+70);for(const b of obs)orphanBg(b[0]-70,b[1]+70,b[2]-70,b[3]+70);obs.length=0;ob[0]=W;ob[1]=-1;ob[2]=H;ob[3]=-1;}
+  // full: join the area it grows least (growing the last one made map-wide sweeps, 40-65 ms ticks)
+  if(obs.length<32)obs.push([x,x,y,y]);else{let b=obs[0],best=Infinity;for(const o of obs){const g=(Math.max(o[1],x)-Math.min(o[0],x)+1)*(Math.max(o[3],y)-Math.min(o[2],y)+1)-(o[1]-o[0]+1)*(o[3]-o[2]+1);if(g<best){best=g;b=o;}}if(x<b[0])b[0]=x;if(x>b[1])b[1]=x;if(y<b[2])b[2]=y;if(y>b[3])b[3]=y;}}
+function sweepBg(){const T=performance.now();sweepBg0();if(ST.scT)ST.scT[2]=performance.now()-T;} // debug: ST.scT[2] = back-wall sweep ms
+function sweepBg0(){if(ST.frame%8!==0||ob[1]<0&&!obs.length)return;if(ob[1]>=0)orphanBg(ob[0]-70,ob[1]+70,ob[2]-70,ob[3]+70);for(const b of obs)orphanBg(b[0]-70,b[1]+70,b[2]-70,b[3]+70);obs.length=0;ob[0]=W;ob[1]=-1;ob[2]=H;ob[3]=-1;}
 export const BLDS=m=>KIND[m]===S&&!NAT[m]&&m!==LEAF;
 function orphanBg(x0,x1,y0,y1){
   const RCH=110;x0=Math.max(0,x0);x1=Math.min(W-1,x1);y0=Math.max(0,y0);y1=Math.min(H-1,y1);

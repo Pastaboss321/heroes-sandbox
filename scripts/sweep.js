@@ -17,7 +17,8 @@
       const a = performance.now();
       try { G.tick(); } catch (e) { out.errors.push(tag + ': ' + e.message + ' @ ' + (e.stack || '').split('\n')[1]); return false; }
       const ms = performance.now() - a;
-      if (ms > 40) out.slow.push([tag, +ms.toFixed(1)]);
+      if (ms > 40) out.slow.push([tag, +ms.toFixed(1), G.ST.prof && [+G.ST.prof.step.toFixed(1), +G.ST.prof.bodies.toFixed(1), +G.ST.prof.support.toFixed(1)], G.ST.scT && G.ST.scT.map((v) => +v.toFixed(1)), G.ST.scN && G.ST.scN.join(','), G.ST.lastBoxes && G.ST.lastBoxes.map((b) => b.join(' ')).join(' | ')]); // tag, ms, [step, bodies, support] ms, [anchor, strength] ms, flood counts, dirty boxes
+      G.ST.scT = G.ST.scN = G.ST.lastBoxes = null;
     }
     return true;
   };
