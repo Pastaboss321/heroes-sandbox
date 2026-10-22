@@ -4,11 +4,16 @@ import { ST } from '../state.js';
 import { R } from '../world/materials.js';
 import { SET } from './look.js';
 import { snd } from '../sfx.js';
+import { curKey } from './theme.js';
 
 // ================= VFX lists =================
 // shake: shared state (ST in state.js)
 export const rings=[], flashes=[], beams=[], afters=[];
-export function flash(x,y,r,c,life=6){flashes.push({x,y,r,c,life,max:life});}
+export function flash(x,y,r,c,life=6){flashes.push({x,y,r:Math.min(r,260),c,life,max:life});}
+// every effect remembers whose it is (the hero, or 'foe' for enemies and the world), so render/vfxdraw.js
+// can draw it in that hero's style (render/theme.js)
+export function tagPush(arr){const p0=Array.prototype.push;arr.push=function(...a){for(const o of a)if(o&&o.st==null)o.st=curKey();return p0.apply(this,a);};}
+tagPush(beams);tagPush(rings);tagPush(flashes);
 
 // ================= comic fx: sound words, bursts, focus lines, impact frames =================
 export const comics=[];

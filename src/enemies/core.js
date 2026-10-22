@@ -1,5 +1,6 @@
 // Enemy framework: defineEnemy, spawning, AI helpers, damage, waves.
 import '../heroes/index.js'; // evaluation order: runs after heroes/index.js
+import { vfxHit } from '../render/vfxcore.js';
 import { ST } from '../state.js';
 import { ACID, F, FIRE, G, GFIRE, KIND, L, LAVA, P, R, RUBBLE, S, WATER, rgb } from '../world/materials.js';
 import { H, N, VW, W, t } from '../world/grid.js';
@@ -68,6 +69,7 @@ function rivalOf(e){
 export function enemyAt(x,y,pad){for(const e of enemies){if(Math.abs(x-e.x)<=e.def.w/2+pad&&Math.abs(y-e.y)<=e.def.h/2+pad)return e;}return null;}
 export function nearestEnemy(x,y,r){let b=null,bd=r;for(const e of enemies){const d=Math.hypot(e.x-x,e.y-y);if(d<bd){bd=d;b=e;}}return b;}
 export function hitEnemy(e,dmg,kx,ky){if(e.hp<=0)return;
+  if(ST.pctx&&dmg>=8&&ST.frame-(e.mem.hfx||-9)>3){e.mem.hfx=ST.frame;vfxHit(e.x+(R()-.5)*e.def.w*.4,e.y+(R()-.5)*e.def.h*.4,dmg);} // comic impact star (render/vfxcore.js)
   if(e.host){e.flash=5;if(e.host.hp>0)hitEnemy(e.host,dmg*(e.mult||1),0,0);return;} // a titan's weak point passes the hit on, multiplied
   if(e.def.titan){kx=ky=0;}
   if(ST.hitHook)dmg=ST.hitHook(e,dmg); // statuses and combos (heroes/abilities.js)

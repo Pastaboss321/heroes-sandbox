@@ -1,5 +1,6 @@
 // Explosions, back-wall hits, punch-out.
 import { flash, fxBoom, rings } from '../render/fx.js';
+import { vfxBoom } from '../render/vfxcore.js';
 import { ST } from '../state.js';
 import { EMBER, EMPTY, FIRE, GFIRE, GLASS, HARD, ICE, KIND, L, NEON, OBSID, OIL, P, PROPANE, R, RUBBLE, S, SMOKE, STEEL, rgb } from './materials.js';
 import { PHYS } from './physics.js';
@@ -56,6 +57,7 @@ export function explode(cx,cy,r,opt={}){
   flash(cx,cy,r*3.2,green?[60,255,110]:ec||[255,170,60],9);
   rings.push({x:cx,y:cy,r:r*.5,vr:Math.max(1.5,r*.24),life:14,c:green?[120,255,160]:ec||[255,220,150]});
   if(r>7)rings.push({x:cx,y:cy,r:r*.3,vr:Math.max(1,r*.14),life:18,c:[200,190,170]});
+  vfxBoom(cx,cy,r,opt); // comic fireball, sparks, flare and the hero style's extra layer (render/vfxcore.js)
   ST.shake=Math.min(22,ST.shake+r*.6);
   const dx=pl_.x-cx,dy=pl_.y-8-cy,dd=Math.hypot(dx,dy);
   if(dd<r*2.2&&dd>0&&!opt.self){pl_.vx+=dx/dd*3;pl_.vy+=dy/dd*3-1;}

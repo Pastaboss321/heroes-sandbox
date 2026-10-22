@@ -7,13 +7,15 @@ import { ignite } from '../world/sim.js';
 import { BLDS, NAT, bodies, gnd, q, rid, vis } from '../world/support.js';
 import { bodyAt, makeBody } from '../world/bodies.js';
 import { MP, crumble, gcol, pvx, pvy, px, py, solidAt, spawn } from '../world/particles.js';
-import { afters, beams, flash, flashes, fxBurst, fxImpact, fxWord, rings } from '../render/fx.js';
+import { afters, beams, flash, flashes, fxBurst, fxImpact, fxWord, rings, tagPush } from '../render/fx.js';
 import { bgHit, explode, ringChunks } from '../world/destruction.js';
 import { iceAt } from './xmen.js';
 import { SKY, boxHit, carve, glowRGB, hand, hurt, mouse, pl_ } from '../player.js';
 import { damageCone, damageEnemies, damageLine, enemies, enemyAt, hitEnemy, nearestEnemy } from '../enemies/core.js';
 import { AOE_MAXR } from './aoe.js';
 import { sliceLine } from '../world/slice.js';
+import { fxCrack, fxFlare, fxSigil, puff, pk, screenFlash, zoomPunch } from '../render/vfxcore.js';
+import { curKey, themeOf } from '../render/theme.js';
 
 // ================= powers =================
 // A power is {n:name, fn(a,p,use)} (a = aim from the hand, use(cost) spends energy) or
@@ -22,6 +24,7 @@ import { sliceLine } from '../world/slice.js';
 // spawn menu state (sandbox): tool = what the next click places; pause/slow/god/inf are its toggles
 export const SPAWN={open:false,tool:null,brush:4,snap:true,pause:false,slow:false,god:false,inf:false,peace:false};
 export const shots=[],drones=[],strikes=[];
+tagPush(shots); // projectiles are drawn in the style of whoever fired them
  let tkPrev=false;
 export function aim(){const h=hand();const dx=mouse.wx-h.x,dy=mouse.wy-h.y,d=Math.hypot(dx,dy)||1;return{h,dx:dx/d,dy:dy/d,d};}
 export const CYAN=[150,235,255], BLUE=[160,205,255], GAMMA=[130,255,90];
@@ -136,6 +139,7 @@ export function quake(x,y,o={}){
     else if((KIND[m]===P||KIND[m]===L)&&R()<.35*(1-d/r)){spawn(X,Y,(R()-.5)*2,-2-R()*3.5,col[i],80,m,0);t[i]=0;wake(i);}
   }
   explode(x,y+2,7,{fire:.15,green,col:o.col,self:true});ringChunks(x,y+4,r*.6,true);
+  fxCrack(x,y+1,r*1.6,gc,{life:40,n:8});puff(x,y-2,Math.min(12,4+r/6|0),4,pk([176,166,146]),pk([128,120,106]),{flat:.25,sp:2.4,up:0,life:46,rise:false,spread:r*.5});zoomPunch(x,y,.035); // the ground splits and a dust wave rolls out
   damageEnemies(x,y,r*1.3/(ST.aoeC||1),45,0,-4);
   for(let k=0;k<3;k++)rings.push({x,y,r:4+k*4,vr:2.4+k*.6,life:18+k*3,c:gc});
   for(let k=0;k<120;k++){const a=Math.PI+R()*Math.PI;spawn(x,y,Math.cos(a)*5,Math.sin(a)*3.5,green?gcol():pickC(gc),20+R()*25,0,1,1);}
@@ -170,9 +174,10 @@ export function lightningStrike(x,ty,r){
   for(;y<yEnd&&y<H-1;y++){if(y>=0){const m=t[y*W+x];if(m&&KIND[m]!==G&&KIND[m]!==F)break;}if(enemyAt(x,y,4))break;}
   const pts=[[x+(R()-.5)*30,ST.camY-10]];let cx=pts[0][0],cy=pts[0][1];
   while(cy<y){cy+=8+R()*6;cx+=(x-cx)*.3+(R()-.5)*10;pts.push([cx,Math.min(cy,y)]);}
-  beams.push({pts,life:4,c:[245,250,255],g:[130,180,255]});
+  beams.push({pts,life:4,c:[245,250,255],g:[130,180,255],w:1.8,st:'zap'});
   for(let f=0;f<2;f++){const st=pts[(R()*pts.length)|0];const fp=[st];let fx=st[0],fy=st[1];for(let k=0;k<4;k++){fx+=(R()-.5)*14;fy+=6+R()*4;fp.push([fx,fy]);}beams.push({pts:fp,life:3,c:[200,220,255],g:[90,140,255]});}
   explode(x,y,r,{col:BLUE});
+  fxCrack(x,y,r*2.2+8,[170,205,255],{life:30});fxFlare(x,y,r*2,[200,225,255],{n:4,life:8});screenFlash([200,220,255],.2);zoomPunch(x,y,.02); // scorched glowing cracks and a white sky flash
   ST.dmgTag='shock';damageEnemies(x,y,r*2,30,0,-2);ST.dmgTag=null;
   flash(x,y,r*5,[150,190,255],8);flash(x,ST.camY+VH/2,200,[60,80,130],4);
   ST.shake=Math.min(24,ST.shake+r*.6);
@@ -201,6 +206,7 @@ export function updStorm(){
 export function nova(){
   fxWord(pl_.x,pl_.y-34,'VWOOOM!',1.3,'#8dffb0',true);fxBurst(pl_.x,pl_.y-8,70,'#8dffb0');fxImpact(pl_.x,pl_.y-8,3);
   const p=pl_;rings.push({x:p.x,y:p.y-8,r:4,vr:4,life:12,c:[200,255,220]},{x:p.x,y:p.y-8,r:2,vr:3,life:15,c:[60,255,110]});
+  {const TH=themeOf(curKey());fxSigil(p.x,p.y-8,46,TH.pal[2],{kind:TH.sig||'rune',life:22,spin:.14});zoomPunch(p.x,p.y-8,.04);}
   flash(p.x,p.y-8,80,[80,255,130],10);ST.shake=Math.min(22,ST.shake+12);
   const cx=p.x,cy=p.y-8,r=44; bgHit(cx,cy,30);
   for(let yy=-r;yy<=r;yy++)for(let xx=-r;xx<=r;xx++){const d=Math.hypot(xx,yy);if(d>r||d<10)continue;const X=cx+xx|0,Y=cy+yy|0;if(X<0||X>=W||Y<0||Y>=H)continue;const i=Y*W+X,m=t[i];if(!m)continue;

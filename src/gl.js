@@ -8,11 +8,14 @@
 //   - bloom on top
 //   - shockwave rings that bend the image around big explosions
 //   - heat haze above hot things, chromatic aberration on heavy impacts, a colour tint (bullet time)
+//   - a second, wider bloom so energy has a soft halo around a tight glow
+//   - a coloured screen flash and a radial zoom blur for the biggest hits and ultimates (render/vfxcore.js)
+//   - over-bright light runs to white and rolls off on a soft shoulder instead of clipping flat
 // The 2D #view canvas stays above this for the comic overlay, HUD bits and minimap.
 // If WebGL or the shader is unavailable, it falls back to plain sprites, and main.js to its 2D path.
 import { Application, Sprite, Texture, BlurFilter, RenderTexture, Container, Geometry, Mesh, Shader, UniformGroup } from 'pixi.js';
 
-let app = null, simT, glowT, lightRT, blurS, blurC, quad = null, U = null;
+let app = null, simT, glowT, lightRT, blurS, blurC, lightRT2, blurS2, blurC2, quad = null, U = null;
 let simS = null, bloomS = null, glowS = null; // fallback sprites when the compositor can't be built
 
 const VERT = `
@@ -33,6 +36,9 @@ out vec4 finalColor;
 uniform sampler2D uSim;
 uniform sampler2D uLight;
 uniform sampler2D uGlow;
+uniform sampler2D uLight2;
+uniform vec4 uFlash;
+uniform vec4 uZoom;
 uniform vec2 uRes;
 uniform float uTime;
 uniform float uCA;
@@ -66,15 +72,26 @@ void main(){
   off += vec2(sin(p.y * 0.42 + uTime * 7.0), cos(p.x * 0.37 + uTime * 5.3)) * hot * 1.1;
   vec2 uv = clamp((p + off) / uRes, vec2(0.0), vec2(1.0));
   vec3 c;
-  if (uCA > 0.01) {
+  if (uZoom.z > 0.002) { // radial zoom blur out from the impact
+    vec2 dir = (uv - uZoom.xy / uRes) * uZoom.z;
+    c = vec3(0.0);
+    for (int i = 0; i < 8; i++) c += texture(uSim, uv - dir * float(i) * 0.125).rgb;
+    c *= 0.125;
+  } else if (uCA > 0.01) {
     vec2 ca = (uv - 0.5) * uCA / uRes;
     c = vec3(texture(uSim, uv + ca).r, texture(uSim, uv).g, texture(uSim, uv - ca).b);
   } else c = texture(uSim, uv).rgb;
   vec3 L = texture(uLight, uv).rgb;
   vec3 g = texture(uGlow, uv).rgb;
-  c += c * L * uLit;                       // light spill onto nearby surfaces
-  c += L * uBloom * 0.95 + g * uBloom * 0.35; // bloom
+  vec3 L2 = texture(uLight2, uv).rgb;
+  c += c * (L * 0.8 + L2 * 0.25) * uLit;  // light spill onto nearby surfaces
+  c += (L * 0.72 + L2 * 0.3) * uBloom + g * uBloom * 0.28; // bloom: tight glow plus a wide halo
+  c += uFlash.rgb * uFlash.a;
   c = mix(c, c * uTint.rgb, uTint.a);
+  float m = max(max(c.r, c.g), c.b);       // hot cores bleach toward white...
+  if (m > 1.0) c = mix(c, vec3(m), clamp((m - 1.0) * 0.22, 0.0, 0.3));
+  vec3 sh = 0.8 + 0.2 * (1.0 - exp(-(c - 0.8) * 5.0)); // ...and roll off instead of clipping
+  c = mix(c, sh, step(vec3(0.8), c));
   finalColor = vec4(c, 1.0);
 }`;
 
@@ -104,19 +121,24 @@ export async function initGL(simCanvas, glowCanvas, overlay) {
     blurS = new Sprite(glowT);
     blurS.filters = [new BlurFilter({ strength: 6, quality: 3 })];
     blurC = new Container(); blurC.addChild(blurS);
+    lightRT2 = RenderTexture.create({ width: simCanvas.width >> 1, height: simCanvas.height >> 1 }); // the wide halo, at half resolution
+    blurS2 = new Sprite(glowT); blurS2.scale.set(0.5);
+    blurS2.filters = [new BlurFilter({ strength: 7, quality: 3 })];
+    blurC2 = new Container(); blurC2.addChild(blurS2);
     U = new UniformGroup({
       uRes: { value: new Float32Array([simCanvas.width, simCanvas.height]), type: 'vec2<f32>' },
       uTime: { value: 0, type: 'f32' }, uCA: { value: 0, type: 'f32' }, uLit: { value: 0.8, type: 'f32' },
       uBloom: { value: 1, type: 'f32' }, uHaze: { value: 0.6, type: 'f32' },
       uTint: { value: new Float32Array([1, 1, 1, 0]), type: 'vec4<f32>' },
       uHeat: { value: new Float32Array(4), type: 'vec4<f32>' },
+      uFlash: { value: new Float32Array(4), type: 'vec4<f32>' }, uZoom: { value: new Float32Array(4), type: 'vec4<f32>' },
       uW0: { value: new Float32Array(4), type: 'vec4<f32>' }, uW1: { value: new Float32Array(4), type: 'vec4<f32>' },
       uW2: { value: new Float32Array(4), type: 'vec4<f32>' }, uW3: { value: new Float32Array(4), type: 'vec4<f32>' },
       uW4: { value: new Float32Array(4), type: 'vec4<f32>' }, uW5: { value: new Float32Array(4), type: 'vec4<f32>' },
     });
     const shader = Shader.from({
       gl: { vertex: VERT, fragment: FRAG, name: 'hs-composite' },
-      resources: { uSim: simT.source, uLight: lightRT.source, uGlow: glowT.source, comp: U },
+      resources: { uSim: simT.source, uLight: lightRT.source, uGlow: glowT.source, uLight2: lightRT2.source, comp: U },
     });
     const geometry = new Geometry({
       attributes: { aPosition: [0, 0, 1, 0, 1, 1, 0, 1], aUV: [0, 0, 1, 0, 1, 1, 0, 1] },
@@ -126,6 +148,7 @@ export async function initGL(simCanvas, glowCanvas, overlay) {
     app.stage.addChild(quad);
     // render once now: a shader that fails to compile throws or logs here instead of mid-game
     app.renderer.render({ container: blurC, target: lightRT, clear: true });
+    app.renderer.render({ container: blurC2, target: lightRT2, clear: true });
     app.render();
     const gl = app.renderer.gl;
     if (gl && gl.getError && gl.getError() !== 0) throw new Error('GL error after compositor test render');
@@ -142,7 +165,8 @@ export async function initGL(simCanvas, glowCanvas, overlay) {
 }
 
 // x, y, w, h: where the scaled frame goes on screen (includes screen shake); scale: pixels per world pixel
-// fx: {bloom, light, waves:[{x,y,r,s}] in sim pixels, ca, haze, tint:[r,g,b,a], heat:[x,y,r,k] in sim pixels, time}
+// fx: {bloom, light, waves:[{x,y,r,s}] in sim pixels, ca, haze, tint:[r,g,b,a], heat:[x,y,r,k] in sim pixels, time,
+//      flash:[r,g,b,a] (0-1 colour added over the frame), zoom:[x,y,k] (radial blur centre in sim pixels, strength)}
 export function presentGL(x, y, w, h, scale, fx = {}) {
   if (!app) return false;
   const r = app.renderer;
@@ -152,6 +176,7 @@ export function presentGL(x, y, w, h, scale, fx = {}) {
   if (quad) {
     glowT.source.update();
     r.render({ container: blurC, target: lightRT, clear: true });
+    r.render({ container: blurC2, target: lightRT2, clear: true });
     const u = U.uniforms;
     u.uTime = fx.time || 0;
     u.uBloom = bloom ? 1 : 0;
@@ -159,6 +184,8 @@ export function presentGL(x, y, w, h, scale, fx = {}) {
     u.uCA = fx.ca || 0;
     u.uHaze = fx.haze ?? 0.6;
     const T = fx.tint || [1, 1, 1, 0]; u.uTint[0] = T[0]; u.uTint[1] = T[1]; u.uTint[2] = T[2]; u.uTint[3] = T[3];
+    const Fl = fx.flash; u.uFlash[0] = Fl ? Fl[0] : 0; u.uFlash[1] = Fl ? Fl[1] : 0; u.uFlash[2] = Fl ? Fl[2] : 0; u.uFlash[3] = Fl ? Fl[3] : 0;
+    const Z = fx.zoom; u.uZoom[0] = Z ? Z[0] : 0; u.uZoom[1] = Z ? Z[1] : 0; u.uZoom[2] = Z ? Z[2] : 0;
     const Hh = fx.heat; u.uHeat[0] = Hh ? Hh[0] : 0; u.uHeat[1] = Hh ? Hh[1] : 0; u.uHeat[2] = Hh ? Hh[2] : 0; u.uHeat[3] = Hh ? Hh[3] : 0;
     const ws = fx.waves || [];
     for (let k = 0; k < 6; k++) {

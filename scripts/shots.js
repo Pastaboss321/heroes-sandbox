@@ -23,6 +23,24 @@
         for (let Y = 0; Y < h; Y++) for (let X = 0; X < CW; X++) { const i = Math.floor(Y / sc) * W + x0 + Math.floor(X / sc), v = t[i] ? col[i] : (bgB[i] ? bg[i] : 0); d[Y * CW + X] = v ? (v | 0xff000000) : 0xff201418; }
         x2.putImageData(im, 0, oy); x2.fillStyle = '#fff'; x2.font = '12px monospace'; x2.fillText(m + ' ' + W + 'x' + H, 4, oy + 12); oy += h + 4; }
       return errs; },
+    // fire power k of hero id at two enemies and freeze mid-effect; o: {map, ticks, dx, dy, hold, sky, after}
+    power(id, k, o = {}) { const { map = 'city', ticks = 12, dx = 80, dy = -20, hold = true, sky = false, after = 0 } = o;
+      const h = G.CHARS.findIndex((c) => c.id === id); run(map, h); G.SPAWN.peace = false; for (let i = 0; i < 40; i++) G.tick();
+      const p = G.pl_; if (sky) { p.y = -200; p.vy = 0; } G.clearEnemies(); G.spawnEnemy('chitauri', p.x + dx, p.y + dy + 12); G.spawnEnemy('ultron', p.x + dx + 30, p.y + dy - 20);
+      p.en = 100; G.selPower(k); ST.cd = 0;
+      const aim = () => { const [cx, cy] = G.cam; G.mouse.sx = p.x + dx - cx; G.mouse.sy = p.y + dy - cy; G.mouse.wx = p.x + dx; G.mouse.wy = p.y + dy; };
+      G.mouse.down = true; for (let i = 0; i < ticks; i++) { aim(); if (sky) p.vy = 0; p.en = 100; if (!i) ST.ult = 100; G.tick(); if (!hold) G.mouse.down = false; }
+      G.mouse.down = false; for (let i = 0; i < after; i++) G.tick();
+      ST.GS = 'shot'; G.setCam(p.x + dx / 2 - 240, p.y + dy / 2 - 150); G.render(); return G.CH.powers[k].n; },
+    // several power() snapshots tiled into one image: list = [[id, k, o], ...]
+    grid(list, cols = 3, zoom = 1) { const c = overlay(), g = c.getContext('2d'), tw = Math.floor(c.width / cols), th = Math.floor(tw * 270 / 480); g.fillStyle = '#000'; g.fillRect(0, 0, c.width, c.height);
+      const cw = 480 / zoom, ch = 270 / zoom, cx0 = Math.max(0, Math.min(480 - cw, 240 - cw / 2)), cy0 = Math.max(0, Math.min(270 - ch, 150 - ch / 2)); // zoomed crop around the effect
+      const gl = document.getElementById('gl'), vw = document.getElementById('view'); c.style.display = 'none'; const names = [];
+      list.forEach(([id, k, o], n) => { let nm; try { nm = this.power(id, k, o); } catch (e) { nm = 'ERR ' + e.message; } names.push(nm);
+        const sc = ST.scale, sx = ST.ox, sy = ST.oy, x = (n % cols) * tw, y = Math.floor(n / cols) * th;
+        const X0 = sx + cx0 * sc, Y0 = sy + cy0 * sc; if (gl) g.drawImage(gl, X0, Y0, cw * sc, ch * sc, x, y, tw, th); g.drawImage(vw, X0, Y0, cw * sc, ch * sc, x, y, tw, th);
+        g.fillStyle = '#fff'; g.font = '13px monospace'; g.fillText(id + ' ' + nm, x + 4, y + 14); });
+      c.style.display = ''; return names; },
     close() { const c = document.getElementById('lineup'); if (c) c.remove(); },
   };
 })();

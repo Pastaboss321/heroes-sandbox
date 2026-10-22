@@ -12,6 +12,7 @@ import { updParticles } from './world/particles.js';
 import { SPAWN, TSL, updDecoy, updDrones, updFx, updJets, updPins, updShots, updStasis, updStorm, updStrikes, updTelekinesis, updTherm, updVortex, updWaves } from './heroes/powers.js';
 import { ACT } from './heroes/xmen.js';
 import { updSlide } from './heroes/iceman.js';
+import { updVfx } from './render/vfxcore.js';
 import { updWave2 } from './heroes/wave2.js';
 import { mouse, pl_, pressed, updCamera, updPlayer } from './player.js';
 import { cast, castUlt } from './heroes/index.js';
@@ -57,7 +58,7 @@ export function tick(){
     const pf=ST.prof||(ST.prof={step:0,bodies:0,support:0,max:0,maxAt:''});pf.step=a2-a1;pf.bodies=a3-a2;pf.support=a4-a3;const mx=Math.max(pf.step,pf.bodies,pf.support);if(mx>pf.max){pf.max=mx;pf.maxAt=mx===pf.step?'step':mx===pf.bodies?'bodies':'support';}}
   ST.simMs=ST.simMs*.95+(performance.now()-t0)*.05;
   lap('sim');if(world)updParticles();lap('particles');
-  updFx();updWaves();lap('fx');
+  updFx();updWaves();updVfx();lap('fx');
   updTravel();if(ST.mindT>0)ST.mindT--;if(ST.aoeShow>0)ST.aoeShow--;
   for(const k in pressed)pressed[k]=false;
 }

@@ -25,6 +25,7 @@ import { drawAxe, drawHammer, drawSlip, drawSprite } from './sprites.js';
 import { groundBelow } from '../ui/spawn.js';
 import { drawChain } from '../heroes/wave4.js';
 import { drawStatus, drawSummons } from '../heroes/abilities.js';
+import { drawAuras, drawBeamFx, drawFlashFx, drawFxBack, drawFxFront, drawRingFx, drawShieldFx, drawShotFx, drawStatusFx } from './vfxdraw.js';
 
 const flick=new Float32Array(256);
 const SPACE_ROW=new Uint32Array(VH);
@@ -85,10 +86,14 @@ export function render(){
   }
   for(let n=0;n<ST.np;n++){const c=pc[n],gl=pg[n]&1;if(pg[n]&16){pixA(px[n],py[n],c,Math.min(1,pl[n]/PHYS.dust.fade)*.55);continue;}pix(px[n],py[n],c,gl?c:0);const vx=pvx[n],vy=pvy[n];
     if(vx*vx+vy*vy>4.5){const c2=shade(c,.62);pix(px[n]-vx*.45,py[n]-vy*.45,c2,gl?c2:0);}} // motion streaks on fast debris and sparks
+  const VT=ST.vfxT||(ST.vfxT={});let vt=performance.now();const vlap=k=>{const n=performance.now();VT[k]=n-vt;vt=n;}; // debug: VFX ms per part (GAME.ST.vfxT)
+  drawFxBack(); // comic smoke, shards, goo (render/vfxdraw.js)
+  vlap('back');
   // projectiles
   for(const s of shots){
     if(s.delay>0)continue;
     if(s.draw){s.draw(s,pix);continue;} // shots that draw themselves (Cap's shield)
+    if(s.type!=='hammer'&&s.type!=='bomb'&&s.type!=='pin'&&s.type!=='axe'){drawShotFx(s);continue;} // energy bolts, shards, cards, blades... in the shooter's style
     if(s.type!=='hammer'&&s.type!=='bomb'){const g=s.col?rgb(s.col[0]*.6,s.col[1]*.6,s.col[2]*.6):s.type==='missile'?rgb(255,150,60):rgb(60,200,90);line(s.x-s.vx*1.6,s.y-s.vy*1.6,s.x-s.vx*.3,s.y-s.vy*.3,g,g);}
     if(s.type==='missile'){pix(s.x,s.y,rgb(210,210,220));pix(s.x-s.vx*.3,s.y-s.vy*.3,rgb(140,140,150));pix(s.x-s.vx*.6,s.y-s.vy*.6,rgb(255,200,80),rgb(255,150,40));}
     else if(s.type==='hammer'){const ca=Math.cos(s.spin),sa=Math.sin(s.spin);for(let k=-2;k<=2;k++)for(let w=-1;w<=1;w++)pix(s.x+k*ca-w*sa,s.y+k*sa+w*ca,rgb(170,176,186),rgb(90,130,220));for(let k=2;k<5;k++)pix(s.x-k*sa,s.y+k*ca,rgb(110,80,50));}
@@ -97,16 +102,13 @@ export function render(){
     else{const c=rgb(220,255,225),r=s.type==='bolt'?2:1;for(let k=-r;k<=r;k++){pix(s.x+k,s.y,c,c);pix(s.x,s.y+k,c,c);}if(r>1){pix(s.x+1,s.y+1,c,c);pix(s.x-1,s.y-1,c,c);pix(s.x+1,s.y-1,c,c);pix(s.x-1,s.y+1,c,c);}}
   }
   // beams & arcs
-  for(const b of beams){
-    const c=rgb(b.c[0],b.c[1],b.c[2]),g=rgb(b.g[0],b.g[1],b.g[2]);
-    if(b.pts){for(let k=1;k<b.pts.length;k++)line(b.pts[k-1][0],b.pts[k-1][1],b.pts[k][0],b.pts[k][1],c,g);}
-    else{const w=b.w||1;const dx=b.x1-b.x0,dy=b.y1-b.y0,d=Math.hypot(dx,dy)||1,nx=-dy/d,ny=dx/d;
-      for(let k=-w;k<=w;k++){const edge=Math.abs(k)===w;line(b.x0+nx*k,b.y0+ny*k,b.x1+nx*k,b.y1+ny*k,edge?g:c,g);}}
-  }
+  vlap('shots');
+  for(const b of beams)drawBeamFx(b); // layered beams and arcs (render/vfxdraw.js)
+  vlap('beams');
   // drones
   for(const d of drones){for(let yy=0;yy<5;yy++)for(let xx=0;xx<7;xx++){const eye=yy===2&&(xx===2||xx===4);if((yy===0||yy===4)&&(xx===0||xx===6))continue;pix(d.x-3+xx,d.y-2+yy,eye?rgb(255,90,70):yy===0?rgb(150,158,170):rgb(100,108,120),eye?rgb(255,60,40):0);}}
   for(const e of enemies)drawEnemy(e);
-  drawSummons();drawStatus(pix,enemies);
+  drawSummons();drawStatus(pix,enemies);drawStatusFx(enemies);
   drawWave2();
   // ---- new power visuals: planted / falling / towed Mjolnir, Stormbreaker, thermite, the X-Jet, Iceman's decoy
   for(const P2 of pins)drawHammer(P2.x,P2.y-2,-Math.PI/2);
@@ -129,16 +131,20 @@ export function render(){
   if(ST.CH.cape&&p.hist.length>3){const yo=ST.PH-5;for(let k=1;k<Math.min(8,p.hist.length);k++){const [hx,hy]=p.hist[k];const wv=Math.sin(ST.frame*.3+k)*1.2;pix(hx-p.face*(2+k*.4),hy-yo+k*.6+wv,k<4?ST.CH.cape[0]:ST.CH.cape[1]);pix(hx-p.face*(2+k*.4),hy-yo+1+k*.6+wv,ST.CH.cape[1]);}}
   if(p.ant>0)drawSprite(p.x,p.y+5,0,p.face,false,(ST.frame>>2)&1?FANT_A:FANT_B,FANT_PAL);
   if(ST.CH.board&&p.fly){const c=Math.cos(p.ang),s2=Math.sin(p.ang),bx=p.x-s2*1,by=p.y+1;for(let k=-9;k<=9;k++){const X=bx+k*c,Y=by+k*s2,edge=Math.abs(k)>7;pix(X,Y,edge?rgb(150,156,172):rgb(226,232,244),edge?0:rgb(90,160,230));if(Math.abs(k)<8)pix(X,Y+1,rgb(110,116,130));}} // the Surfer's board
+  if(!p.slip&&!p.blob)drawAuras(p,ST.CH.id); // phoenix wings, binary flame, rage... (render/vfxdraw.js)
   if(p.slip)drawSlip(p.slip);else if(p.blob)drawBlob(p);else drawSprite(p.x,p.y+PP*ST.SZ,p.ang,p.face,false,posePlayer(p),p.metal>0?metalPal():null,p.hurtF,p.stealth>0,ST.SZ);
   const h=hand();
   if(ST.CH.id==='thor'&&!p.tow&&!pins.length&&!shots.some(s=>s.type==='hammer'||s.type==='pin')){for(let yy=0;yy<3;yy++)pix(h.x,h.y+yy,rgb(110,80,50));for(let yy=-2;yy<0;yy++)for(let xx=-1;xx<=1;xx++)pix(h.x+xx,h.y+yy,rgb(160,166,176));}
   else if(ST.CH.id!=='hulk')pix(h.x,h.y,glowRGB(),glowRGB());
   if(mouse.down&&ST.GS==='play'&&ST.CH.id!=='hulk'){const gc=ST.CH.glow,c=rgb(gc[0],gc[1],gc[2]),rr=4.5+Math.sin(ST.frame*.4);for(let k=0;k<6;k++){const a=k/6*6.283+ST.frame*.18;pix(h.x+Math.cos(a)*rr,h.y+Math.sin(a)*rr,c,c);pix(h.x+Math.cos(a+.25)*rr,h.y+Math.sin(a+.25)*rr,c,c);}}
-  if(ST.shieldOn){const r=17;for(let k=0;k<120;k++){const a=k/120*6.283;const rr=r+Math.sin(a*8+ST.frame*.4)*.7;const hex=(k+(ST.frame>>2))%10<5;pix(p.x+Math.cos(a)*rr,p.y-8+Math.sin(a)*rr,hex?rgb(...ST.shieldC[0]):rgb(...ST.shieldC[1]),rgb(...ST.shieldC[2]));}
-    for(let k=0;k<12;k++){const a=R()*6.283,rr=R()*r;gaddS((p.x+Math.cos(a)*rr-ST.CX)|0,(p.y-8+Math.sin(a)*rr-ST.CY)|0,ST.shieldC[2][0]/6,ST.shieldC[2][1]/6,ST.shieldC[2][2]/6);}}
-  for(const r of rings){const a=Math.min(1,r.life/10),c=rgb(r.c[0]*a,r.c[1]*a,r.c[2]*a);if(ink&&r.r>5)circle(r.x,r.y,r.r+1,rgb(20,17,15),0);circle(r.x,r.y,r.r,c,c);if(r.r>8)circle(r.x,r.y,r.r-1,c,c);}
-  for(const f of flashes){const k=f.life/f.max,rr=f.r|0,sx=(f.x-ST.CX)|0,sy=(f.y-ST.CY)|0;
-    for(let y=-rr;y<=rr;y+=2)for(let x=-rr;x<=rr;x+=2){const d=Math.sqrt(x*x+y*y)/rr;if(d>=1)continue;const s=(1-d)*(1-d)*k*.9;const r=f.c[0]*s,g=f.c[1]*s,b=f.c[2]*s;gaddS(sx+x,sy+y,r,g,b);gaddS(sx+x+1,sy+y,r,g,b);gaddS(sx+x,sy+y+1,r,g,b);gaddS(sx+x+1,sy+y+1,r,g,b);}}
+  if(ST.shieldOn)drawShieldFx(p.x,p.y-8,17,ST.shieldC,ST.CH.id); // the bubble in the hero's style (render/vfxdraw.js)
+  vt=performance.now();
+  {const n0=rings.length-40;for(let i=0;i<rings.length;i++)drawRingFx(rings[i],i<n0);} // past the newest 40, rings draw as thin lines (chain blasts can leave 300)
+  vlap('rings');
+  for(const f of flashes)drawFlashFx(f);
+  vlap('flashes');
+  drawFxFront(); // sparks, embers, stars, runes, sigils, slashes, flares (render/vfxdraw.js)
+  vlap('front');
   if(ST.stasis){const s=ST.stasis,r=s.r,x0=Math.max(0,(s.x-r-ST.CX)|0),x1=Math.min(VW-1,(s.x+r-ST.CX)|0),y0=Math.max(0,(s.y-r-ST.CY)|0),y1=Math.min(VH-1,(s.y+r-ST.CY)|0),k=Math.min(1,s.life/30);
     for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const dx=x+ST.CX-s.x,dy=y+ST.CY-s.y,d2=dx*dx+dy*dy;if(d2>r*r)continue;const o=y*VW+x,c=buf[o],l=lumC(c),a=.35*k;
       buf[o]=rgb((c&255)*(1-a)+(l*.7+90)*a,((c>>8)&255)*(1-a)+(l*.5+40)*a,((c>>16)&255)*(1-a)+(l*.7+110)*a);if(d2>(r-2)*(r-2)&&((x+y+(ST.frame>>1))&3)){buf[o]=rgb(255,170,235);gbuf[o]=rgb(160,60,140);}}}
@@ -158,7 +164,8 @@ export function render(){
   sx-=(ST.camX-ST.CX)*ST.scale;sy-=(ST.camY-ST.CY)*ST.scale; // sub-pixel camera: the frame glides instead of stepping a whole pixel at a time
   if(ST.GL){presentGL(ST.ox+sx,ST.oy+sy,VW*ST.scale,VH*ST.scale,ST.scale,{bloom:SET.bloom,light:SET.light,time:performance.now()/1000,ca:SET.fx?Math.min(4,ST.caPulse):0,haze:SET.fx?.6:0,
       waves:SET.fx?waves.map(w=>({x:w.x-ST.CX,y:w.y-ST.CY,r:w.r,s:w.s*Math.min(1,w.life/12)})):null,tint:ST.slowT>0?[.72,.88,1.3,.6]:SPAWN.pause?[.8,.86,1.05,.45]:null,
-      heat:ST.heatZ&&SET.fx?[ST.heatZ.x-ST.CX,ST.heatZ.y-ST.CY,ST.heatZ.r*1.3,Math.min(1,ST.heatZ.life/40)*1.2]:null});ctx.clearRect(0,0,cv.width,cv.height);} // WebGL draws the frame + bloom under the 2D overlay
+      heat:ST.heatZ&&SET.fx?[ST.heatZ.x-ST.CX,ST.heatZ.y-ST.CY,ST.heatZ.r*1.3,Math.min(1,ST.heatZ.life/40)*1.2]:null,
+      flash:SET.fx&&ST.flashK>.01&&ST.flashC?[ST.flashC[0]/255,ST.flashC[1]/255,ST.flashC[2]/255,ST.flashK]:null,zoom:SET.fx&&ST.zoomK>.003?[ST.zoomX-ST.CX,ST.zoomY-ST.CY,ST.zoomK]:null});ctx.clearRect(0,0,cv.width,cv.height);} // WebGL draws the frame + bloom under the 2D overlay
   else{ // 2D-canvas fallback
     bctx.clearRect(0,0,VW/2,VH/2);bctx.filter='blur(3px)';bctx.drawImage(glc,0,0,VW/2,VH/2);bctx.filter='none';
     ctx.fillStyle='#050806';ctx.fillRect(0,0,cv.width,cv.height);

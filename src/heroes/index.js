@@ -1,5 +1,6 @@
 // Hero roster (CHARS), setChar and cast.
-import { boxHit, pl_ } from '../player.js';
+import { boxHit, hand, pl_ } from '../player.js';
+import { vfxCast } from '../render/vfxcore.js';
 import { ST } from '../state.js';
 import { R } from '../world/materials.js';
 import { spawn } from '../world/particles.js';
@@ -33,6 +34,7 @@ import { CHAR_PANTHER } from './panther.js';
 import { CHAR_CAP, CHAR_MARVEL, CHAR_SURFER } from './cosmic.js';
 import { CHAR_POOL, CHAR_RIDER } from './wave4.js';
 import { applyKits } from './kits2b.js';
+import { applySigFx } from './sigfx.js';
 import { CHAR_HELA, CHAR_MOON, CHAR_SHANG, CHAR_THANOS } from './wave5.js';
 import { CHAR_GAMBIT, CHAR_KURT, CHAR_MILES, CHAR_QUILL } from './wave6.js';
 import { aoeCost } from './aoe.js';
@@ -42,6 +44,7 @@ import { buildPowerBar, pwDiv } from '../ui/hud.js';
 
 export const CHARS=[CHAR_DOOM,CHAR_HULK,CHAR_THOR,CHAR_IRON,CHAR_WOLVERINE,CHAR_CYCLOPS,CHAR_ICEMAN,CHAR_JEAN,CHAR_SPIDEY,CHAR_WANDA,CHAR_STRANGE,CHAR_ANTMAN,CHAR_JUGGERNAUT,CHAR_ULTRON,CHAR_MAGNETO,CHAR_STORM,CHAR_VENOM,CHAR_REED,CHAR_SUE,CHAR_TORCH,CHAR_THING,CHAR_PANTHER,CHAR_CAP,CHAR_MARVEL,CHAR_SURFER,CHAR_RIDER,CHAR_POOL,CHAR_THANOS,CHAR_HELA,CHAR_MOON,CHAR_SHANG,CHAR_GAMBIT,CHAR_KURT,CHAR_QUILL,CHAR_MILES]; // entries live in src/heroes/<hero>.js
 applyKits(CHARS); // reworked and new powers (heroes/kits2a.js, kits2b.js)
+applySigFx(CHARS); // signature visuals for each hero's showpiece powers (heroes/sigfx.js)
 ST.CH=CHARS[0];
 export const HERO_UI={juggernaut:'#7a2a1e',ultron:'#8a909e',magneto:'#5a2470',spidey:'#c8282f',wanda:'#a8183a',strange:'#2a52a0',antman:'#8a1c1c',doom:'#2f8f4e',hulk:'#6aa84f',thor:'#3a6fd8',iron:'#c23a2b',wolverine:'#e8b21f',cyclops:'#1f3c8a',iceman:'#7cc8f0',jean:'#c42a3a',storm:'#2a2a33',venom:'#1c1c28',reed:'#4f86b8',sue:'#7fb2d8',torch:'#e8731f',thing:'#d0702c',panther:'#2a2236',cap:'#2c4aa0',marvel:'#c8282f',surfer:'#9aa4b8',rider:'#e8731f',pool:'#9a1c24',thanos:'#6a3c8a',hela:'#1f5a34',moon:'#d8dce6',shang:'#a82a2a',gambit:'#7a4a2c',kurt:'#2c3c8a',quill:'#8a2a22',miles:'#1a1a22'};
 export const HERO_DARK=new Set(['hulk','wolverine','iceman','sue','surfer','moon']);
@@ -72,7 +75,8 @@ export function cast(){
       ST.ult=0;ST.ultT=200;ST.hitstop=Math.max(ST.hitstop,6);fxWord(p.x,p.y-ST.PH-18,pw.n.toUpperCase()+'!',1.7,'#ffc93c',true);snd('charge',p.x,p.y,{pitch:.5,v:1});
       document.body.classList.add('cine');clearTimeout(ultCine);ultCine=setTimeout(()=>document.body.classList.remove('cine'),1500);}
     use=()=>true;}
-  const c0=ST.cd;pw.fn(a,p,use);p.castF=12;if(ST.cd>c0)p.recoilF=6;
+  const c0=ST.cd,e0=p.en,u0=ST.ultT;pw.fn(a,p,use);p.castF=12;if(ST.cd>c0)p.recoilF=6;
+  if(ST.cd>c0||p.en<e0-.01||pw.ult&&u0===200)vfxCast(pw,a,p,hand); // the hand flares in the hero's style (render/vfxcore.js)
   if(pw.ult&&ST.cd>c0)ST.ultT=0; // a one-shot ultimate is spent; a held one keeps going for a few seconds
   if(denied&&ST.frame-(p.denyT||-99)>20){p.denyT=ST.frame;snd('deny',p.x,p.y,{v:.6});const d=pwDiv.children[ST.cur];if(d){d.classList.remove('deny');void d.offsetWidth;d.classList.add('deny');}}
   if(ST.cd>c0)ST.cdMax=ST.cd;

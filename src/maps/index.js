@@ -13,6 +13,7 @@ import { genXMansion } from './xmansion.js';
 import { ambSavage, genSavageLand } from './savage.js';
 import { ambArctic, genArctic } from './arctic.js';
 import { afters, beams, comics, flashes, rings } from '../render/fx.js';
+import { clearVfx } from '../render/vfxcore.js';
 import { drones, jets, pins, shots, strikes, therm, waves } from '../heroes/powers.js';
 import { ACT } from '../heroes/xmen.js';
 import { slide } from '../heroes/iceman.js';
@@ -60,7 +61,7 @@ export function regen(){
   ST.np=0;ACT.length=0;slide.length=0;shots.length=0;drones.length=0;strikes.length=0;ST.vortex=null;ST.held=null;ST.heldE=null;ST.storm=null;clearEnemies();
   ants.length=0;tramps.length=0;gzones.length=0;limbo.length=0;portals.a=portals.b=null;RW.length=0;
   pins.length=0;therm.length=0;jets.length=0;waves.length=0;comics.length=0;ST.impactF=0;ST.hurtV=0;ST.decoy=null;ST.stasis=null;ST.slowT=0;ST.heatZ=null;
-  Object.assign(pl_,{script:0,ball:0,tow:null,grip:null,cling:0,crouch:0,stealth:0,grit:0,dodge:0,sprint:0,leap:false,slam:false});ST.wave=0;ST.SPAWNX=50;ST.dark=0;ST.mindT=0;ST.chain=null;booms.length=0;rings.length=0;flashes.length=0;beams.length=0;afters.length=0;
+  Object.assign(pl_,{script:0,ball:0,tow:null,grip:null,cling:0,crouch:0,stealth:0,grit:0,dodge:0,sprint:0,leap:false,slam:false});ST.wave=0;ST.SPAWNX=50;ST.dark=0;ST.mindT=0;ST.chain=null;booms.length=0;rings.length=0;clearVfx();flashes.length=0;beams.length=0;afters.length=0;
   const def=MAPDEFS[mapSel.value]||MAPDEFS.city;setWorld(mapW(def),def.h||720);ST.gk=def.grav||1;ST.GYO=H-640; // extra rows: urban maps drop their street by this for taller skylines
   pin.fill(0);str.fill(10);rid.fill(0);rcount.length=1;ST.PIN2=null;ST.streetY=0;ST.neonCity=mapSel.value==='nyc2099';ST.genMode=true;def.gen();detailPass(def.theme);ST.genMode=false; // props, interiors and caves (maps/detail.js)
   for(let i=0;i<N;i++)bgB[i]=bg[i]!==bgD[i]?1:0;
