@@ -9,7 +9,7 @@ import { genCity, noise2 } from './city.js';
 import { genForest } from './forest.js';
 import { genNYC } from './nyc.js';
 import { amb2099, genNYC2099 } from './nyc2099.js';
-import { genXMansion } from './xmansion.js';
+import { ambXMansion, genXMansion } from './xmansion.js';
 import { ambSavage, genSavageLand } from './savage.js';
 import { ambArctic, genArctic } from './arctic.js';
 import { afters, beams, comics, flashes, rings } from '../render/fx.js';
@@ -32,7 +32,7 @@ import { detailPass } from './detail.js';
 export const mapSel=document.getElementById('map');
 // w: world width (heroes are fast, so maps are long); h: height (default 720: deep underground, and the
 // urban maps sit their street lower for taller skylines, ST.GYO); grav: gravity multiplier; space: off-world
-export const MAPDEFS={city:{name:'City',theme:'urban',gen:genCity,w:7200},nyc:{name:'New York',theme:'urban',gen:genNYC,w:8000},nyc2099:{name:'NYC 2099',theme:'urban',gen:genNYC2099,amb:amb2099,rain:true,w:8000},forest:{name:'Forest',theme:'nature',gen:genForest,w:6400},xmansion:{name:'X-Mansion',theme:'estate',gen:genXMansion,w:4800},
+export const MAPDEFS={city:{name:'City',theme:'urban',gen:genCity,w:7200},nyc:{name:'New York',theme:'urban',gen:genNYC,w:8000},nyc2099:{name:'NYC 2099',theme:'urban',gen:genNYC2099,amb:amb2099,rain:true,w:8000},forest:{name:'Forest',theme:'nature',gen:genForest,w:6400},xmansion:{name:'X-Mansion',theme:'estate',gen:genXMansion,amb:ambXMansion,w:4800},
   retro:{name:'Earth-828 NYC',theme:'urban',gen:genRetro,amb:ambRetro,w:7200},
   incursion:{name:'Incursion NYC',theme:'urban',gen:genIncursion,amb:ambIncursion,w:7200},
   savage:{name:'Savage Land',theme:'nature',gen:genSavageLand,amb:ambSavage,w:8000},arctic:{name:'Weapon X',theme:'snow',gen:genArctic,amb:ambArctic,wind:true,w:6400},
