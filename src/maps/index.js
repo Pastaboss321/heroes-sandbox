@@ -16,6 +16,7 @@ import { afters, beams, comics, flashes, rings } from '../render/fx.js';
 import { clearVfx } from '../render/vfxcore.js';
 import { drones, jets, pins, shots, strikes, therm, waves } from '../heroes/powers.js';
 import { ACT } from '../heroes/xmen.js';
+import { resetHeroTimers, summons } from '../heroes/abilities.js';
 import { slide } from '../heroes/iceman.js';
 import { RW, ants, gzones, limbo, portals, tramps } from '../heroes/wave2.js';
 import { pl_, spawnPlayer } from '../player.js';
@@ -58,7 +59,7 @@ function shadeWorld(){
 let R0gen=1; // pieces registered at generation time have rid < R0gen (Wrecking Crew counts what is still standing)
 export function countBuilt(){let n=0;for(let i=0;i<N;i++){const m=t[i];if(KIND[m]===S&&!NAT[m]&&m!==LEAF&&rid[i]>0&&rid[i]<R0gen)n++;}return n;}
 export function regen(){
-  ST.np=0;ACT.length=0;slide.length=0;shots.length=0;drones.length=0;strikes.length=0;ST.vortex=null;ST.held=null;ST.heldE=null;ST.storm=null;clearEnemies();
+  ST.np=0;ACT.length=0;summons.length=0;resetHeroTimers(pl_);slide.length=0;shots.length=0;drones.length=0;strikes.length=0;ST.vortex=null;ST.held=null;ST.heldE=null;ST.storm=null;clearEnemies();
   ants.length=0;tramps.length=0;gzones.length=0;limbo.length=0;portals.a=portals.b=null;RW.length=0;
   pins.length=0;therm.length=0;jets.length=0;waves.length=0;comics.length=0;ST.impactF=0;ST.hurtV=0;ST.decoy=null;ST.stasis=null;ST.slowT=0;ST.heatZ=null;
   Object.assign(pl_,{script:0,ball:0,tow:null,grip:null,cling:0,crouch:0,stealth:0,grit:0,dodge:0,sprint:0,leap:false,slam:false});ST.wave=0;ST.SPAWNX=50;ST.dark=0;ST.mindT=0;ST.chain=null;booms.length=0;rings.length=0;clearVfx();flashes.length=0;beams.length=0;afters.length=0;

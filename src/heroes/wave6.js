@@ -148,7 +148,8 @@ const SPR_QUILL=[
 "..sss...sSS.."];
 const PAL_QUILL={s:rgb(192,192,202),S:rgb(130,130,142),e:rgb(255,60,50),g:rgb(80,80,90),c:rgb(150,56,42),C:rgb(96,34,26),L:rgb(192,88,66),D:rgb(62,42,42),k:rgb(28,28,32),K:rgb(54,54,62),n:rgb(110,74,40),Y:rgb(222,190,80),G:rgb(152,152,162),b:rgb(100,66,40),T:rgb(122,44,34)};
 ANIM.quill={leg:14,mid:6,armC:'LcC',tipC:'GGK',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null,cape:'T'};
-const egun=(a,c,el)=>shots.push({x:a.h.x,y:a.h.y,vx:a.dx*8,vy:a.dy*8,type:'egun',life:70,col:c,ecol:c,boom:3,onHit:s=>{explode(s.x|0,s.y|0,4,{self:true,quiet:true,col:c,fire:el==='fire'?.4:0});tagged(el,()=>damageEnemies(s.x,s.y,10,12,0,0));}});
+const egun=(a,c,el)=>{for(const o of pl_.mix>0?[0,.13,-.13]:[0]) // Awesome Mix (heroes/kits3a.js): three-way spread while the tape plays
+  shots.push({x:a.h.x,y:a.h.y,vx:(a.dx-a.dy*o)*8,vy:(a.dy+a.dx*o)*8,type:'egun',life:70,col:c,ecol:c,boom:3,onHit:s=>{explode(s.x|0,s.y|0,4,{self:true,quiet:true,col:c,fire:el==='fire'?.4:0});tagged(el,()=>damageEnemies(s.x,s.y,10,12,0,0));}});};
 function drawMilano(s){const x=s.x,y=s.y,f=s.face,o={},B=rgb(60,90,170),O=rgb(240,140,40),G=rgb(180,190,200);TK.begin();TK.ell(x,y,26,6,B,o);TK.poly([[x-f*20,y-4],[x-f*34,y-14],[x-f*10,y-4]],O,o);TK.poly([[x-f*20,y+4],[x-f*34,y+12],[x-f*10,y+4]],O,o);TK.ell(x+f*12,y-3,8,4,G,o);TK.end();for(let k=0;k<3;k++)spawn(x-f*28,y+(R()-.5)*4,-f*3,0,R()<.5?rgb(150,200,255):rgb(255,255,255),8,0,1,0,1);}
 const QUILL_POWERS=[
  {n:'Element Gun: Fire',fn:(a,p,use)=>{if(!use(3))return;ST.cd=7;egun(a,[255,140,40],'fire');}},
@@ -219,3 +220,4 @@ const MILES_POWERS=[
    for(let k=0;k<30;k++){const an=R()*6.283,r=40+R()*120;venomZap(cx,cy,cx+Math.cos(an)*r,cy+Math.sin(an)*r);}tagged('shock',()=>{for(const e of enemies)if(Math.hypot(e.x-cx,e.y-cy)<160){hitEnemy(e,60,0,-3);applyStatus(e,'stun',90);}});}},
 ];
 export const CHAR_MILES={id:'miles',name:'Miles Morales',spr:SPR_MILES,pal:PAL_MILES,pw:7,ph:19,fly:false,fs:2.4,boost:2,run:2.3,jump:5.6,hp:330,armor:.75,glow:VC,cape:null,thrust:()=>rgb(255,230,120),powers:MILES_POWERS,webs:true};
+export { card, charge, bamf, puff as kpuff, venomZap, KC, VC };

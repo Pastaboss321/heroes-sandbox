@@ -262,3 +262,4 @@ const SHANG_POWERS=[
 ];
 export const CHAR_SHANG={id:'shang',name:'Shang-Chi',spr:SPR_SHANG,pal:PAL_SHANG,pw:7,ph:19,fly:false,fs:2.4,boost:2,run:2.4,jump:5.8,hp:360,armor:.7,glow:RC,cape:null,thrust:()=>rgb(120,220,255),powers:SHANG_POWERS};
 export { EMPTY, markDirty };
+export { necroShot, crescent, ringShot, NG, NGE, ML, RC, STONE_C };

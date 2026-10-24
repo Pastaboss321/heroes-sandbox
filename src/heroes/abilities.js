@@ -71,3 +71,7 @@ export function drawSummons(){for(const s of summons)if(s.draw)s.draw(s);}
 {const hc=document.querySelector('#hud .hcol');if(hc&&!document.getElementById('ult')){const b=document.createElement('div');b.className='bar ulb';b.innerHTML='<div id="ult"></div><b id="ultK">G ULT</b>';hc.appendChild(b);}}
 export function hudUlt(){const el=document.getElementById('ult');if(!el)return;const w=Math.round(ST.ult)+'%';if(el.style.width!==w)el.style.width=w;el.parentNode.classList.toggle('ready',ST.ult>=100);}
 ST.hitHook=onHit;ST.gainUlt=gainUlt;ST.statusTick=tickStatus;ST.blastQ=[];ST.dmgTag=null;
+// timed hero states that powers guard on (`if(p.x>0)return`): their ACT updaters die with a map regen, so
+// regen() and setChar() zero them, or the power would stay locked for the rest of the run
+export const HERO_TIMERS=['nshield','rguard','glide','harvest','parry','throne','mix','isp','caura','fsteps','madder','lbody','prowl','boardOut'];
+export function resetHeroTimers(p){if(p.madder>0)p.sizeT=1;for(const k of HERO_TIMERS)p[k]=0;}
