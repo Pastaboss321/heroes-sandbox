@@ -48,7 +48,7 @@ export function endRun(){
   if(nb)saveBest(id,ST.score);
   $('overT').textContent=res.title;
   const L=$('overL');L.innerHTML='';
-  for(const [label,val,hot] of [...(res.stats||[]),['SCORE',ST.score.toLocaleString(),1]]){const d=document.createElement('div');d.className='stat';const b=document.createElement('b');b.textContent=val;if(hot)b.style.color='#e23b2e';const sp=document.createElement('span');sp.textContent=label;d.append(b,sp);L.appendChild(d);}
+  for(const [label,val,hot] of [...(res.stats||[]),['SCORE',ST.score.toLocaleString(),1]]){const d=document.createElement('div');d.className='stat';const b=document.createElement('b');b.textContent=val;if(hot)b.className='hot';const sp=document.createElement('span');sp.textContent=label;d.append(b,sp);L.appendChild(d);}
   $('overB').textContent=nb?'NEW BEST!':'BEST '+best.toLocaleString();
   overlay('over');
 }
