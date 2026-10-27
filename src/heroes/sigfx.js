@@ -214,6 +214,31 @@ const SIG = {
     'Glitch Shift': (c) => { fxGlitch(c.ox, c.oy - ST.PH / 2, 12, { life: 14 }); fxGlitch(c.p.x, c.p.y - ST.PH / 2, 12, { life: 14 }); },
     'Camouflage': (c) => fxGlitch(c.p.x, c.p.y - ST.PH / 2, 9, { life: 12 }),
   },
+  // Kang the Conqueror: clock faces, nested time rings and eclipse discs in chrono violet and Damocles gold
+  kang: {
+    'Chrono Bolt': (c) => fxSigil(c.hx, c.hy, 10, [190, 140, 255], { kind: 'clock', life: 16, spin: .3, follow: () => [c.hx, c.hy] }),
+    // the lance: a clock face at the muzzle and rings of time racing down the beam
+    'Chronal Lance': { every: true, f: (c) => { fxSigil(c.hx, c.hy, 12, [205, 165, 255], { kind: 'clock', life: 8, spin: .25, follow: () => [c.hx, c.hy] });
+      loop(20, (k) => { if (k % 3 === 0) fxSigil(c.hx + c.a.dx * (40 + k * 16), c.hy + c.a.dy * (40 + k * 16), 9, [225, 190, 255], { kind: 'rings', sq: .5, life: 10, spin: .4 }); }); } },
+    'Force Cascade': (c) => { screenFlash([200, 160, 255], .14);
+      loop(20, (k) => { if (k % 4 === 0) fxSigil(c.hx + Math.cos(c.ang) * (k * 6), c.hy + Math.sin(c.ang) * (k * 6), 14, [205, 165, 255], { kind: 'clock', life: 12, spin: .3 }); }); },
+    'Chrono Stasis': (c) => { fxEclipse(c.mx, c.my, 16, [190, 150, 255], { life: 150 }); screenFlash([180, 140, 255], .2); stars(c.mx, c.my, 18, [200, 160, 255], 2, 40); },
+    'Time Loop': (c) => { fxSigil(c.mx, c.my, 20, [190, 150, 255], { kind: 'clock', life: 60, spin: .4 }); wisps(c.mx, c.my, 8, [210, 175, 255], [120, 60, 200]); },
+    'Entropy Ray': (c) => { loop(40, (k) => { if (k % 4 === 0) { const x = c.hx + (c.mx - c.hx) * (k / 40), y = c.hy + (c.my - c.hy) * (k / 40);
+      fxSigil(x, y, 10, [200, 160, 255], { kind: 'clock', life: 12, spin: .3 }); } }); },
+    'Chronal Rewind': (c) => { screenFlash([180, 130, 255], .18); fxGlitch(c.ox, c.oy - ST.PH / 2, 14, { life: 22 }); },
+    'Temporal Clones': (c) => { for (let k = -1; k <= 1; k++) fxSigil(c.p.x + k * 22, c.p.y - ST.PH / 2, 18, [190, 140, 255], { kind: 'clock', life: 40, spin: k * .08, follow: () => [c.p.x + k * 22, c.p.y - ST.PH / 2] });
+      screenFlash([190, 150, 255], .2); loop(30, (k) => { if (k % 2 === 0) vp(K.MOTE, c.p.x + rnd(-30, 30), c.p.y - rnd(4, 30), 0, -.5, 16, 1.6, .5, pk([255, 236, 200]), pk([150, 90, 235]), 0); }); },
+    'Damocles Base': (c) => { const gy = groundBelow(c.mx | 0, c.my);
+      fxPillar(c.mx, ST.camY - 10, gy, 5, [255, 214, 110], { life: 60, flat: true }); fxSigil(c.mx, gy, 52, [255, 214, 110], { kind: 'clock', sq: .35, life: 70, spin: .08 });
+      loop(60, (k) => { if (k % 10 === 0) fxSigil(c.mx, gy, 16 + k * .5, [220, 180, 255], { kind: 'rings', life: 18, spin: .2 }); }); },
+    'Chrono Barrage': (c) => { fxSigil(c.hx, c.hy, 16, [205, 165, 255], { kind: 'clock', life: 20, spin: .35 }); stars(c.hx, c.hy, 10, [210, 175, 255], 2.4); },
+    'Entropic Nova': (c) => { fxEclipse(c.p.x, c.p.y - ST.PH / 2, 22, [255, 214, 110], { life: 40 });
+      loop(24, (k) => { if (k % 4 === 0) fxSigil(c.p.x, c.p.y - ST.PH / 2, 20 + k * 2, [195, 150, 255], { kind: 'clock', life: 20, spin: -.15 }); }); },
+    // the ultimate: clock faces open across the whole street while the Dynasty comes down
+    'Kang Dynasty': (c) => { screenFlash([255, 214, 110], .35); zoomPunch(c.p.x, c.p.y - ST.PH / 2, .07);
+      loop(60, (k) => { if (k % 6 === 0) fxSigil(c.p.x + rnd(-140, 140), c.p.y - ST.PH / 2 + rnd(-70, 60), 22, k % 12 === 0 ? [255, 214, 110] : [195, 150, 255], { kind: 'clock', life: 26, spin: .1 }); }); },
+  },
 };
 // Nightcrawler's chained teleports: smoke wherever he lands for a while after the cast
 for (const n of ['BAMF Strike', 'Teleport Drop', 'Chain BAMF', 'BAMF Barrage']) SIG.kurt[n] = (c) => { let lx = c.ox, ly = c.oy; bamf(lx, ly - ST.PH / 2); loop(120, () => { const p = c.p; if (Math.hypot(p.x - lx, p.y - ly) > 18) { bamf(lx, ly - ST.PH / 2, .8); bamf(p.x, p.y - ST.PH / 2, .8); } lx = p.x; ly = p.y; }); };

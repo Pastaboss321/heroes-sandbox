@@ -434,4 +434,9 @@ export function drawAuras(p, id) {
   if (p.rguard > 0 && is('shang')) for (let k = 0; k < 10; k++) { const an = f * .1 + k * .628; circL(sx + Math.cos(an) * 15, sy + Math.sin(an) * 15 * .45, 1.5, k & 1 ? 255 : 120, 200, k & 1 ? 80 : 255, .8, .8); }
   if (p.eye > 0 && is('storm')) glowDisc(sx + p.face, sy - PH / 2 + 4, 6, 220, 235, 255, .5, .8);
   if (p.absorb > 0 && is('marvel') && play && f % 2 === 0) { const an = Math.random() * 6.283; vp(K.MOTE, cx + Math.cos(an) * 26, cy + Math.sin(an) * 26, -Math.cos(an) * 1.6, -Math.sin(an) * 1.6, 15, 1.5, .5, pk([255, 240, 170]), pk([255, 170, 60]), 0); }
+  // Kang: a clock face turning around him with chrono motes rising, on while an aegis or his clones are out
+  if (p.chrono > 0 && is('kang')) { const rr = 22 + Math.sin(f * .06) * 2, a0 = f * .035;
+    for (let k = 0; k < 24; k++) { const an = a0 + k / 24 * 6.283, rad = rr + (k % 6 === 0 ? 2 : 0); mixP(sx + Math.cos(an) * rad, sy + Math.sin(an) * rad * .92, 190, 150, 255, .5, .55); }
+    circL(sx, sy, rr * .58, 255, 214, 110, .35, .4, 1, 4, -a0);
+    if (play && f % 3 === 0) vp(K.MOTE, cx + (Math.random() - .5) * 34, cy + (Math.random() - .5) * PH, 0, -.5, 14, 1.5, .4, pk([255, 236, 200]), pk([150, 90, 235]), 0); }
 }

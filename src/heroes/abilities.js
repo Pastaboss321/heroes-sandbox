@@ -73,5 +73,5 @@ export function hudUlt(){const el=document.getElementById('ult');if(!el)return;c
 ST.hitHook=onHit;ST.gainUlt=gainUlt;ST.statusTick=tickStatus;ST.blastQ=[];ST.dmgTag=null;
 // timed hero states that powers guard on (`if(p.x>0)return`): their ACT updaters die with a map regen, so
 // regen() and setChar() zero them, or the power would stay locked for the rest of the run
-export const HERO_TIMERS=['nshield','rguard','glide','harvest','parry','throne','mix','isp','caura','fsteps','madder','lbody','prowl','boardOut'];
+export const HERO_TIMERS=['nshield','rguard','glide','harvest','parry','throne','mix','isp','caura','fsteps','madder','lbody','prowl','boardOut','chrono'];
 export function resetHeroTimers(p){if(p.madder>0)p.sizeT=1;for(const k of HERO_TIMERS)p[k]=0;}
