@@ -10,7 +10,7 @@ import { snd } from '../sfx.js';
 
 // ---- Savage Land: a prehistoric jungle hidden in Antarctica. A live volcano with a lava lake, a waterfall
 // off a plateau, a ruined step pyramid, a tar pit and a buried dinosaur.
-const SAV={VX:820,CX:1300,src:0,pool:[0,0,0],vtop:196};
+export const SAV={VX:820,CX:1300,src:0,pool:[0,0,0],vtop:196};
 function jungleTree(x,gy){
   const h=46+R()*40|0,tw=3;fill(x,gy-h,x+tw,gy+4,WOOD);tint(x,gy-h,x+tw,gy,96,70,44,10);
   const r=10+R()*6|0,cx=x+1,cy=gy-h-2;

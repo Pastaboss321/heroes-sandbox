@@ -2,15 +2,16 @@
 import { ambIncursion, genIncursion } from './incursion.js';
 import { ST } from '../state.js';
 import { GRASS, KIND, LEAF, S, cl, rgb } from '../world/materials.js';
-import { H, N, W, bg, bgB, bgD, booms, col, t } from '../world/grid.js';
+import { H, N, VW, W, bg, bgB, bgD, booms, col, life, t } from '../world/grid.js';
+import { PAR } from './gen.js';
 import { NAT, gnd, pin, rcount, rid, str, supportCheck, unq } from '../world/support.js';
 import { applyTOD } from '../render/look.js';
 import { genCity, noise2 } from './city.js';
 import { genForest } from './forest.js';
 import { genNYC } from './nyc.js';
 import { amb2099, genNYC2099 } from './nyc2099.js';
-import { ambXMansion, genXMansion } from './xmansion.js';
-import { ambSavage, genSavageLand } from './savage.js';
+import { XM, ambXMansion, genXMansion } from './xmansion.js';
+import { SAV, ambSavage, genSavageLand } from './savage.js';
 import { ambArctic, genArctic } from './arctic.js';
 import { afters, beams, comics, flashes, rings } from '../render/fx.js';
 import { clearVfx } from '../render/vfxcore.js';
@@ -22,8 +23,8 @@ import { RW, ants, gzones, limbo, portals, tramps } from '../heroes/wave2.js';
 import { pl_, spawnPlayer } from '../player.js';
 import { clearEnemies } from '../enemies/core.js';
 import { ambRetro, genRetro } from './retro.js';
-import { ambAsgard, genAsgard } from './asgard.js';
-import { ambWakanda, genWakanda } from './wakanda.js';
+import { ASG, ambAsgard, genAsgard } from './asgard.js';
+import { WAK, ambWakanda, genWakanda } from './wakanda.js';
 import { ambSakaar, genSakaar } from './sakaar.js';
 import { ambKnowhere, ambMoon, ambTitan, genKnowhere, genMoon, genTitan } from './space.js';
 import { ambDark, genDark } from './dark.js';
@@ -46,7 +47,22 @@ export const MAPDEFS={city:{name:'City',theme:'urban',gen:genCity,w:7200},nyc:{n
   moon:{name:'The Moon',theme:'moon',gen:genMoon,amb:ambMoon,w:8000,space:true,grav:.4},
   dark:{name:'Dark Dimension',theme:'hell',gen:genDark,amb:ambDark,w:6400,space:true,grav:.8}};
 // the phone build keeps worlds shorter (memory)
-export const mapW=d=>{const w=d.w||1600;return window.HS_MOBILE?Math.max(1600,Math.round(w*.36/32)*32):w;};
+// Maps are generated at half size and every cell is then doubled (MAPK), so buildings, doors, cars and trees
+// are 1:1 with the heroes (a floor fits a 22 px hero). mapW is the final width: 60% of the design width (30% on
+// phones), so the world holds about as many cells as before the scale-up while the height doubles.
+export const MAPK=2;
+export const mapW=d=>{const w=d.w||1600;return Math.max(2400,Math.round(w*(window.HS_MOBILE?.3:.6)/64)*64);};
+const ANCH=[ASG,SAV,WAK,XM];let anchK=1; // per-map anchors (fountain, falls, pools) kept in generation pixels; scaled with the world
+const scaleAnch=k=>{for(const o of ANCH)for(const key in o){const v=o[key];if(typeof v==='number')o[key]=v*k;else if(Array.isArray(v))for(let j=0;j<v.length;j++)if(typeof v[j]==='number')v[j]*=k;}};
+function upscaleWorld(K){
+  const Wg=W,Hg=H,T=t,Cl=col,Lf=life,B=bg,BD=bgD,P=pin,oF=ST.far,oK=ST.farKeep,oB=ST.farBase,oS=ST.farSky,oFW=ST.FW;
+  setWorld(Wg*K,Hg*K);
+  for(let y=0;y<H;y++){const sr=((y/K)|0)*Wg,r=y*W;for(let x=0;x<W;x++){const s=sr+((x/K)|0),i=r+x;t[i]=T[s];col[i]=Cl[s];life[i]=Lf[s];bg[i]=B[s];bgD[i]=BD[s];pin[i]=P[s];}}
+  if(oF){const FW=VW+Math.ceil((W-VW)*PAR)+2,n=FW*H;ST.FW=FW;ST.far=new Uint32Array(n);ST.farKeep=new Uint8Array(n);ST.farBase=new Uint32Array(n);ST.farSky=new Uint8Array(n);
+    for(let y=0;y<H;y++){const sr=((y/K)|0)*oFW;for(let x=0;x<FW;x++){const s=sr+Math.min(oFW-1,(x/K)|0),i=y*FW+x;ST.far[i]=oF[s];ST.farKeep[i]=oK[s];ST.farBase[i]=oB?oB[s]:oF[s];ST.farSky[i]=oS?oS[s]:0;}}}
+  ST.SPAWNX*=K;ST.streetY*=K;ST.GYO*=K;scaleAnch(K);anchK=K;
+}
+
 for(const id in MAPDEFS){const o=document.createElement('option');o.value=id;o.textContent=MAPDEFS[id].name;mapSel.appendChild(o);}
 function shadeWorld(){
   for(let x=0;x<W;x++){let depth=-1;
@@ -64,8 +80,8 @@ export function regen(){
   ants.length=0;tramps.length=0;gzones.length=0;limbo.length=0;portals.a=portals.b=null;RW.length=0;
   pins.length=0;therm.length=0;jets.length=0;waves.length=0;comics.length=0;ST.impactF=0;ST.hurtV=0;ST.decoy=null;ST.stasis=null;ST.slowT=0;ST.heatZ=null;
   Object.assign(pl_,{script:0,ball:0,tow:null,grip:null,cling:0,crouch:0,stealth:0,grit:0,dodge:0,sprint:0,leap:false,slam:false});ST.wave=0;ST.SPAWNX=50;ST.dark=0;ST.mindT=0;ST.chain=null;booms.length=0;rings.length=0;clearVfx();flashes.length=0;beams.length=0;afters.length=0;
-  const def=MAPDEFS[mapSel.value]||MAPDEFS.city;setWorld(mapW(def),def.h||720);ST.gk=def.grav||1;ST.GYO=H-640; // extra rows: urban maps drop their street by this for taller skylines
-  pin.fill(0);str.fill(10);rid.fill(0);rcount.length=1;ST.PIN2=null;ST.streetY=0;ST.neonCity=mapSel.value==='nyc2099';ST.genMode=true;def.gen();detailPass(def.theme);ST.genMode=false; // props, interiors and caves (maps/detail.js)
+  const def=MAPDEFS[mapSel.value]||MAPDEFS.city;if(anchK!==1){scaleAnch(1/anchK);anchK=1;}setWorld(Math.round(mapW(def)/MAPK/32)*32,def.h||720);ST.gk=def.grav||1;ST.GYO=H-640; // extra rows: urban maps drop their street by this for taller skylines
+  pin.fill(0);str.fill(10);rid.fill(0);rcount.length=1;ST.PIN2=null;ST.streetY=0;ST.neonCity=mapSel.value==='nyc2099';ST.genMode=true;def.gen();detailPass(def.theme);ST.genMode=false;upscaleWorld(MAPK);str.fill(10); // to hero scale (see MAPK) // props, interiors and caves (maps/detail.js)
   for(let i=0;i<N;i++)bgB[i]=bg[i]!==bgD[i]?1:0;
   // streets, decks and tunnel shells: built runs wider than any building act as ground, so buildings stand on them
   for(let i=0;i<N;i++)gnd[i]=NAT[t[i]];

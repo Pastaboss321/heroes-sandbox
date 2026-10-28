@@ -10,13 +10,14 @@ import { ACID, FIRE, GLASS, LAVA, R, WATER, rgb } from './materials.js';
 import { H, VH, VW, W, t } from './grid.js';
 import { gnd } from './support.js';
 import { solidAt, spawn } from './particles.js';
-import { pix, pixA } from '../render/canvas.js';
+import { pix as PIX, pixA } from '../render/canvas.js';
 import { fgL, lut } from '../render/look.js';
 import { fxWord } from '../render/fx.js';
 import { enemies } from '../enemies/core.js';
 import { pl_ } from '../player.js';
 
 const MOB=()=>window.HS_MOBILE?.6:1;
+const K=2,V=1.41; // map scale (maps/index.js MAPK): people, birds and aircraft are drawn in KxK blocks to stay 1:1 with the heroes; V scales their speeds
 const URB={civ:34,birds:'pigeon',perch:10,planes:['air','air','prop','heli'],win:.3,pal:'city'};
 export const LIFE={city:URB,nyc:URB,retro:URB,incursion:{...URB,civ:24},
   nyc2099:{civ:30,birds:'pigeon',perch:6,planes:['air','jet','heli'],win:.4,pal:'p2099'},
@@ -49,13 +50,13 @@ const civs=[],birds=[],perch=[],planes=[];
 ST.life={civs,birds,perch,planes}; // debug: GAME.ST.life
 let cfg=LIFE.city,winX=null,winY=null,winW=null,winH=null,winS=null,buckets=[],wOut=new Set(),lastSay=-99,kills0=0;
 
-// ---- reset and window scan (once per map: every pane of glass 1-6 wide and 5-16 tall is a window someone can stand behind)
+// ---- reset and window scan (once per map: every pane of glass up to 6 wide and 5-18 tall, in map units, is a window someone can stand behind)
 export function lifeReset(id){
   cfg=LIFE[id]||{civ:0};civs.length=birds.length=perch.length=planes.length=0;wOut=new Set();kills0=ST.kills||0;
   const xs=[],ys=[],ws=[],hs=[];buckets=Array.from({length:(W>>5)+1},()=>[]);
   if(cfg.win){for(let y=1;y<H-1;y++){const r=y*W;for(let x=1;x<W-1;x++){const i=r+x;if(t[i]!==GLASS||t[i-1]===GLASS||t[i-W]===GLASS)continue;
-    let w=0;while(w<8&&t[i+w]===GLASS)w++;let h=0;while(h<18&&t[i+h*W]===GLASS)h++;
-    if(w<1||w>6||h<5||h>16)continue;buckets[x>>5].push(xs.length);xs.push(x);ys.push(y);ws.push(w);hs.push(h);}}}
+    let w=0;while(w<8*K&&t[i+w]===GLASS)w++;let h=0;while(h<20*K&&t[i+h*W]===GLASS)h++;
+    if(w<1||w>6*K||h<5*K||h>18*K)continue;buckets[x>>5].push(xs.length);xs.push(x);ys.push(y);ws.push(w);hs.push(h);}}}
   ST.life.nwin=xs.length;winX=Int32Array.from(xs);winY=Int32Array.from(ys);winW=Uint8Array.from(ws);winH=Uint8Array.from(hs);winS=Uint32Array.from(xs,(x,k)=>Math.imul(x*73856093^ys[k]*19349663,2654435761)>>>0);
 }
 const occupied=k=>{const s=winS[k],ep=(ST.frame+(s&4095))/(780+(s>>12&511))|0;return((Math.imul(s^ep*2246822519,2654435761)>>>0)&1023)/1024<cfg.win;};
@@ -64,35 +65,37 @@ const liquid=m=>m===WATER||m===LAVA||m===ACID||m===FIRE;
 // ---- civilians
 function makeCiv(x,y,air){const P=PALS[cfg.pal]||PALS.city;const kid=R()<.18;
   const sk=P.alien&&R()<.5?C(pick(P.alien)):SKIN[P.skin?pick(P.skin):R()*5|0];
-  const c={x,y,dir:R()<.5?-1:1,sp:.22+R()*.18,fast:.9+R()*.4,kid,sk,hr:pick(HAIR),sh:C(pick(P.shirt)),pt:C(pick(P.pants)),hat:P.hat?C(P.hat):(R()<.12?C(pick(P.shirt)):0),glow:P.glow,
+  const c={x,y,dir:R()<.5?-1:1,sp:(.22+R()*.18)*V,fast:(.9+R()*.4)*V,kid,sk,hr:pick(HAIR),sh:C(pick(P.shirt)),pt:C(pick(P.pants)),hat:P.hat?C(P.hat):(R()<.12?C(pick(P.shirt)):0),glow:P.glow,
     t:R()*60|0,pan:0,idle:0,air:air?1:0,vx:0,vy:0,wet:0,cheer:0,bf:-1};civs.push(c);return c;}
-function say(c,list,col){if(ST.frame-lastSay<45)return;if(c.x<ST.camX||c.x>ST.camX+VW||c.y<ST.camY||c.y>ST.camY+VH)return;lastSay=ST.frame;fxWord(c.x,c.y-14,pick(list),.55,col,true,true);}
+function say(c,list,col){if(ST.frame-lastSay<45)return;if(c.x<ST.camX||c.x>ST.camX+VW||c.y<ST.camY||c.y>ST.camY+VH)return;lastSay=ST.frame;fxWord(c.x,c.y-12*K,pick(list),.55,col,true,true);}
 function panic(c,fx){if(c.pan<=0&&R()<.35)say(c,SCREAM,'#fff4d0');c.pan=240+R()*120|0;c.idle=0;c.dir=c.x<fx?-1:1;}
 // first open surface going down from y0 (feet stand on row y, body above it is clear); prefer streets over roofs
 function groundAt(x,y0,y1){let roof=-1;for(let y=Math.max(10,y0|0);y<Math.min(H-1,y1|0);y++){if(!solidAt(x,y))continue;if(solidAt(x,y-1)){if(gnd&&gnd[y*W+x])break;continue;} // never below the first ground layer (no tunnels under buildings)
-    let ok=true;for(let k=2;k<=10;k++)if(solidAt(x,y-k)){ok=false;break;}if(!ok||liquid(t[(y-1)*W+x]))continue;
+    let ok=true;for(let k=2;k<=10*K;k++)if(solidAt(x,y-k)){ok=false;break;}if(!ok||liquid(t[(y-1)*W+x]))continue;
     if(gnd&&gnd[y*W+x])return y;if(roof<0)roof=y;}
   return roof>=0&&R()<.25?roof:-1;}
 function updCiv(c){c.t++;const b=ST.lastBoom;
-  if(b&&ST.frame-b.f<2&&b.f!==c.bf){c.bf=b.f;const d=Math.hypot(c.x-b.x,c.y-5-b.y);
-    if(d<b.r*2+10){c.air=1;c.vy=-2.2-R()*1.6;c.vx=(c.x<b.x?-1:1)*(1.2+R()*1.6);}if(d<b.r*8+100)panic(c,b.x);}
+  if(b&&ST.frame-b.f<2&&b.f!==c.bf){c.bf=b.f;const d=Math.hypot(c.x-b.x,c.y-5*K-b.y);
+    if(d<b.r*2+10*K){c.air=1;c.vy=(-2.2-R()*1.6)*V;c.vx=(c.x<b.x?-1:1)*(1.2+R()*1.6)*V;}if(d<b.r*8+100)panic(c,b.x);}
   if(c.t%15===0){for(const e of enemies){if(Math.abs(e.x-c.x)<80&&Math.abs(e.y-c.y)<50){panic(c,e.x);break;}}
-    const m=t[((c.y-3)|0)*W+(c.x|0)];if(m===FIRE||m===LAVA){if(c.pan<=0)say(c,['HOT HOT HOT!','FIRE!'],'#ffb070');panic(c,c.x-c.dir);}
+    const m=t[((c.y-3*K)|0)*W+(c.x|0)];if(m===FIRE||m===LAVA){if(c.pan<=0)say(c,['HOT HOT HOT!','FIRE!'],'#ffb070');panic(c,c.x-c.dir);}
     if(m===WATER&&++c.wet>6)return false;}
-  if(ST.kills>kills0&&c.pan<=0&&!c.air&&Math.abs(pl_.x-c.x)<150&&Math.abs(pl_.y-c.y)<80&&R()<.35){c.cheer=50;c.air=1;c.vy=-1.6;c.vx=0;c.dir=pl_.x<c.x?-1:1;say(c,CHEER,'#bfffb0');}
+  if(ST.kills>kills0&&c.pan<=0&&!c.air&&Math.abs(pl_.x-c.x)<150&&Math.abs(pl_.y-c.y)<80&&R()<.35){c.cheer=50;c.air=1;c.vy=-1.6*V;c.vx=0;c.dir=pl_.x<c.x?-1:1;say(c,CHEER,'#bfffb0');}
   if(c.cheer>0)c.cheer--;
-  if(c.air){c.vy=Math.min(5,c.vy+.2*(ST.gk||1));const nx=c.x+c.vx,ny=c.y+c.vy;if(solidAt(nx,ny-4))c.vx*=-.3;else c.x=nx;
+  if(c.air){c.vy=Math.min(5*V,c.vy+.2*(ST.gk||1));const nx=c.x+c.vx,ny=c.y+c.vy;if(solidAt(nx,ny-4*K))c.vx*=-.3;else c.x=nx;
     if(c.vy>0&&solidAt(c.x,ny)){let y=ny|0;while(y>0&&solidAt(c.x,y-1))y--;c.y=y;c.air=0;c.vx=0;}else c.y=ny;return c.y<H-2;}
-  if(!solidAt(c.x,c.y)){c.air=1;c.vy=0;c.vx=c.dir*.4;return true;}
+  if(!solidAt(c.x,c.y)){c.air=1;c.vy=0;c.vx=c.dir*.4*V;return true;}
   if(c.pan>0)c.pan--;else if(c.idle>0){c.idle--;return true;}else if(R()<.004)c.idle=60+R()*160|0;else if(R()<.002)c.dir=-c.dir;
   const sp=c.pan>0?c.fast:c.sp,nx=c.x+c.dir*sp,X=nx|0;
   if(X!==(c.x|0)){
-    if(solidAt(X,c.y-1)){let k=1;while(k<=2&&solidAt(X,c.y-1-k))k++;if(k<=2&&!solidAt(X,c.y-7-k)){c.y-=k;c.x=nx;}else c.dir=-c.dir;return true;}
-    if(solidAt(X,c.y-6)){c.dir=-c.dir;return true;}
-    c.x=nx;if(!solidAt(X,c.y)){let k=1;while(k<=3&&!solidAt(X,c.y+k))k++;if(k<=3)c.y+=k;}
+    if(solidAt(X,c.y-1)){let k=1;while(k<=2*K&&solidAt(X,c.y-1-k))k++;if(k<=2*K&&!solidAt(X,c.y-7*K-k)){c.y-=k;c.x=nx;}else c.dir=-c.dir;return true;}
+    if(solidAt(X,c.y-6*K)){c.dir=-c.dir;return true;}
+    c.x=nx;if(!solidAt(X,c.y)){let k=1;while(k<=3*K&&!solidAt(X,c.y+k))k++;if(k<=3*K)c.y+=k;}
   }else c.x=nx;
   return true;}
-function drawCiv(c,night){const L=v=>lut(fgL,v),x=c.x|0,y=c.y|0,d=c.dir,f=c.air?2:(c.pan>0||c.idle<=0)&&((c.t>>(c.pan>0?2:3))&1);
+// sprites below are drawn in map units: each unit is a KxK block, anchored at (ax,ay)
+const blk=(ax,ay,X,Y,c,g)=>{const wx=ax+(X-ax)*K-(K>>1),wy=ay+(Y-ay)*K;for(let a=0;a<K;a++)for(let b=0;b<K;b++)PIX(wx+a,wy+b,c,g);};
+function drawCiv(c,night){const L=v=>lut(fgL,v),x=c.x|0,y=c.y|0,d=c.dir,f=c.air?2:(c.pan>0||c.idle<=0)&&((c.t>>(c.pan>0?2:3))&1),pix=(X,Y,cc,g)=>blk(x,y,X,Y,cc,g);
   const pt=L(c.pt),sh=L(c.sh),sk=L(c.sk),hr=L(c.hr),g=c.glow?sh:0;let yy=y-1;
   if(f===1){pix(x,yy,pt);pix(x,yy-1,pt);}else{pix(x-1,yy,pt);pix(x+1,yy,pt);if(!c.kid){pix(x-1,yy-1,pt);pix(x+1,yy-1,pt);}}
   yy-=c.kid?1:2;pix(x-1,yy,pt);pix(x,yy,pt);pix(x+1,yy,pt);yy--;
@@ -105,26 +108,26 @@ function drawCiv(c,night){const L=v=>lut(fgL,v),x=c.x|0,y=c.y|0,d=c.dir,f=c.air?
 // ---- birds: flocks crossing the sky, pigeons perched on roof edges that take off when something comes close
 const BIRD={pigeon:[[92,96,108],[150,150,160]],song:[[60,48,40],[110,80,60]],gull:[[238,238,244],[150,156,170]],raven:[[22,22,30],[50,50,64]],ptero:[[140,92,60],[200,140,90]]};
 function spawnFlock(){const dir=R()<.5?1:-1,n=cfg.birds==='ptero'?1+R()*2|0:4+R()*6|0,x0=dir>0?ST.camX-30:ST.camX+VW+30,y0=ST.camY+12+R()*VH*.35;
-  if(solidAt(x0,y0))return;const sp=(cfg.birds==='ptero'?.7:1.1)+R()*.5;
-  for(let k=0;k<n;k++){const row=(k+1)>>1,side=k&1?1:-1;birds.push({x:x0-dir*row*7,y:y0+row*4*side+(R()-.5)*2,vx:dir*sp,vy:0,ph:R()*6,big:cfg.birds==='ptero',kind:cfg.birds});}}
+  if(solidAt(x0,y0))return;const sp=((cfg.birds==='ptero'?.7:1.1)+R()*.5)*V;
+  for(let k=0;k<n;k++){const row=(k+1)>>1,side=k&1?1:-1;birds.push({x:x0-dir*row*7*K,y:y0+(row*4*side+(R()-.5)*2)*K,vx:dir*sp,vy:0,ph:R()*6,big:cfg.birds==='ptero',kind:cfg.birds});}}
 function updBird(b){b.ph+=b.big?.12:.32;const bm=ST.lastBoom;
-  if(bm&&ST.frame-bm.f<2&&Math.hypot(b.x-bm.x,b.y-bm.y)<bm.r*6+120){b.vy-=1.2;b.vx*=1.6;}
-  if(Math.hypot(b.x-pl_.x,b.y-pl_.y+8)<24){b.vy-=.6;b.vx+=Math.sign(b.x-pl_.x)*.3;}
-  b.vy=b.vy*.96+Math.sin(b.ph*.21)*.02;if(solidAt(b.x+b.vx*6,b.y+4))b.vy-=.25;b.x+=b.vx;b.y+=b.vy;
+  if(bm&&ST.frame-bm.f<2&&Math.hypot(b.x-bm.x,b.y-bm.y)<bm.r*6+120){b.vy-=1.2*V;b.vx*=1.6;}
+  if(Math.hypot(b.x-pl_.x,b.y-pl_.y+8)<36){b.vy-=.6;b.vx+=Math.sign(b.x-pl_.x)*.3;}
+  b.vy=b.vy*.96+Math.sin(b.ph*.21)*.02;if(solidAt(b.x+b.vx*6,b.y+4*K))b.vy-=.25;b.x+=b.vx;b.y+=b.vy;
   return b.x>ST.camX-VW&&b.x<ST.camX+VW*2&&b.y>ST.camY-VH&&b.y<H;}
-function drawBird(b){const P=BIRD[b.kind]||BIRD.pigeon,c=lut(fgL,C(P[0])),x=b.x|0,y=b.y|0,up=Math.sin(b.ph)>0,s=b.big?2:1;
+function drawBird(b){const P=BIRD[b.kind]||BIRD.pigeon,c=lut(fgL,C(P[0])),x=b.x|0,y=b.y|0,up=Math.sin(b.ph)>0,s=b.big?2:1,pix=(X,Y,cc,g)=>blk(x,y,X,Y,cc,g);
   pix(x,y,c);pix(x-s,y,c);pix(x+s,y,c);const wy=up?-1:1;
   if(b.big){pix(x-2,y+wy,c);pix(x+2,y+wy,c);pix(x-3,y+wy*2,c);pix(x+3,y+wy*2,c);pix(x+Math.sign(b.vx)*3,y,lut(fgL,C(P[1])));}
   else{pix(x-2,y+wy,c);pix(x+2,y+wy,c);}}
 function spawnPerch(){const x=ST.camX+R()*VW|0;for(let y=Math.max(10,ST.camY|0);y<Math.min(H-1,ST.camY+VH);y++){if(!solidAt(x,y))continue;
-  if(solidAt(x,y-1)||solidAt(x,y-2)||solidAt(x,y-3))return;if(gnd&&gnd[y*W+x])return;
+  for(let k=1;k<=3*K;k++)if(solidAt(x,y-k))return;if(gnd&&gnd[y*W+x])return;
   perch.push({x,y,dir:R()<.5?-1:1,t:R()*100|0,kind:cfg.birds});return;}}
-function updPerch(p){p.t++;const bm=ST.lastBoom;let go=Math.hypot(p.x-pl_.x,p.y-pl_.y+8)<44||!solidAt(p.x,p.y);
+function updPerch(p){p.t++;const bm=ST.lastBoom;let go=Math.hypot(p.x-pl_.x,p.y-pl_.y+8)<60||!solidAt(p.x,p.y);
   if(bm&&ST.frame-bm.f<2&&Math.hypot(p.x-bm.x,p.y-bm.y)<bm.r*6+120)go=true;
   if(!go&&p.t%20===0)for(const e of enemies)if(Math.abs(e.x-p.x)<50&&Math.abs(e.y-p.y)<40){go=true;break;}
-  if(go){const d=p.x<pl_.x?-1:1;birds.push({x:p.x,y:p.y-2,vx:d*(1+R()*.6),vy:-1.2-R(),ph:0,kind:p.kind});return false;}
+  if(go){const d=p.x<pl_.x?-1:1;birds.push({x:p.x,y:p.y-2*K,vx:d*(1+R()*.6)*V,vy:(-1.2-R())*V,ph:0,kind:p.kind});return false;}
   if(R()<.004)p.dir=-p.dir;return p.x>ST.camX-VW&&p.x<ST.camX+VW*2;}
-function drawPerch(p){const P=BIRD[p.kind]||BIRD.pigeon,c=lut(fgL,C(P[0])),c2=lut(fgL,C(P[1])),x=p.x,y=p.y-1,peck=((p.t>>4)%7)===0;
+function drawPerch(p){const P=BIRD[p.kind]||BIRD.pigeon,c=lut(fgL,C(P[0])),c2=lut(fgL,C(P[1])),x=p.x,y=p.y-1,peck=((p.t>>4)%7)===0,pix=(X,Y,cc,g)=>blk(p.x,p.y,X,Y,cc,g);
   pix(x,y,c);pix(x-p.dir,y,c);pix(x+p.dir,y-(peck?0:1),c2);}
 
 // ---- aircraft
@@ -139,10 +142,10 @@ const SPR={
 const APAL={'#':[200,40,50],b:[226,228,234],w:[40,60,100],n:[60,64,80],d:[150,154,166],r:[200,40,40],k:[48,52,60],t:[48,52,60],'|':[80,80,90],'=':[110,110,120],v:[60,40,90],g:[120,110,100],o:[220,130,40]};
 function spawnPlane(){const kind=pick(cfg.planes),S=SPR[kind],dir=R()<.5?1:-1,x=dir>0?ST.camX-40:ST.camX+VW+40;
   let top=ST.camY+VH;for(let sx=0;sx<VW;sx+=8){const X=(ST.camX+sx)|0;for(let y=Math.max(0,ST.camY|0);y<top;y++)if(solidAt(X,y)){top=y;break;}}
-  const y=Math.min(ST.camY+14+R()*34,top-34);if(y<ST.camY+6)return;planes.push({kind,x,y,y0:y,dir,t:0,sp:S.sp*(.85+R()*.3)});}
-function drawPlane(p,night){const S=SPR[p.kind],s=S.s,h=s.length,w=s[0].length,x0=(p.x-w/2)|0,y0=(p.y-h/2)|0,fr=ST.frame;
-  if(S.trail&&night<.7){const n=Math.min(160,p.t*.5|0),tx=p.dir>0?x0:x0+w,ty=y0+2;for(let k=0;k<n;k+=1){const a=.45*(1-k/n)*(1-night);if(a<.03)break;pixA(tx-p.dir*k,ty,rgb(250,250,255),a);if(k>40)pixA(tx-p.dir*k,ty+1,rgb(250,250,255),a*.5);}}
-  if(S.beam&&night>.4){const bx=p.x,by=y0+h;for(let k=1;k<70;k+=1){const r=k*.35|0;for(let q=-r;q<=r;q+=2)pixA(bx+q+p.dir*k*.2,by+k,rgb(255,250,210),.18*(1-k/70)*night);}}
+  const y=Math.min(ST.camY+20+R()*34,top-40*K);if(y<ST.camY+6*K)return;planes.push({kind,x,y,y0:y,dir,t:0,sp:S.sp*(.85+R()*.3)*V});}
+function drawPlane(p,night){const S=SPR[p.kind],s=S.s,h=s.length,w=s[0].length,x0=(p.x-w/2)|0,y0=(p.y-h/2)|0,fr=ST.frame,pix=(X,Y,cc,g)=>blk(x0,y0,X,Y,cc,g),X0=x0-(K>>1),WW=w*K;
+  if(S.trail&&night<.7){const n=Math.min(160*K,p.t*.5*K|0),tx=p.dir>0?X0:X0+WW,ty=y0+2*K;for(let k=0;k<n;k+=1){const a=.45*(1-k/n)*(1-night);if(a<.03)break;for(let b=0;b<K;b++)pixA(tx-p.dir*k,ty+b,rgb(250,250,255),a);if(k>40*K)pixA(tx-p.dir*k,ty+K,rgb(250,250,255),a*.5);}}
+  if(S.beam&&night>.4){const bx=X0+WW/2,by=y0+h*K,L=70*K;for(let k=1;k<L;k+=1){const r=k*.35|0;for(let q=-r;q<=r;q+=2)pixA(bx+q+p.dir*k*.2,by+k,rgb(255,250,210),.18*(1-k/L)*night);}}
   for(let r=0;r<h;r++)for(let q=0;q<w;q++){const ch=s[r][p.dir>0?q:w-1-q];if(ch==='.')continue;if(ch==='='&&((q+fr)&1))continue;const c=APAL[ch];if(!c)continue;pix(x0+q,y0+r,lut(fgL,C(c)));}
   const nose=p.dir>0?x0+w:x0-1,tail=p.dir>0?x0-1:x0+w;
   if(S.prop&&fr&1){pix(nose,y0,rgb(200,200,200));pix(nose,y0+2,rgb(200,200,200));}
@@ -174,9 +177,9 @@ export function drawLife(){if(!cfg)return;const night=Math.max(0,Math.min(1,(235
     const sil=rgb(18,16,28);
     for(let b=b0;b<=b1;b++)for(const k of buckets[b]){const x=winX[k],y=winY[k],w=winW[k],h=winH[k];if(y+h<ST.camY||y>ST.camY+VH||!occupied(k))continue;
       if(duck&&Math.hypot(x-bm.x,y-bm.y)<bm.r*8+120)continue;const s=winS[k],sk=SKIN[s%5],sh=C(PALS.city.shirt[(s>>>3)%9]),hr=HAIR[(s>>>7)%6];
-      const near=Math.abs(pl_.x-x)<70&&Math.abs(pl_.y-y)<70,cw=Math.min(2,w),cx=x+((w-cw)>>1)+(w>2?(((ST.frame+(s&511))>>7)&1)*(w-cw>>1):0),base=y+h;
+      const near=Math.abs(pl_.x-x)<70&&Math.abs(pl_.y-y)<70,cw=Math.min(2*K,w),cx=x+((w-cw)>>1)+(w>2*K?(((ST.frame+(s&511))>>7)&1)*(w-cw>>1):0),base=y+h;
       const put=(px,py,c,a)=>{if(py>=y&&py<base&&px>=x&&px<x+w&&t[py*W+px]===GLASS)pixA(px,py,night>.5?sil:c,a);};
-      for(let q=0;q<cw;q++){for(let r=1;r<=3;r++)put(cx+q,base-r,sh,.7);put(cx+q,base-4,sk,.75);put(cx+q,base-5,sk,.75);put(cx+q,base-6,hr,.75);}
-      if(near&&((ST.frame>>3)&1))put(cx+cw-1+(w>cw?1:0),base-7,sk,.8);}}
+      for(let q=0;q<cw;q++)for(let r=1;r<=6*K;r++)put(cx+q,base-r,r<=3*K?sh:r<=5*K?sk:hr,r<=3*K?.7:.75); // shoulders, face, hair
+      if(near&&((ST.frame>>3)&1))for(let a=0;a<K;a++)for(let r=6*K+1;r<=7*K;r++)put(cx+cw-1-a+(w>cw?K:0),base-r,sk,.8);}}
   for(const c of civs)drawCiv(c,night);
 }

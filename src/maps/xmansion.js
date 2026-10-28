@@ -11,7 +11,7 @@ import { spawn } from '../world/particles.js';
 // in the backdrop (the far layer is centred on the map, so the house lines up with x = W/2). Both sides are old
 // forest full of the wrecks of giant Sentinels from some long-ago siege: heads, hands, arms, torsos and legs,
 // half-buried and grown over with moss.
-const XM={fx:0,top:0};
+export const XM={fx:0,top:0};
 export function genXMansion(){
   clearAll();
   const GY=356,s=R()*100,B=252; // B: lawn line of the mansion in far-layer rows (sits just above the courtyard on screen)
