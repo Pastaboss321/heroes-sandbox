@@ -29,6 +29,7 @@ import { ambKnowhere, ambMoon, ambTitan, genKnowhere, genMoon, genTitan } from '
 import { ambDark, genDark } from './dark.js';
 import { setWorld } from '../world/grid.js';
 import { detailPass } from './detail.js';
+import { lifeReset } from '../world/life.js';
 
 export const mapSel=document.getElementById('map');
 // w: world width (heroes are fast, so maps are long); h: height (default 720: deep underground, and the
@@ -82,6 +83,7 @@ export function regen(){
   R0gen=rcount.length;
   ST.T0=t.slice();ST.C0=col.slice();ST.B0=bg.slice(); // the untouched map, for Scarlet Witch's Reweave
   applyTOD();
+  lifeReset(mapSel.value); // civilians, people in windows, birds and planes (world/life.js)
   spawnPlayer();
 }
 document.getElementById('regen').onclick=e=>{regen();e.target.blur();};

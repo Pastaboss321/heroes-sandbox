@@ -25,6 +25,7 @@ import { drawAxe, drawHammer, drawSlip, drawSprite } from './sprites.js';
 import { groundBelow } from '../ui/spawn.js';
 import { drawChain } from '../heroes/wave4.js';
 import { drawStatus, drawSummons } from '../heroes/abilities.js';
+import { drawLife } from '../world/life.js';
 import { drawAuras, drawBeamFx, drawFlashFx, drawFxBack, drawFxFront, drawRingFx, drawShieldFx, drawShotFx, drawStatusFx } from './vfxdraw.js';
 
 const flick=new Float32Array(256);
@@ -84,6 +85,7 @@ export function render(){
       const so=(Y-ST.CY)*VW+(X-ST.CX);buf[so]=lut(fgL,bc);if(b.held&&!b.overhead&&((lx+ly+ST.frame)&7)===0)gbuf[so]=rgb(40,160,70);
     }
   }
+  drawLife(); // civilians, window people, birds, planes (world/life.js)
   for(let n=0;n<ST.np;n++){const c=pc[n],gl=pg[n]&1;if(pg[n]&16){pixA(px[n],py[n],c,Math.min(1,pl[n]/PHYS.dust.fade)*.55);continue;}pix(px[n],py[n],c,gl?c:0);const vx=pvx[n],vy=pvy[n];
     if(vx*vx+vy*vy>4.5){const c2=shade(c,.62);pix(px[n]-vx*.45,py[n]-vy*.45,c2,gl?c2:0);}} // motion streaks on fast debris and sparks
   const VT=ST.vfxT||(ST.vfxT={});let vt=performance.now();const vlap=k=>{const n=performance.now();VT[k]=n-vt;vt=n;}; // debug: VFX ms per part (GAME.ST.vfxT)
