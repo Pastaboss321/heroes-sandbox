@@ -7,11 +7,12 @@
 //        render/render.js after the terrain and chunks, before particles -> drawLife().
 import { ST } from '../state.js';
 import { ACID, FIRE, GLASS, LAVA, R, WATER, rgb } from './materials.js';
-import { H, VH, VW, W, t } from './grid.js';
+import { H, VH, VW, VWMAX, W, bg, t } from './grid.js';
+import { PAR } from '../maps/gen.js';
 import { gnd } from './support.js';
 import { solidAt, spawn } from './particles.js';
 import { pix as PIX, pixA } from '../render/canvas.js';
-import { fgL, lut } from '../render/look.js';
+import { fgL, htL, lut } from '../render/look.js';
 import { fxWord } from '../render/fx.js';
 import { enemies } from '../enemies/core.js';
 import { pl_ } from '../player.js';
@@ -130,27 +131,29 @@ function updPerch(p){p.t++;const bm=ST.lastBoom;let go=Math.hypot(p.x-pl_.x,p.y-
 function drawPerch(p){const P=BIRD[p.kind]||BIRD.pigeon,c=lut(fgL,C(P[0])),c2=lut(fgL,C(P[1])),x=p.x,y=p.y-1,peck=((p.t>>4)%7)===0,pix=(X,Y,cc,g)=>blk(p.x,p.y,X,Y,cc,g);
   pix(x,y,c);pix(x-p.dir,y,c);pix(x+p.dir,y-(peck?0:1),c2);}
 
-// ---- aircraft
+// ---- aircraft: part of the sky backdrop, far away and high up. They live in skyline (far-layer) columns and move with its
+// parallax (render.js), fly in the top band of the screen whatever the camera height, are drawn tiny at native size, and only
+// show through open sky, never in front of anything.
 const SPR={
-  air:{s:['#..............','##.............','#bbbbbbbbbbbbb.','bbbwbwbwbwbwbbn','.bbbbbbbbbbbbb.','.....ddd.......'],sp:.5,trail:true,lights:true},
-  prop:{s:['#.......','#rrrrrrw','.rrrrrr.','...dd...'],sp:1.1,prop:true,lights:true},
-  heli:{s:['..=======..','.....|.....','..kkkkkw...','tkkkkkkkw..','..k...k....','.kkkkkkkk..'],sp:.6,rotor:true,bob:true,lights:true,beam:true},
-  jet:{s:['#.........','#kkkkkkkkn','..ddd.....'],sp:2.6,burn:[255,150,60]},
-  talon:{s:['##..........','.vvvvvvvvvv.','vvvvvvvvvvvn','..ddddd.....'],sp:2.2,burn:[170,90,255]},
-  junk:{s:['....oo......','.ggggggggg..','gogggogggoog','.ggggggggg..','..b....b....'],sp:.35,burn:[255,170,80],bob:true},
+  air:{s:['#.......','#bbbbbbn','..dd....'],sp:.22,trail:true,lights:true},
+  prop:{s:['#....','#rrrw','.d...'],sp:.35,lights:true},
+  heli:{s:['====.','.kkkw','.k.k.'],sp:.25,rotor:true,lights:true},
+  jet:{s:['#.....','#kkkkn'],sp:.9,burn:[255,150,60]},
+  talon:{s:['#......','vvvvvvn','.dd....'],sp:.8,burn:[170,90,255]},
+  junk:{s:['..oo...','ggggggg','gogogog'],sp:.15,burn:[255,170,80]},
 };
 const APAL={'#':[200,40,50],b:[226,228,234],w:[40,60,100],n:[60,64,80],d:[150,154,166],r:[200,40,40],k:[48,52,60],t:[48,52,60],'|':[80,80,90],'=':[110,110,120],v:[60,40,90],g:[120,110,100],o:[220,130,40]};
-function spawnPlane(){const kind=pick(cfg.planes),S=SPR[kind],dir=R()<.5?1:-1,x=dir>0?ST.camX-40:ST.camX+VW+40;
-  let top=ST.camY+VH;for(let sx=0;sx<VW;sx+=8){const X=(ST.camX+sx)|0;for(let y=Math.max(0,ST.camY|0);y<top;y++)if(solidAt(X,y)){top=y;break;}}
-  const y=Math.min(ST.camY+20+R()*34,top-40*K);if(y<ST.camY+6*K)return;planes.push({kind,x,y,y0:y,dir,t:0,sp:S.sp*(.85+R()*.3)*V});}
-function drawPlane(p,night){const S=SPR[p.kind],s=S.s,h=s.length,w=s[0].length,x0=(p.x-w/2)|0,y0=(p.y-h/2)|0,fr=ST.frame,pix=(X,Y,cc,g)=>blk(x0,y0,X,Y,cc,g),X0=x0-(K>>1),WW=w*K;
-  if(S.trail&&night<.7){const n=Math.min(160*K,p.t*.5*K|0),tx=p.dir>0?X0:X0+WW,ty=y0+2*K;for(let k=0;k<n;k+=1){const a=.45*(1-k/n)*(1-night);if(a<.03)break;for(let b=0;b<K;b++)pixA(tx-p.dir*k,ty+b,rgb(250,250,255),a);if(k>40*K)pixA(tx-p.dir*k,ty+K,rgb(250,250,255),a*.5);}}
-  if(S.beam&&night>.4){const bx=X0+WW/2,by=y0+h*K,L=70*K;for(let k=1;k<L;k+=1){const r=k*.35|0;for(let q=-r;q<=r;q+=2)pixA(bx+q+p.dir*k*.2,by+k,rgb(255,250,210),.18*(1-k/L)*night);}}
-  for(let r=0;r<h;r++)for(let q=0;q<w;q++){const ch=s[r][p.dir>0?q:w-1-q];if(ch==='.')continue;if(ch==='='&&((q+fr)&1))continue;const c=APAL[ch];if(!c)continue;pix(x0+q,y0+r,lut(fgL,C(c)));}
-  const nose=p.dir>0?x0+w:x0-1,tail=p.dir>0?x0-1:x0+w;
-  if(S.prop&&fr&1){pix(nose,y0,rgb(200,200,200));pix(nose,y0+2,rgb(200,200,200));}
-  if(S.burn){const c=C(S.burn);pix(tail,y0+1,c,c);if(fr&1)pix(tail-p.dir,y0+1,c,c);}
-  if(S.lights&&night>.2){if((fr>>3)&1){const red=rgb(255,50,40);pix(x0+(w>>1),y0+h-1,red,red);}if(fr%40<3){const wht=rgb(255,255,255);pix(tail,y0,wht,wht);}}}
+const farX0=()=>(ST.camX+VW/2)*PAR-VW/2+VWMAX/2; // skyline column at the screen's left edge (same as render.js)
+function spawnPlane(){const kind=pick(cfg.planes),dir=R()<.5?1:-1,f0=farX0();
+  planes.push({kind,fx:dir>0?f0-20:f0+VW+20,sy:6+R()*VH*.16,dir,t:0,sp:SPR[kind].sp*(.85+R()*.3)});}
+function drawPlane(p,night){const S=SPR[p.kind],s=S.s,h=s.length,w=s[0].length,fr=ST.frame,x0=Math.round(p.fx-farX0()-w/2),y0=Math.round(p.sy);
+  const sky=(X,Y)=>{if(X<0||X>=VW||Y<0||Y>=VH)return false;const wx=X+ST.CX,wy=Y+ST.CY;if(wy<0)return true;if(wx<0||wx>=W||wy>=H)return false;const i=wy*W+wx;return t[i]===0&&!bg[i];};
+  const put=(X,Y,c,g)=>{if(sky(X,Y))PIX(X+ST.CX,Y+ST.CY,c,g);},putA=(X,Y,c,a)=>{if(sky(X,Y))pixA(X+ST.CX,Y+ST.CY,c,a);};
+  if(S.trail&&night<.7){const n=Math.min(120,p.t*.4|0),tx=p.dir>0?x0-1:x0+w,ty=y0+1;for(let k=0;k<n;k++){const a=.4*(1-k/n)*(1-night);if(a<.03)break;putA(tx-p.dir*k,ty,rgb(250,250,255),a);}}
+  for(let r=0;r<h;r++)for(let q=0;q<w;q++){const ch=s[r][p.dir>0?q:w-1-q];if(ch==='.')continue;if(ch==='='&&((q+fr)&1))continue;const c=APAL[ch];if(!c)continue;put(x0+q,y0+r,lut(htL,C(c)));}
+  const tail=p.dir>0?x0-1:x0+w;
+  if(S.burn&&fr&1){const c=C(S.burn);put(tail,y0+1,c,c);}
+  if(S.lights&&night>.2){if((fr>>3)&1){const red=rgb(255,50,40);put(x0+(w>>1),y0+h-1,red,red);}if(fr%40<3){const wht=rgb(255,255,255);put(tail,y0,wht,wht);}}}
 
 // ---- tick and draw
 export function updLife(){if(!cfg)return;const m=MOB(),f=ST.frame;
@@ -166,7 +169,7 @@ export function updLife(){if(!cfg)return;const m=MOB(),f=ST.frame;
   for(let n=birds.length-1;n>=0;n--)if(!updBird(birds[n]))birds.splice(n,1);
   for(let n=perch.length-1;n>=0;n--)if(!updPerch(perch[n]))perch.splice(n,1);
   if(cfg.planes&&cfg.planes.length&&!planes.length&&f%60===0&&R()<.12)spawnPlane();
-  for(let n=planes.length-1;n>=0;n--){const p=planes[n];p.t++;p.x+=p.dir*p.sp;if(SPR[p.kind].bob)p.y=p.y0+Math.sin(p.t*.05)*2;if(Math.abs(p.x-ST.camX-VW/2)>VW*1.3)planes.splice(n,1);}
+  for(let n=planes.length-1;n>=0;n--){const p=planes[n];p.t++;p.fx+=p.dir*p.sp;if(Math.abs(p.fx-farX0()-VW/2)>VW*1.2)planes.splice(n,1);}
 }
 export function drawLife(){if(!cfg)return;const night=Math.max(0,Math.min(1,(235-(lut(fgL,0xffffffff)&255))/110));
   for(const p of planes)drawPlane(p,night);
