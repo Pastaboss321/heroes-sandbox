@@ -60,9 +60,9 @@ function upscaleWorld(K){
   for(let y=0;y<H;y++){const sr=((y/K)|0)*Wg,r=y*W;for(let x=0;x<W;x++){const s=sr+((x/K)|0),i=r+x;t[i]=T[s];col[i]=Cl[s];life[i]=Lf[s];bg[i]=B[s];bgD[i]=BD[s];pin[i]=P[s];}}
   if(oF){const FW=VWMAX+Math.ceil(W*PAR)+2,n=FW*H;ST.FW=FW;ST.far=new Uint32Array(n);ST.farKeep=new Uint8Array(n);ST.farBase=new Uint32Array(n);ST.farSky=new Uint8Array(n);
     // columns scale about the parallax anchor (VWMAX/2: see render.js) so the far layer stays centred on the map. The X-Mansion
-    // backdrop is the exception: shrunk to 50% about the fountain axis and its lawn line (so the house reads far away), lawn a little
+    // backdrop is the exception: shrunk to 65% about the fountain axis and its lawn line (so the house reads far away), lawn a little
     // above the courtyard, mirrored past its ends and hazed 20% toward the sky.
-    const nat=mapSel.value==='xmansion',h=VWMAX/2,cn=Math.round(W/2*PAR+h),co=oFW>>1,SN=.5,Bn=Math.round(XFB*K)-40,Hg2=Hg-1;
+    const nat=mapSel.value==='xmansion',h=VWMAX/2,cn=Math.round(W/2*PAR+h),co=oFW>>1,SN=.65,Bn=Math.round(XFB*K)-55,Hg2=Hg-1;
     const sx=x=>{if(!nat)return Math.max(0,Math.min(oFW-1,Math.round((x-h)/K+h)));let v=Math.round(co+(x-cn)/SN);if(v<0)v=-v;if(v>=oFW)v=2*oFW-v-2;return Math.max(0,Math.min(oFW-1,v));};
     for(let y=0;y<H;y++){const sr=(nat?Math.max(0,Math.min(Hg2,Math.round(XFB+(y-Bn)/SN))):((y/K)|0))*oFW;for(let x=0;x<FW;x++){const s=sr+sx(x),i=y*FW+x;ST.far[i]=oF[s];ST.farKeep[i]=oK[s];ST.farBase[i]=oB?oB[s]:oF[s];ST.farSky[i]=oS?oS[s]:0;
       if(nat&&!ST.farSky[i]){for(const A of [ST.far,ST.farBase]){const c=A[i];A[i]=((255<<24)|((((c>>16)&255)*.8+190*.2)<<16)|((((c>>8)&255)*.8+160*.2)<<8)|((c&255)*.8+150*.2))>>>0;}}}}}
