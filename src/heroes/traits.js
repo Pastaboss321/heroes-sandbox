@@ -17,7 +17,7 @@ import { beams, flash, fxWord, rings } from '../render/fx.js';
 import { explode, punchOut } from '../world/destruction.js';
 import { snd } from '../sfx.js';
 import { damageEnemies, enemies, hitEnemy, nearestEnemy } from '../enemies/core.js';
-import { boxHit, carve, mouse, pl_ } from '../player.js';
+import { boxHit, carve, hurt, mouse, pl_ } from '../player.js';
 import { TSL, aim, quake, zap } from './powers.js';
 import { ACT } from './xmen.js';
 import { applyStatus, gainUlt, powerKind, stOf, summons } from './abilities.js';
@@ -291,6 +291,13 @@ miles:{n:'Venom Charge',c:'#ffe84a',d:'Hits build bio-electric charge; when full
   hurt(d,p){if(R()<.2){if(ST.frame-(p.dodgeW||-99)>30){p.dodgeW=ST.frame;say('GLITCH!','#ffe84a',.7);}return 0;}return d;},
   after(e,d,T){if(T.inner||e.hp<=0)return;if(T.m>=100||T.aw>0&&ST.frame-(T.vz||-9)>10){T.m=0;T.vz=ST.frame;T.inner=1;venomArc(e);T.inner=0;}else T.m=Math.min(100,T.m+d*.35);},
   aw:{n:'Venom Overload',d:'Glitching so hard nothing lands, and every hit (up to six a second) is a venom discharge.',hurt:()=>0}},
+kang:{n:'Temporal Debt',c:'#a878ff',d:'Damage reaches Kang 3 s late: every hit is filed as DEBT and comes due later. Each kill he makes erases a third of what he owes.',
+  hud:T=>{const s=T.dq.reduce((a,q)=>a+q.d,0);return[Math.min(1,s/(ST.CH.hp*.4)),'DEBT '+Math.round(s)];},init(T){T.dq=[];},
+  hurt(d,p,T){if(T.paying)return d;T.dq.push({t:ST.frame+180,d});if(ST.frame-(T.dw||-99)>40){T.dw=ST.frame;say('DEFERRED','#c8a8ff',.6);}return 0;},
+  tick(p,T){while(T.dq.length&&T.dq[0].t<=ST.frame){const q=T.dq.shift();T.paying=1;hurt(q.d);T.paying=0;}},
+  kill(e,T){if(!T.dq.length)return;for(const q of T.dq)q.d*=.67;glow(pl_.x,cy(),rgb(170,120,255),6,1.5);},
+  aw:{n:'Lord of Time',d:'His debt is wiped and nothing new comes due, cooldowns run 60% faster, and Kangs from other timelines fire chrono bolts at nearby foes.',start(p,T){T.dq.length=0;},cast(){ST.cd=Math.ceil(ST.cd*.4);},
+    tick(p,T){T.dq.length=0;if(T.aw%24===0){const e=randE(300);if(e){const x=e.x+(R()-.5)*80,y=e.y-50-R()*30;line(x,y,e.x,e.y,[230,210,255],[168,120,255],2,6);hitEnemy(e,16,(e.x-x)*.02,-1);glow(x,y,rgb(170,120,255),5,1);}}}}},
 };
 
 // ---- state and hooks

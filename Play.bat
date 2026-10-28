@@ -5,6 +5,12 @@ rem starts the dev server (live reload while the code is edited) and opens the g
 rem Close this window to stop the server.
 title Heroes Sandbox
 cd /d "%~dp0"
+echo.
+echo   HEROES SANDBOX  -  retro-futuristic UI  -  7 maps, 6 modes
+rem Read the roster straight out of src/heroes/index.js so this banner never goes stale
+powershell -NoProfile -Command "$s=Get-Content src\heroes\index.js -Raw; $m=[regex]::Match($s,'export const CHARS=\[(.*?)\];'); if($m.Success){ $ids=$m.Groups[1].Value -split ','; Write-Host ('  ' + $ids.Count + ' heroes loaded, newest ' + $ids[-1].Trim()) } else { Write-Host '  (hero roster not found)' }"
+echo   Newest hero: Kang the Conqueror - chrono bolts, time stop, rewinds, shields and temporal clones
+echo.
 set NEED=0
 if not exist node_modules\.package-lock.json set NEED=1
 if %NEED%==0 (

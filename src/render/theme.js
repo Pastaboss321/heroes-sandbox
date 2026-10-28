@@ -32,6 +32,7 @@ export const STY = {
   brimstone:  { beam: 'wisp', ring: 'smoke', flare: 0, spark: 'smoke', boom: 'bamf', cast: 'bamf', smoke: [60, 40, 90] },
   blaster:    { beam: 'pulse', ring: 'plain', flare: 4, spark: 'spark', boom: 'fire', cast: 'muzzle', smoke: [80, 74, 70] },
   quantum:    { beam: 'pulse', ring: 'implode', flare: 4, spark: 'mote', boom: 'quantum', cast: 'quantum', smoke: [70, 40, 90] },
+  temporal:   { beam: 'pulse', ring: 'double', flare: 6, spark: 'mote', boom: 'rings', cast: 'ringflare', smoke: [64, 58, 92] }, // Kang: clock sigils, nested rings, violet and gold
   web:        { beam: 'plain', ring: 'plain', flare: 0, spark: 'spark', boom: 'dust', cast: 'none', smoke: [150, 150, 156] },
   shield:     { beam: 'plain', ring: 'plain', flare: 4, spark: 'star', boom: 'sparks', cast: 'glint', smoke: [100, 100, 110] },
   stretch:    { beam: 'plain', ring: 'plain', flare: 2, spark: 'spark', boom: 'dust', cast: 'none', smoke: [100, 110, 130] },
@@ -75,6 +76,7 @@ export const THEME = {
   kurt: { st: 'brimstone', pal: [[230, 220, 255], [160, 130, 230], [90, 60, 170], [20, 10, 40]] },
   quill: { st: 'blaster', pal: [[255, 250, 230], [255, 200, 120], [255, 130, 60], [150, 40, 10]], alt: [[230, 250, 255], [140, 220, 255], [60, 160, 255], [20, 60, 140]] },
   miles: { st: 'bioelectric', pal: [[255, 255, 240], [255, 240, 140], [255, 210, 60], [120, 160, 255]] },
+  kang: { st: 'temporal', pal: [[248, 240, 255], [190, 140, 255], [140, 80, 235], [58, 20, 116]], alt: [[255, 240, 190], [255, 214, 110], [226, 170, 60], [120, 60, 10]], sig: 'clock' },
   foe: { st: 'foe', pal: [[255, 235, 220], [255, 160, 110], [255, 80, 50], [120, 20, 10]] },
   // effect-only keys: lightning, crisp spikes, magnetic field loops
   zap: { st: 'storm', pal: [[255, 255, 255], [220, 235, 255], [160, 200, 255], [70, 90, 160]] },
