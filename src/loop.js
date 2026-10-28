@@ -27,6 +27,7 @@ import { useTool } from './ui/spawn.js';
 import { updTravel } from './world/travel.js';
 import { updCapShields } from './heroes/cosmic.js';
 import { updRings } from './heroes/wave5.js';
+import { hudTrait, traitTick } from './heroes/traits.js';
 
 const waveTEl=document.getElementById('waveT'),scoreNEl=document.getElementById('scoreN'),scoreSEl=document.getElementById('scoreS'),waveEl=document.getElementById('wave'),hpEl=document.getElementById('hp'),enEl=document.getElementById('en'),fpsEl=document.getElementById('fps'),modeEl=document.getElementById('mode');
 let last=performance.now(),acc=0,fpsT=0,fpsN=0;
@@ -43,7 +44,7 @@ export function tick(){
   const Q=ST.ph||(ST.ph={});let q0=performance.now();const lap=k=>{const n=performance.now();Q[k]=n-q0;q0=n;}; // debug: per-phase ms (GAME.ST.ph)
   lap('cast');updTelekinesis();
   const world=!(ST.slowT>0&&(ST.slowT--&1))&&!SPAWN.pause; // Tactical Focus runs the world at half speed; the spawn menu can freeze it
-  updPlayer();if(!pl_.slip){TSL.push({x:pl_.x,y:pl_.y,hp:pl_.hp,face:pl_.face});if(TSL.length>300)TSL.shift();}updShots(world);lap('player+shots');ST.aoeC=ST.aoeK;ST.pctx=true;updSummons();
+  updPlayer();if(!pl_.slip){TSL.push({x:pl_.x,y:pl_.y,hp:pl_.hp,face:pl_.face});if(TSL.length>300)TSL.shift();}updShots(world);lap('player+shots');ST.aoeC=ST.aoeK;ST.pctx=true;updSummons();traitTick();
   if(world){updDrones();updVortex();updStrikes();updStorm();ST.aoeC=1;ST.pctx=false;lap('powers');updEnemies();lap('enemies');ST.pctx=true;ST.aoeC=ST.aoeK;updJets();}
   updPins();updTherm();updDecoy();if(world)updWave2();updCapShields();updRings();
   for(let n=ACT.length-1;n>=0;n--)if(ACT[n]()===false)ACT.splice(n,1);
@@ -74,7 +75,7 @@ export function loop(now){
   else{ambience('fire',0);ambience('lava',0);ambience('rain',0);ambience('wind',0);}
   ST.frameMs=ST.frameMs*.95+(performance.now()-a)*.05;
   fpsN++;fpsT+=dt;if(fpsT>=500){ST.fps=fpsN*1000/fpsT;fpsN=0;fpsT=0;}
-  hudUlt();hpEl.style.width=Math.max(0,pl_.hp/ST.CH.hp*100)+'%';enEl.style.width=Math.max(0,pl_.en)+'%';
+  hudUlt();hudTrait();hpEl.style.width=Math.max(0,pl_.hp/ST.CH.hp*100)+'%';enEl.style.width=Math.max(0,pl_.en)+'%';
   {const tc=$('toolchip'),T=SPAWN.tool,st=[SPAWN.pause&&'PHYSICS PAUSED',SPAWN.slow&&'SLOW MOTION',SPAWN.god&&'GOD MODE',SPAWN.inf&&'INFINITE ENERGY',SPAWN.peace&&'PEACEFUL'].filter(Boolean);
    const txt=T?'PLACING '+T.label.toUpperCase()+' · RIGHT-CLICK CANCELS'+(T.kind==='paint'||T.id==='boom'||T.id==='boulder'?' · [ ] BRUSH '+SPAWN.brush:''):st.join(' · ');tc.style.display=txt&&ST.GS==='play'?'block':'none';if(tc.textContent!==txt)tc.textContent=txt;}
   {const d=pwDiv.children[ST.cur],f=d&&d.lastChild;if(f&&f.className==='cdf')f.style.width=(ST.cd>0?Math.min(100,ST.cd/ST.cdMax*100):0)+'%';}

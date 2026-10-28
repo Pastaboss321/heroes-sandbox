@@ -64,7 +64,7 @@ const MARVEL_POWERS=[
  {n:'Photon Barrage',fn:(a,p,use)=>{if(!use(26))return;ST.cd=50;let k=0;ACT.push(()=>{if(k%2===0){const e=nearestEnemy(mouse.wx,mouse.wy,200),tx=e?e.x:mouse.wx+(R()-.5)*40,ty=e?e.y:mouse.wy+(R()-.5)*40,h=p,dx=tx-h.x,dy=ty-(h.y-ST.PH/2),d=Math.hypot(dx,dy)||1,an=Math.atan2(dy,dx)+(R()-.5)*.8;
      shots.push({x:p.x,y:p.y-ST.PH/2,vx:Math.cos(an)*6,vy:Math.sin(an)*6,type:'photon',life:120,boom:6,col:PH,ecol:PH,home:true});}return++k<30;});snd('charge',p.x,p.y,{pitch:1.4});}},
  // an orbital strike: a column of photon light from the top of the sky to the cursor
- {n:'Orbital Lance',fn:(a,p,use)=>{if(!use(40))return;ST.cd=90;const tx=mouse.wx;let k=0;fxWord(tx,mouse.wy-40,'LOCKED ON',1,'#ffd36a',true);
+ {n:'Kree Sky Lance',fn:(a,p,use)=>{if(!use(40))return;ST.cd=90;const tx=mouse.wx;let k=0;fxWord(tx,mouse.wy-40,'LOCKED ON',1,'#ffd36a',true);
    ACT.push(()=>{k++;const gy=surfaceY(tx|0,Math.max(0,mouse.wy-200),600),top=Math.min(gy,mouse.wy)-400;
      if(k<30){if(k%4===0)rings.push({x:tx,y:Math.min(gy,mouse.wy+40),r:20,vr:-.5,life:6,c:PH});return true;}
      beamCore({h:{x:tx,y:top},dx:0,dy:1,d:600},{pow:400,rad:5*ST.aoeC|0,len:Math.max(10,gy-top+30),w:6,c:PHC,g:[255,160,40],spark:()=>rgb(255,230,160),dmg:9});

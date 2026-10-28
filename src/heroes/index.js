@@ -42,6 +42,7 @@ import { aoeCost } from './aoe.js';
 import { markUlt, resetHeroTimers } from './abilities.js';
 import { SPAWN } from './powers.js';
 import { buildPowerBar, pwDiv } from '../ui/hud.js';
+import { traitCast, traitCost, traitIntro, traitPre, traitUlt } from './traits.js';
 
 export const CHARS=[CHAR_DOOM,CHAR_HULK,CHAR_THOR,CHAR_IRON,CHAR_WOLVERINE,CHAR_CYCLOPS,CHAR_ICEMAN,CHAR_JEAN,CHAR_SPIDEY,CHAR_WANDA,CHAR_STRANGE,CHAR_ANTMAN,CHAR_JUGGERNAUT,CHAR_ULTRON,CHAR_MAGNETO,CHAR_STORM,CHAR_VENOM,CHAR_REED,CHAR_SUE,CHAR_TORCH,CHAR_THING,CHAR_PANTHER,CHAR_CAP,CHAR_MARVEL,CHAR_SURFER,CHAR_RIDER,CHAR_POOL,CHAR_THANOS,CHAR_HELA,CHAR_MOON,CHAR_SHANG,CHAR_GAMBIT,CHAR_KURT,CHAR_QUILL,CHAR_MILES]; // entries live in src/heroes/<hero>.js
 applyKits(CHARS); // reworked and new powers (heroes/kits2a.js, kits2b.js)
@@ -57,7 +58,7 @@ export function setChar(i){
   if(!ST.CH.fly)p.fly=false;
   if(ST.held){ST.held.held=false;ST.held=null;}
   TSL.length=0;resetHeroTimers(p);Object.assign(p,{slip:null,wav:0,biomassT:0,bm:0,blob:false,blobA:null,size:1,sizeT:1,ant:0,web:null,sense:0,ceil:0,shell:0,surge:0,jcharge:0,script:0,ball:0,tow:null,grip:null,cling:0,crouch:0,stealth:0,grit:0,sprint:0,ang:0});
-  markUlt(ST.CH);ST.cur=0;ST.cd=0;buildPowerBar();
+  markUlt(ST.CH);traitIntro();ST.cur=0;ST.cd=0;buildPowerBar();
   if(boxHit(p.x,p.y))punchOut(p);
   rings.push({x:p.x,y:p.y-ST.PH/2,r:2,vr:2.5,life:16,c:ST.CH.glow},{x:p.x,y:p.y-ST.PH/2,r:12,vr:-.6,life:16,c:ST.CH.glow});flash(p.x,p.y-ST.PH/2,40,ST.CH.glow,10);
   for(let k=0;k<40;k++){const a=R()*6.283;spawn(p.x,p.y-ST.PH/2,Math.cos(a)*2,Math.sin(a)*2,ST.CH.thrust(),20,0,1,0,1);}
@@ -71,7 +72,7 @@ export let selPowerHook=()=>{};export const setSelHook=f=>{selPowerHook=f;};
 export function cast(){
   const p=pl_;if(ST.cd>0||p.script>0)return;const pw=ST.CH.powers[ST.cur];if(!pw||pw.tk)return;const a=aim();if(!p.fly||Math.abs(p.vx)<.5)p.face=a.dx<0?-1:1;
   if(p.stealth>0&&pw.n!=='Stealth Mode'&&pw.n!=='Energy Shield'){p.stealth=0;fxWord(p.x,p.y-ST.PH-6,'DECLOAK',.7,'#bfe3ff',true);}
-  let denied=false;const ck=aoeCost();let use=c=>{c*=ck;if(p.en<c){denied=true;return false;}p.en-=c;return true;};
+  let denied=false;const ck=aoeCost();let use=c=>{c*=ck;c=traitCost(c,pw,p);if(p.en<c){denied=true;return false;}p.en-=c;traitPre(pw,p,c);return true;}; // the hero's trait can reprice a power and react before it lands (heroes/traits.js)
   if(pw.ult){ // ultimates cost the meter, not energy (heroes/abilities.js)
     if(!(ST.ultT>0)){if(ST.ult<100&&!SPAWN.inf){if(ST.frame-(p.denyT||-99)>30){p.denyT=ST.frame;fxWord(p.x,p.y-ST.PH-8,'ULTIMATE '+(ST.ult|0)+'%',.8,'#ffc93c',true);snd('deny',p.x,p.y,{v:.5});}return;}
       ST.ult=0;ST.ultT=200;ST.hitstop=Math.max(ST.hitstop,6);fxWord(p.x,p.y-ST.PH-18,pw.n.toUpperCase()+'!',1.7,'#ffc93c',true);snd('charge',p.x,p.y,{pitch:.5,v:1});
@@ -79,6 +80,7 @@ export function cast(){
     use=()=>true;}
   const c0=ST.cd,e0=p.en,u0=ST.ultT;pw.fn(a,p,use);p.castF=12;if(ST.cd>c0)p.recoilF=6;
   if(ST.cd>c0||p.en<e0-.01||pw.ult&&u0===200)vfxCast(pw,a,p,hand); // the hand flares in the hero's style (render/vfxcore.js)
+  if(pw.ult&&u0===200)traitUlt(pw,p,a);else if(ST.cd>c0||p.en<e0-.01)traitCast(pw,p,a); // the ultimate awakens the trait for ten seconds
   if(pw.ult&&ST.cd>c0)ST.ultT=0; // a one-shot ultimate is spent; a held one keeps going for a few seconds
   if(denied&&ST.frame-(p.denyT||-99)>20){p.denyT=ST.frame;snd('deny',p.x,p.y,{v:.6});const d=pwDiv.children[ST.cur];if(d){d.classList.remove('deny');void d.offsetWidth;d.classList.add('deny');}}
   if(ST.cd>c0)ST.cdMax=ST.cd;

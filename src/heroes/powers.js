@@ -101,7 +101,7 @@ export function hurtTarget(e,d){if(ST.AI_ALLY===e){if(ST.AI_TE)hitEnemy(ST.AI_TE
 export function beam(a){beamCore(a,{pow:48,rad:1,len:420,w:2+((ST.frame>>1)&1),c:[230,255,235],g:[90,255,130],spark:()=>R()<.5?gcol():rgb(230,255,230),dmg:3});}
 export function beamCore(a,o){
   if(ST.frame%26===0)fxWord(a.h.x+a.dx*34,a.h.y+a.dy*34-6,R()<.5?'ZZZAP!':'FZZZT!',.8,`rgb(${o.g[0]},${o.g[1]},${o.g[2]})`,true);
-  let x=a.h.x,y=a.h.y,pow=o.pow;const x0=x,y0=y,rad=o.rad;
+  let x=a.h.x,y=a.h.y,pow=o.pow;const x0=x,y0=y,rad=Math.max(1,Math.min(12,o.rad*(ST.aoeC||1)));
   for(let s=0;s<o.len&&pow>0;s++){
     x+=a.dx;y+=a.dy;if(x<0||x>=W||y>=H||y<-SKY)break; // beams keep going through the open sky above the map
     for(let oy=-rad;oy<=rad;oy++)for(let ox=-rad;ox<=rad;ox++){

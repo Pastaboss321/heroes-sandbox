@@ -54,7 +54,7 @@ const WANDA_POWERS=[
      else if(r<.75){freezeArea(x,y,12,80,6);for(let k=0;k<10;k++)iceAt(x+(R()-.5)*10,y+(R()-.5)*10);}
      else{for(const e of enemies)if(Math.hypot(e.x-x,e.y-y)<30){e.vy=-7;e.vx+=(R()-.5)*6;}for(let k=0;k<20;k++)spawn(x,y,(R()-.5)*3,-R()*4,rgb(255,90,150),20,0,1,1);}}});snd('psi',a.h.x,a.h.y,{pitch:.9,v:.5});}},
  // reality warp: every solid thing in the circle becomes sand (buildings pour away)
- {n:'Transmute',fn:(a,p,use)=>{if(!use(26))return;ST.cd=40;const cx=mouse.wx|0,cy=mouse.wy|0,r=22;
+ {n:'Transmute',fn:(a,p,use)=>{if(!use(26))return;ST.cd=40;const cx=mouse.wx|0,cy=mouse.wy|0,r=22*ST.aoeC|0;
    for(let y=-r;y<=r;y++)for(let x=-r;x<=r;x++){if(x*x+y*y>r*r)continue;const X=cx+x,Y=cy+y;if(X<0||X>=W||Y<0||Y>=H-44)continue;const i=Y*W+X,m=t[i];if(KIND[m]===S&&m!==OBSID){const c=col[i];setc(i,SAND);col[i]=mix3(c,[214,186,118],.35);}}
    rings.push({x:cx,y:cy,r:4,vr:3,life:10,c:[255,70,140]});flash(cx,cy,40,[255,60,130],6);fxWord(cx,cy-r-6,'TRANSMUTE',1.1,'#ff6fa8',true);snd('psi',cx,cy,{pitch:.6});}},
  // hold: a storm of hex lightning tears up everything around the cursor
@@ -76,7 +76,7 @@ const WANDA_POWERS=[
  // gravity runs backwards inside the hex for five seconds
  {n:'Gravity Hex',fn:(a,p,use)=>{if(!use(30))return;ST.cd=50;gzones.push({x:mouse.wx,y:mouse.wy,r:62,life:300});fxWord(mouse.wx,mouse.wy-66,'UPSIDE DOWN',1.1,'#ff6fa8',true);snd('psi',mouse.wx,mouse.wy,{pitch:.5});}},
  // swap the elements: water to lava, lava to water, fire to ice, ice to fire, sand to glass and back
- {n:'Elemental Inversion',fn:(a,p,use)=>{if(!use(28))return;ST.cd=45;const cx=mouse.wx|0,cy=mouse.wy|0,r=30;const SW2={[WATER]:LAVA,[LAVA]:WATER,[ICE]:FIRE,[FIRE]:ICE,[GFIRE]:ICE,[SAND]:GLASS,[GLASS]:SAND,[STEAM]:SMOKE,[SMOKE]:STEAM,[SNOW]:ASH,[OIL]:WATER,[ACID]:WATER};
+ {n:'Elemental Inversion',fn:(a,p,use)=>{if(!use(28))return;ST.cd=45;const cx=mouse.wx|0,cy=mouse.wy|0,r=30*ST.aoeC|0;const SW2={[WATER]:LAVA,[LAVA]:WATER,[ICE]:FIRE,[FIRE]:ICE,[GFIRE]:ICE,[SAND]:GLASS,[GLASS]:SAND,[STEAM]:SMOKE,[SMOKE]:STEAM,[SNOW]:ASH,[OIL]:WATER,[ACID]:WATER};
    for(let y=-r;y<=r;y++)for(let x=-r;x<=r;x++){if(x*x+y*y>r*r)continue;const X=cx+x,Y=cy+y;if(X<0||X>=W||Y<0||Y>=H-6)continue;const i=Y*W+X,to=SW2[t[i]];if(to!==undefined)setc(i,to);}
    rings.push({x:cx,y:cy,r:r,vr:-2,life:10,c:[255,60,130]});fxWord(cx,cy-r-6,'INVERTED',1.1,'#ff6fa8',true);snd('psi',cx,cy,{pitch:1.1});}},
  // conjure random objects out of thin air above the cursor

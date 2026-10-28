@@ -56,6 +56,7 @@ function bore(p,sp){
 export function hurt(d){
   const p=pl_;if(d<=0)return;
   if(p.dodge>0||p.script>0||p.surge>0)return; // mid-dash, mid-leap, rolling, Crimson Surge: untouchable
+  if(ST.hurtHook){d=ST.hurtHook(d);if(!(d>0))return;} // the hero's trait (heroes/traits.js)
   if(p.shell>0)d*=.2; // Ultron's adamantium shell
   if(p.sense>0&&R()<.7){p.vx+=(R()<.5?-1:1)*2.2;for(let k=0;k<6;k++)spawn(p.x,p.y-ST.PH/2,(R()-.5)*3,(R()-.5)*3,rgb(240,240,250),8,0,1,0,1);if(ST.frame-(p.dodgeW||-99)>30){p.dodgeW=ST.frame;fxWord(p.x,p.y-ST.PH-6,'DODGED!',.7,'#f3e9d2',true);}return;}
   if(ST.SZ<.8)d*=.6;

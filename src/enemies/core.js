@@ -80,7 +80,7 @@ export function damageEnemies(x,y,r,dmg,kx,ky,radial){
   for(const e of enemies){const dx=e.x-x,dy=e.y-y,d=Math.hypot(dx,dy);if(d>r+e.def.w/2)continue;const f=Math.max(.25,1-d/(r+1));
     const kr=radial||(!kx&&!ky)?3*f:0;hitEnemy(e,dmg*f,(kx||0)*f+(d?dx/d*kr:0),(ky||0)*f+(d?dy/d*kr:0));}
 }
-export function damageLine(x0,y0,x1,y1,r,dmg){
+export function damageLine(x0,y0,x1,y1,r,dmg){r*=ST.aoeC||1;
   const dx=x1-x0,dy=y1-y0,L2=dx*dx+dy*dy||1;
   for(const e of enemies){const u=Math.max(0,Math.min(1,((e.x-x0)*dx+(e.y-y0)*dy)/L2));const d=Math.hypot(x0+dx*u-e.x,y0+dy*u-e.y);if(d<r+e.def.w/2)hitEnemy(e,dmg,dx/Math.sqrt(L2)*.3,dy/Math.sqrt(L2)*.3);}
 }
@@ -136,7 +136,7 @@ export function updEnemies(){
   }
 }
 function killEnemy(e){
-  const d=e.def;if(d.name==='titan_part')return;if(ST.frame-(e.pHit||-99)<90&&ST.gainUlt)ST.gainUlt(d.titan?30:3);if(!e.mem.noScore){ST.kills++;ST.score+=d.score;}snd('kill',e.x,e.y,{v:Math.min(1,.5+d.boom/16)});
+  const d=e.def;if(d.name==='titan_part')return;if(ST.frame-(e.pHit||-99)<90){if(ST.gainUlt)ST.gainUlt(d.titan?30:3);if(ST.killHook)ST.killHook(e);}if(!e.mem.noScore){ST.kills++;ST.score+=d.score;}snd('kill',e.x,e.y,{v:Math.min(1,.5+d.boom/16)});
   explode(e.x,e.y,d.boom,{fire:.25,self:true,col:[255,140,80]});
   // scrap: the sprite's own pixels fly off and land as debris
   const sp=d.draw?['.']:d.sprite,sw=sp[0].length,sh=sp.length,S=d.scale||1;

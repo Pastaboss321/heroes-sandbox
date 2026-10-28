@@ -3,7 +3,7 @@
 // (a time loop, a Flerken, a suplex, Thomas the Tank Engine, a shared-pain mind link...). applyKits3() puts
 // these and part A's (kits3a.js) on the bar, the ultimate staying last.
 import { ST } from '../state.js';
-import { EMBER, EMPTY, FIRE, GFIRE, KIND, R, S, WATER, rgb } from '../world/materials.js';
+import { EMBER, EMPTY, FIRE, GFIRE, KIND, LAVA, R, S, WATER, rgb } from '../world/materials.js';
 import { H, W, t, setc } from '../world/grid.js';
 import { bodies, q } from '../world/support.js';
 import { makeBody } from '../world/bodies.js';
@@ -12,7 +12,7 @@ import { afters, beams, flash, fxWord, rings } from '../render/fx.js';
 import { explode } from '../world/destruction.js';
 import { sliceLine } from '../world/slice.js';
 import { snd } from '../sfx.js';
-import { quake, scriptMove, shots, surfaceY, zap } from './powers.js';
+import { grabRegion, quake, scriptMove, shots, surfaceY, zap } from './powers.js';
 import { ACT } from './xmen.js';
 import { carve, hand, mouse, pl_ } from '../player.js';
 import { damageEnemies, damageLine, enemies, hitEnemy, nearestEnemy } from '../enemies/core.js';
@@ -99,7 +99,7 @@ const EXTRA3B={
  // ================= ULTRON =================
  ultron:[
   // Sokovia: the ground under the cursor tears loose, rises on thrusters, and comes down where he points
-  {n:'Sokovia',fn:(a,p,use)=>{const n=chunkAt(mouse.wx,mouse.wy,16);if(n<40){noTarget('#ff6060','NOTHING TO LIFT');return;}if(!use(32))return;ST.cd=80;const b=makeBody(q,n,false);if(!b)return;fxWord(b.x,b.y-30,'DO YOU SEE THE BEAUTY OF IT?',.9,'#ff6060',true);let k=0;
+  {n:'Sokovia',fn:(a,p,use)=>{const n=grabRegion(mouse.wx|0,mouse.wy|0,10)||chunkAt(mouse.wx,mouse.wy,16);if(n<40){noTarget('#ff6060','NOTHING TO LIFT');return;}if(!use(32))return;ST.cd=80;const b=makeBody(q,n,false);if(!b)return;fxWord(b.x,b.y-30,'DO YOU SEE THE BEAUTY OF IT?',.9,'#ff6060',true);let k=0;
     ACT.push(()=>{k++;if(!bodies.includes(b))return false;b.rest=0;if(k<50){b.vy=-3.5;b.vx*=.8;for(let j=0;j<2;j++)spawn(b.x+(R()-.5)*b.rmax,b.y+b.rmax*.6,(R()-.5),1.5,R()<.5?rgb(150,200,255):rgb(255,120,90),10,0,1,0,1);return true;}
       if(k<80){b.vy=-.3;b.vx=0;return true;}b.vx=Math.max(-6,Math.min(6,(mouse.wx-b.x)*.05));b.vy=7;b.thrown=true;bodyImpact(b,45,[255,90,90]);return false;});}},
   // a lattice of beams lifts everything near the cursor, shocks it, and slams it back down
@@ -145,7 +145,7 @@ const EXTRA3B={
  torch:[
   // he drinks in every flame around him: fires go out, burning enemies are scorched, his energy comes back
   {n:'Flame Absorb',fn:(a,p,use)=>{const cx=p.x,cy=p.y-ST.PH/2,r=70;let n=0;
-    for(let y=-r;y<=r;y++)for(let x=-r;x<=r;x++){if(x*x+y*y>r*r)continue;const X=cx+x|0,Y=cy+y|0;if(X<0||X>=W||Y<0||Y>=H)continue;const i=Y*W+X,m=t[i];if(m===FIRE||m===EMBER||m===GFIRE){setc(i,EMPTY);n++;if(R()<.2)spawn(X,Y,(cx-X)*.08,(cy-Y)*.08,rgb(255,160,40),12,0,1,0,1);}}
+    for(let y=-r;y<=r;y++)for(let x=-r;x<=r;x++){if(x*x+y*y>r*r)continue;const X=cx+x|0,Y=cy+y|0;if(X<0||X>=W||Y<0||Y>=H)continue;const i=Y*W+X,m=t[i];if(m===FIRE||m===EMBER||m===GFIRE||m===LAVA){setc(i,EMPTY);n++;if(R()<.2)spawn(X,Y,(cx-X)*.08,(cy-Y)*.08,rgb(255,160,40),12,0,1,0,1);}}
     for(const e of enemies){const s=e.st;if(s&&s.burn>0&&Math.hypot(e.x-cx,e.y-cy)<r){s.burn=0;hitEnemy(e,12,0,0);n+=20;beams.push({pts:[[e.x,e.y],[(e.x+cx)/2,(e.y+cy)/2-8],[cx,cy]],life:6,c:[255,220,120],g:[255,100,20]});}}
     if(!n){fxWord(p.x,p.y-ST.PH-6,'NOTHING TO ABSORB',.7,'#ff9a3c',true);return;}ST.cd=30;p.en=Math.min(100,p.en+Math.min(60,n*.15));p.hp=Math.min(ST.CH.hp,p.hp+Math.min(40,n*.05));
     rings.push({x:cx,y:cy,r,vr:-4,life:16,c:[255,150,40]});fxWord(cx,cy-24,'*FWOOMP*',1,'#ff9a3c',true);}},

@@ -2,6 +2,7 @@
 import { $, MODES, bestOf, bossBar, overlay, pauseRun, resumeRun, startRun } from '../modes/core.js';
 import { ST } from '../state.js';
 import { CHARS, HERO_DARK, HERO_UI, MOVE_TAG } from '../heroes/index.js';
+import { TRAITS } from '../heroes/traits.js';
 import { MAPDEFS } from '../maps/index.js';
 import { resetSpawn } from './spawn.js';
 
@@ -14,7 +15,7 @@ function buildMenu(){
   $('modes').innerHTML='';for(const id in MODES){const m=MODES[id],b=bestOf(id);
     mk($('modes'),'card mode',[['b','',m.name.toUpperCase()],['span','sub',m.sub.toUpperCase()]],SEL.mode===id,()=>{SEL.mode=id;buildMenu();});}
   {const m=MODES[SEL.mode],b=bestOf(SEL.mode),el=$('mdesc');el.innerHTML='';const h=document.createElement('b');h.textContent=m.name.toUpperCase();el.append(h,m.desc+(b?' · BEST '+b.toLocaleString():''));} // the selected story's blurb, shown once instead of on every card
-  $('heroes').innerHTML='';CHARS.forEach((c,i)=>mk($('heroes'),'card',[['b','',c.name.toUpperCase()],['span','sub',`${c.hp} HP · ${MOVE_TAG[c.id]||(c.fly?'FLIES':'LEAPS')}`]],SEL.hero===i,()=>{SEL.hero=i;buildMenu();},false,HERO_UI[c.id],HERO_DARK.has(c.id)?'#14110f':null));
+  $('heroes').innerHTML='';CHARS.forEach((c,i)=>mk($('heroes'),'card',[['b','',c.name.toUpperCase()],['span','sub',`${c.hp} HP · ${MOVE_TAG[c.id]||(c.fly?'FLIES':'LEAPS')}`],['span','sub trt',TRAITS[c.id]?TRAITS[c.id].n.toUpperCase():'']],SEL.hero===i,()=>{SEL.hero=i;buildMenu();},false,HERO_UI[c.id],HERO_DARK.has(c.id)?'#14110f':null));
   const fixed=MODES[SEL.mode].map;
   $('maps').innerHTML='';for(const id in MAPDEFS)mk($('maps'),'chip',[['span','',MAPDEFS[id].name.toUpperCase()]],fixed?fixed===id:SEL.map===id,()=>{SEL.map=id;buildMenu();},fixed&&fixed!==id);
 }

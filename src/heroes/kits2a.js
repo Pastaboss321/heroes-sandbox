@@ -23,7 +23,7 @@ import { TK } from '../render/titan.js';
 import { drawHammer, drawSprite } from '../render/sprites.js';
 
 export const tagged=(tag,f)=>{const o=ST.dmgTag;ST.dmgTag=tag;try{f();}finally{ST.dmgTag=o;}};
-export const nearestN=(x,y,r,n,skip)=>enemies.filter(e=>e.hp>0&&!e.host&&e!==skip&&Math.hypot(e.x-x,e.y-y)<r).sort((a,b)=>Math.hypot(a.x-x,a.y-y)-Math.hypot(b.x-x,b.y-y)).slice(0,n);
+export const nearestN=(x,y,r,n,skip)=>(r*=ST.aoeC||1,enemies).filter(e=>e.hp>0&&!e.host&&e!==skip&&Math.hypot(e.x-x,e.y-y)<r).sort((a,b)=>Math.hypot(a.x-x,a.y-y)-Math.hypot(b.x-x,b.y-y)).slice(0,n);
 const G=[120,255,160];
 export const REWORK={},EXTRA={};
 
@@ -87,7 +87,7 @@ function drawBuster(s){const x=s.x,y=s.y,f=s.face||1,RED=rgb(176,32,32),GLD=rgb(
 REWORK.iron={'Energy Shield':
  {n:'Hulkbuster',fn:(a,p,use)=>{if(summons.some(s=>s.buster)||!use(40))return;ST.cd=80;fxWord(mouse.wx,ST.camY+30,'VERONICA, DROP THE BUSTER',1,'#ff6b5c',true);snd('jet',mouse.wx,mouse.wy);
    summons.push({buster:true,x:mouse.wx,y:ST.camY-50,vy:4,life:900,landed:false,punch:0,face:1,cd:0,
-     upd(s){if(!s.landed){s.vy+=.4;s.y+=s.vy;for(let k=0;k<3;k++)spawn(s.x+(R()-.5)*8,s.y,(R()-.5),2+R(),R()<.5?rgb(255,220,150):rgb(255,140,60),10,0,1,0,1);const g=groundBelow(s.x|0,s.y-10);if(s.y>=g){s.y=g;s.landed=true;explode(s.x|0,g,12,{self:true,col:[255,170,80]});shockFx(s.x,g,1);fxWord(s.x,g-50,'KRA-THOOM!',1.3,'#ff6b5c',true);}return;}
+     upd(s){if(!s.landed){s.vy+=.4;s.y+=s.vy;for(let k=0;k<3;k++)spawn(s.x+(R()-.5)*8,s.y,(R()-.5),2+R(),R()<.5?rgb(255,220,150):rgb(255,140,60),10,0,1,0,1);const g=groundBelow(s.x|0,Math.max(0,s.y-10));if(s.y>0&&s.y>=g){s.y=g;s.landed=true;explode(s.x|0,g,12,{self:true,col:[255,170,80]});shockFx(s.x,g,1);fxWord(s.x,g-50,'KRA-THOOM!',1.3,'#ff6b5c',true);}return;}
        const e=nearestEnemy(s.x,s.y-20,300);if(s.punch>0)s.punch--;if(--s.cd<0)s.cd=0;
        if(e){s.face=e.x>s.x?1:-1;if(Math.abs(e.x-s.x)>24){s.x+=s.face*1.3;carve(s.x+s.face*12,s.y-20,9,s.face*3,0,s.y);}else if(s.cd===0){s.cd=28;s.punch=8;const fx=s.x+s.face*24,fy=s.y-22;explode(fx|0,fy|0,6,{self:true,quiet:true,col:[255,200,120]});hitEnemy(e,34,s.face*7,-4);fxWord(fx,fy-10,'WHAM!',.9,'#ff6b5c',true);snd('punch',fx,fy);}}
        s.y=groundBelow(s.x|0,s.y-14);if(s.life===1)explode(s.x|0,s.y-20|0,14,{self:true,fire:.3});},
