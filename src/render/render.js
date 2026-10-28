@@ -4,7 +4,7 @@ import { drawEnemy } from './drawEnemy.js';
 import { ST } from '../state.js';
 import { ACID, EMBER, F, FIRE, G, GFIRE, GLASS, ICE, KIND, LAVA, NEON, PROPANE, R, S, SMOKE, STEAM, VIBR, rgb } from '../world/materials.js';
 import { PHYS } from '../world/physics.js';
-import { H, VH, VW, W, bg, col, life, onViewResize, t } from '../world/grid.js';
+import { H, VH, VW, VWMAX, W, bg, col, life, onViewResize, t } from '../world/grid.js';
 import { bodies } from '../world/support.js';
 import { SET, bgL, fgL, htL, inkL, lumC, lut, rimL } from './look.js';
 import { PAR } from '../maps/gen.js';
@@ -37,7 +37,7 @@ viewBufs();onViewResize(viewBufs);
 export function render(){
   ST.CX=ST.camX|0;ST.CY=ST.camY|0;
   gbuf.fill(0);const ink=SET.ink;let nFire=0,nLava=0;
-  const fl=ST.frame, fx0=(ST.CX*PAR)|0, fyo=(ST.CY*.5)|0, sa=ST.spaceA, sa1=1-sa;
+  const fl=ST.frame, fx0=((ST.CX+VW/2)*PAR-VW/2+VWMAX/2)|0, /* parallax anchored at the screen centre, so every zoom sees the same skyline behind the same spot */ fyo=(ST.CY*.5)|0, sa=ST.spaceA, sa1=1-sa;
   for(let i=0;i<256;i++)flick[i]=R();
   let fi=0;
   // space: near-black with a thin blue limb toward the horizon, and a slow-parallax star field

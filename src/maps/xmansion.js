@@ -12,9 +12,10 @@ import { spawn } from '../world/particles.js';
 // forest full of the wrecks of giant Sentinels from some long-ago siege: heads, hands, arms, torsos and legs,
 // half-buried and grown over with moss.
 export const XM={fx:0,top:0};
+export const XFB=252; // the mansion's lawn line in far-layer rows (maps/index.js keeps the backdrop at native size around it)
 export function genXMansion(){
   clearAll();
-  const GY=356,s=R()*100,B=252; // B: lawn line of the mansion in far-layer rows (sits just above the courtyard on screen)
+  const GY=356,s=R()*100,B=XFB; // B: lawn line of the mansion in far-layer rows (sits just above the courtyard on screen)
   makeFar([38,50,104],[246,170,118],()=>{
     // the mansion is drawn into its own buffer first, then pasted bigger and lower with forced perspective
     const mc=new Uint32Array(ST.FW*H),mk=new Uint8Array(ST.FW*H);
