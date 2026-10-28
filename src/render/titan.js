@@ -8,11 +8,11 @@
 //   TK.end()                         ink outline around everything drawn since begin()
 import { ST } from '../state.js';
 import { rgb } from '../world/materials.js';
-import { VH, VW } from '../world/grid.js';
+import { VH, VW, onViewResize } from '../world/grid.js';
 import { buf, gbuf } from './canvas.js';
 import { SET } from './look.js';
 
-const mask=new Uint8Array(VW*VH);
+let mask=new Uint8Array(VW*VH);onViewResize(()=>{mask=new Uint8Array(VW*VH);});
 // optional scale about an anchor (TK.xf): lets a titan be drawn bigger than its coordinates are written
 let XO=0,YO=0,XS=1;const tx=x=>XO+(x-XO)*XS,ty=y=>YO+(y-YO)*XS;let mx0=VW,my0=VH,mx1=-1,my1=-1;
 const K=(c,k)=>rgb(Math.min(255,(c&255)*k),Math.min(255,((c>>8)&255)*k),Math.min(255,((c>>16)&255)*k));

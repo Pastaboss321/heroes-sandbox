@@ -2,7 +2,7 @@
 import '../render/look.js'; // evaluation order: runs after render/look.js
 import { ST } from '../state.js';
 import { R, cl, rgb } from '../world/materials.js';
-import { H, VW, W, bg, col, life, onWorldResize, setc, stamp, sxy, t, vel } from '../world/grid.js';
+import { H, VWMAX, W, bg, col, life, onWorldResize, setc, stamp, sxy, t, vel } from '../world/grid.js';
 import { bodies } from '../world/support.js';
 import { BLD } from './city.js';
 
@@ -17,7 +17,7 @@ export function disc(cx,cy,r,m,p=1){for(let y=-r;y<=r;y++)for(let x=-r;x<=r;x++)
 export function tint(x0,y0,x1,y1,r,g,b,v){for(let y=y0|0;y<y1;y++)for(let x=x0|0;x<x1;x++){if(x<0||x>=W||y<0||y>=H)continue;const n=(R()*2-1)*v;col[y*W+x]=rgb(cl(r+n),cl(g+n),cl(b+n));}}
 export function bgRect(x0,y0,x1,y1,c){for(let y=Math.max(0,y0|0);y<Math.min(H,y1|0);y++)for(let x=Math.max(0,x0|0);x<Math.min(W,x1|0);x++)bg[y*W+x]=c;}
 export function makeFar(top,bot,layer){
-  ST.FW=VW+Math.ceil((W-VW)*PAR)+2; ST.far=new Uint32Array(ST.FW*H); ST.farKeep=new Uint8Array(ST.FW*H);
+  ST.FW=VWMAX+Math.ceil(W*PAR)+2; /* wide enough for the widest zoomed-out view */ ST.far=new Uint32Array(ST.FW*H); ST.farKeep=new Uint8Array(ST.FW*H);
   for(let y=0;y<H;y++){const f=y/H;const c=rgb(top[0]+(bot[0]-top[0])*f,top[1]+(bot[1]-top[1])*f,top[2]+(bot[2]-top[2])*f);ST.far.fill(c,y*ST.FW,(y+1)*ST.FW);}
   const grad=ST.far.slice();
   layer&&layer();

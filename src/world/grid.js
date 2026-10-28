@@ -8,7 +8,13 @@ import { NAT, gnd, obAdd, pin, rid, unq } from './support.js';
 // Each map picks its own size (MAPDEFS[...].w/h); setWorld() reallocates every per-cell array and tells
 // the modules that keep their own per-cell or per-column arrays (onWorldResize). Every module imports
 // these as live bindings, so they always see the current world.
-export const VW=480, VH=270, CS=32;
+export const CS=32;
+// the camera view in world pixels; the zoom buttons change it (ui/zoom.js) and setView() tells every module that keeps
+// a screen-sized buffer (onViewResize). VWMAX bounds it so map-time layers (the far skyline) are always wide enough.
+export let VW=480, VH=270;
+export const VWMAX=960, VHMAX=540;
+export function onViewResize(f){(ST.vsz||(ST.vsz=[])).push(f);}
+export function setView(w,h){if(w===VW&&h===VH)return false;VW=w;VH=h;for(const f of ST.vsz||[])f();return true;}
 export let W=1600, H=640, N=W*H, CW=Math.ceil(W/CS), CHN=Math.ceil(H/CS);
 
 // ================= grid =================

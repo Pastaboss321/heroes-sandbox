@@ -2,7 +2,7 @@
 import { ambIncursion, genIncursion } from './incursion.js';
 import { ST } from '../state.js';
 import { GRASS, KIND, LEAF, S, cl, rgb } from '../world/materials.js';
-import { H, N, VW, W, bg, bgB, bgD, booms, col, life, t } from '../world/grid.js';
+import { H, N, VWMAX, W, bg, bgB, bgD, booms, col, life, t } from '../world/grid.js';
 import { PAR } from './gen.js';
 import { NAT, gnd, pin, rcount, rid, str, supportCheck, unq } from '../world/support.js';
 import { applyTOD } from '../render/look.js';
@@ -47,20 +47,20 @@ export const MAPDEFS={city:{name:'City',theme:'urban',gen:genCity,w:7200},nyc:{n
   moon:{name:'The Moon',theme:'moon',gen:genMoon,amb:ambMoon,w:8000,space:true,grav:.4},
   dark:{name:'Dark Dimension',theme:'hell',gen:genDark,amb:ambDark,w:6400,space:true,grav:.8}};
 // the phone build keeps worlds shorter (memory)
-// Maps are generated at half size and every cell is then doubled (MAPK), so buildings, doors, cars and trees
-// are 1:1 with the heroes (a floor fits a 22 px hero). mapW is the final width: 60% of the design width (30% on
-// phones), so the world holds about as many cells as before the scale-up while the height doubles.
-export const MAPK=2;
-export const mapW=d=>{const w=d.w||1600;return Math.max(2400,Math.round(w*(window.HS_MOBILE?.3:.6)/64)*64);};
+// Maps are generated at 2/3 size and resampled up by MAPK=1.5, so buildings, doors, cars and trees sit close to
+// the heroes' scale (a 16 px floor becomes 24 px next to a 22 px hero). mapW is the final width: 75% of the design
+// width (36% on phones), so the world holds about as many cells as before the scale-up while the height grows to 1080.
+export const MAPK=1.5;
+export const mapW=d=>{const w=d.w||1600;return Math.max(2400,Math.round(w*(window.HS_MOBILE?.36:.75)/96)*96);};
 const ANCH=[ASG,SAV,WAK,XM];let anchK=1; // per-map anchors (fountain, falls, pools) kept in generation pixels; scaled with the world
-const scaleAnch=k=>{for(const o of ANCH)for(const key in o){const v=o[key];if(typeof v==='number')o[key]=v*k;else if(Array.isArray(v))for(let j=0;j<v.length;j++)if(typeof v[j]==='number')v[j]*=k;}};
+const scaleAnch=k=>{for(const o of ANCH)for(const key in o){const v=o[key];if(typeof v==='number')o[key]=Math.round(v*k);else if(Array.isArray(v))for(let j=0;j<v.length;j++)if(typeof v[j]==='number')v[j]=Math.round(v[j]*k);}};
 function upscaleWorld(K){
   const Wg=W,Hg=H,T=t,Cl=col,Lf=life,B=bg,BD=bgD,P=pin,oF=ST.far,oK=ST.farKeep,oB=ST.farBase,oS=ST.farSky,oFW=ST.FW;
   setWorld(Wg*K,Hg*K);
   for(let y=0;y<H;y++){const sr=((y/K)|0)*Wg,r=y*W;for(let x=0;x<W;x++){const s=sr+((x/K)|0),i=r+x;t[i]=T[s];col[i]=Cl[s];life[i]=Lf[s];bg[i]=B[s];bgD[i]=BD[s];pin[i]=P[s];}}
-  if(oF){const FW=VW+Math.ceil((W-VW)*PAR)+2,n=FW*H;ST.FW=FW;ST.far=new Uint32Array(n);ST.farKeep=new Uint8Array(n);ST.farBase=new Uint32Array(n);ST.farSky=new Uint8Array(n);
+  if(oF){const FW=VWMAX+Math.ceil(W*PAR)+2,n=FW*H;ST.FW=FW;ST.far=new Uint32Array(n);ST.farKeep=new Uint8Array(n);ST.farBase=new Uint32Array(n);ST.farSky=new Uint8Array(n);
     for(let y=0;y<H;y++){const sr=((y/K)|0)*oFW;for(let x=0;x<FW;x++){const s=sr+Math.min(oFW-1,(x/K)|0),i=y*FW+x;ST.far[i]=oF[s];ST.farKeep[i]=oK[s];ST.farBase[i]=oB?oB[s]:oF[s];ST.farSky[i]=oS?oS[s]:0;}}}
-  ST.SPAWNX*=K;ST.streetY*=K;ST.GYO*=K;scaleAnch(K);anchK=K;
+  ST.SPAWNX=Math.round(ST.SPAWNX*K);ST.streetY=Math.round(ST.streetY*K);ST.GYO=Math.round(ST.GYO*K);scaleAnch(K);anchK=K;
 }
 
 for(const id in MAPDEFS){const o=document.createElement('option');o.value=id;o.textContent=MAPDEFS[id].name;mapSel.appendChild(o);}

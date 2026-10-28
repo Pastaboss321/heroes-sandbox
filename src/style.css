@@ -545,6 +545,13 @@
   #aoechip.bump{animation:aoebump .35s ease-out;}
   @keyframes aoebump{0%{transform:scale(1.4);box-shadow:0 0 22px rgba(255,200,74,.5)}100%{transform:scale(1)}}
   body.ui-off #aoechip{visibility:hidden;}
+  #zoomctl{position:absolute;right:16px;bottom:46px;display:flex;align-items:center;gap:6px;background:rgba(6,13,27,.88);border:1px solid rgba(49,230,255,.4);padding:3px 5px;
+    clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px);}
+  #zoomctl b{font:700 10px/1.4 var(--font-d);letter-spacing:.12em;color:#9fe8ff;min-width:84px;text-align:center;}
+  #zoomctl button{width:24px;height:22px;border:1px solid rgba(49,230,255,.55);background:rgba(10,30,52,.9);color:#dff8ff;font:700 15px/1 var(--font-d);cursor:pointer;padding:0;}
+  #zoomctl button:hover:not(:disabled){background:rgba(49,230,255,.25);}
+  #zoomctl button:disabled{opacity:.35;cursor:default;}
+  body.ui-off #zoomctl{visibility:hidden;}
   /* ============================ travel ============================ */
   #travel{
     position:absolute;inset:0;z-index:12;display:flex;align-items:center;justify-content:center;

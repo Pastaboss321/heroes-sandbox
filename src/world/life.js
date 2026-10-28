@@ -17,7 +17,7 @@ import { enemies } from '../enemies/core.js';
 import { pl_ } from '../player.js';
 
 const MOB=()=>window.HS_MOBILE?.6:1;
-const K=2,V=1.41; // map scale (maps/index.js MAPK): people, birds and aircraft are drawn in KxK blocks to stay 1:1 with the heroes; V scales their speeds
+const K=1.5,V=Math.sqrt(1.5); // map scale (maps/index.js MAPK): people, birds and aircraft are drawn K times bigger to match; V scales their speeds
 const URB={civ:34,birds:'pigeon',perch:10,planes:['air','air','prop','heli'],win:.3,pal:'city'};
 export const LIFE={city:URB,nyc:URB,retro:URB,incursion:{...URB,civ:24},
   nyc2099:{civ:30,birds:'pigeon',perch:6,planes:['air','jet','heli'],win:.4,pal:'p2099'},
@@ -93,8 +93,8 @@ function updCiv(c){c.t++;const b=ST.lastBoom;
     c.x=nx;if(!solidAt(X,c.y)){let k=1;while(k<=3*K&&!solidAt(X,c.y+k))k++;if(k<=3*K)c.y+=k;}
   }else c.x=nx;
   return true;}
-// sprites below are drawn in map units: each unit is a KxK block, anchored at (ax,ay)
-const blk=(ax,ay,X,Y,c,g)=>{const wx=ax+(X-ax)*K-(K>>1),wy=ay+(Y-ay)*K;for(let a=0;a<K;a++)for(let b=0;b<K;b++)PIX(wx+a,wy+b,c,g);};
+// sprites below are drawn in map units: unit (X,Y) covers the world pixels from (X-ax)*K to (X+1-ax)*K around the anchor (ax,ay)
+const blk=(ax,ay,X,Y,c,g)=>{const x0=Math.round(ax+(X-ax)*K),x1=Math.round(ax+(X+1-ax)*K),y0=Math.round(ay+(Y-ay)*K),y1=Math.round(ay+(Y+1-ay)*K);for(let x=x0;x<x1;x++)for(let y=y0;y<y1;y++)PIX(x,y,c,g);};
 function drawCiv(c,night){const L=v=>lut(fgL,v),x=c.x|0,y=c.y|0,d=c.dir,f=c.air?2:(c.pan>0||c.idle<=0)&&((c.t>>(c.pan>0?2:3))&1),pix=(X,Y,cc,g)=>blk(x,y,X,Y,cc,g);
   const pt=L(c.pt),sh=L(c.sh),sk=L(c.sk),hr=L(c.hr),g=c.glow?sh:0;let yy=y-1;
   if(f===1){pix(x,yy,pt);pix(x,yy-1,pt);}else{pix(x-1,yy,pt);pix(x+1,yy,pt);if(!c.kid){pix(x-1,yy-1,pt);pix(x+1,yy-1,pt);}}

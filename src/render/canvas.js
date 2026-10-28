@@ -2,7 +2,7 @@
 import '../enemies/bosses.js'; // evaluation order: runs after enemies/bosses.js
 import { ST } from '../state.js';
 import { rgb } from '../world/materials.js';
-import { H, VH, VW, W, onWorldResize } from '../world/grid.js';
+import { H, VH, VW, W, onViewResize, onWorldResize } from '../world/grid.js';
 
 // ================= render =================
 export const cv=document.getElementById('view'),ctx=cv.getContext('2d');
@@ -10,22 +10,23 @@ export const sim=document.createElement('canvas');
 sim.width=VW;
 sim.height=VH;
 export const sctx=sim.getContext('2d');
-export const img=sctx.createImageData(VW,VH),buf=new Uint32Array(img.data.buffer);
+export let img=sctx.createImageData(VW,VH),buf=new Uint32Array(img.data.buffer);
 export const glc=document.createElement('canvas');
 glc.width=VW;
 glc.height=VH;
 export const gctx=glc.getContext('2d');
-export const gimg=gctx.createImageData(VW,VH),gbuf=new Uint32Array(gimg.data.buffer);
+export let gimg=gctx.createImageData(VW,VH),gbuf=new Uint32Array(gimg.data.buffer);
 export const blur=document.createElement('canvas');
 blur.width=VW/2;
 blur.height=VH/2;
 export const bctx=blur.getContext('2d');
+onViewResize(()=>{sim.width=glc.width=VW;sim.height=glc.height=VH;blur.width=VW>>1;blur.height=VH>>1;img=sctx.createImageData(VW,VH);buf=new Uint32Array(img.data.buffer);gimg=gctx.createImageData(VW,VH);gbuf=new Uint32Array(gimg.data.buffer);resize();});
 export const mm=document.createElement('canvas');
 export const mctx=mm.getContext('2d');
 export let mimg,mbuf;
 onWorldResize(()=>{mm.width=Math.ceil(W/8);mm.height=Math.ceil(H/8);mimg=mctx.createImageData(mm.width,mm.height);mbuf=new Uint32Array(mimg.data.buffer);});
 // scale, ox, oy, CX, CY, GL: shared state (ST in state.js)
-export function resize(){cv.width=innerWidth;cv.height=innerHeight;ST.scale=Math.max(1,Math.min(innerWidth/VW,innerHeight/VH));ST.ox=(innerWidth-VW*ST.scale)/2|0;ST.oy=(innerHeight-VH*ST.scale)/2|0;
+export function resize(){cv.width=innerWidth;cv.height=innerHeight;ST.scale=Math.min(innerWidth/VW,innerHeight/VH);ST.ox=(innerWidth-VW*ST.scale)/2|0;ST.oy=(innerHeight-VH*ST.scale)/2|0;
   vig.width=cv.width;vig.height=cv.height;const g=vctx.createRadialGradient(cv.width/2,cv.height/2,Math.min(cv.width,cv.height)*.35,cv.width/2,cv.height/2,Math.max(cv.width,cv.height)*.72);
   g.addColorStop(0,'rgba(10,6,20,0)');g.addColorStop(1,'rgba(10,6,20,.6)');vctx.fillStyle=g;vctx.fillRect(0,0,vig.width,vig.height);}
 export const vig=document.createElement('canvas'),vctx=vig.getContext('2d');

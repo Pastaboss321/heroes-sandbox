@@ -1,9 +1,9 @@
 // Entry point: imports every module in evaluation order (see the import chain note in state.js), then boots the game and exposes window.GAME for scripted tests.
-import { initGL } from './gl.js';
+import { initGL, resizeGL } from './gl.js';
 import { OBJS, buildSpawnUI, placeStruct } from './ui/spawn.js';
 import { ST } from './state.js';
 import { EMPTY, MATS } from './world/materials.js';
-import { H, N, VH, VW, W, bg, bgB, col, setc, t } from './world/grid.js';
+import { H, N, VH, VW, W, bg, bgB, col, onViewResize, setc, t } from './world/grid.js';
 import { bodies, gnd, pin, rcount, rid, supportCheck } from './world/support.js';
 import { bodyHit } from './world/bodies.js';
 import { SET } from './render/look.js';
@@ -32,8 +32,11 @@ import { sliceLine } from './world/slice.js';
 import { setAoe } from './heroes/aoe.js';
 import { summons } from './heroes/abilities.js';
 import { drawSprite } from './render/sprites.js';
+import { initZoom } from './ui/zoom.js'; // last: it pulls in player.js, which must load in its usual order
 
 resize();
+onViewResize(()=>resizeGL(VW,VH)); // the zoom resized the sim canvas (ui/zoom.js)
+initZoom();
 initGL(sim,glc,cv).then(ok=>{ST.GL=ok;});
 buildSpawnUI();
 $('spawnbtn').onclick=e=>{ST.spawnUI.toggle();e.target.blur();};

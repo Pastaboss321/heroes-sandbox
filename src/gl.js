@@ -202,3 +202,12 @@ export function presentGL(x, y, w, h, scale, fx = {}) {
   app.render();
   return true;
 }
+
+// the zoom changed the sim canvas size (world/grid.js setView): follow it with the textures and the light maps
+export function resizeGL(w, h) {
+  if (!app) return;
+  simT.source.resize(w, h); glowT.source.resize(w, h);
+  if (lightRT) lightRT.source.resize(w, h);
+  if (lightRT2) lightRT2.source.resize(w >> 1, h >> 1);
+  if (U) { U.uniforms.uRes[0] = w; U.uniforms.uRes[1] = h; U.update(); }
+}

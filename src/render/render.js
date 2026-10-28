@@ -4,7 +4,7 @@ import { drawEnemy } from './drawEnemy.js';
 import { ST } from '../state.js';
 import { ACID, EMBER, F, FIRE, G, GFIRE, GLASS, ICE, KIND, LAVA, NEON, PROPANE, R, S, SMOKE, STEAM, VIBR, rgb } from '../world/materials.js';
 import { PHYS } from '../world/physics.js';
-import { H, VH, VW, W, bg, col, life, t } from '../world/grid.js';
+import { H, VH, VW, W, bg, col, life, onViewResize, t } from '../world/grid.js';
 import { bodies } from '../world/support.js';
 import { SET, bgL, fgL, htL, inkL, lumC, lut, rimL } from './look.js';
 import { PAR } from '../maps/gen.js';
@@ -29,10 +29,11 @@ import { drawLife } from '../world/life.js';
 import { drawAuras, drawBeamFx, drawFlashFx, drawFxBack, drawFxFront, drawRingFx, drawShieldFx, drawShotFx, drawStatusFx } from './vfxdraw.js';
 
 const flick=new Float32Array(256);
-const SPACE_ROW=new Uint32Array(VH);
-for(let y=0;y<VH;y++){const k=Math.pow(y/VH,3);SPACE_ROW[y]=rgb(3+k*22|0,4+k*38|0,12+k*70|0);}
-const htm=new Uint8Array(VW*VH);
-for(let y=0;y<VH;y++)for(let x=0;x<VW;x++){const ox2=(y>>2)&1?2:0,dx=((x+ox2)&3)-1.5,dy=(y&3)-1.5;htm[y*VW+x]=dx*dx+dy*dy<1.8?1:0;}
+let SPACE_ROW,htm; // screen-sized: rebuilt when the zoom changes the view (world/grid.js setView)
+function viewBufs(){SPACE_ROW=new Uint32Array(VH);htm=new Uint8Array(VW*VH);
+  for(let y=0;y<VH;y++){const k=Math.pow(y/VH,3);SPACE_ROW[y]=rgb(3+k*22|0,4+k*38|0,12+k*70|0);}
+  for(let y=0;y<VH;y++)for(let x=0;x<VW;x++){const ox2=(y>>2)&1?2:0,dx=((x+ox2)&3)-1.5,dy=(y&3)-1.5;htm[y*VW+x]=dx*dx+dy*dy<1.8?1:0;}}
+viewBufs();onViewResize(viewBufs);
 export function render(){
   ST.CX=ST.camX|0;ST.CY=ST.camY|0;
   gbuf.fill(0);const ink=SET.ink;let nFire=0,nLava=0;
