@@ -51,7 +51,8 @@ function tickStatus(e){const s=e.st;const X=e.x|0,Y=e.y|0;
   if(s.chill>0){s.chill--;e.vx*=.9;if(R()<.1)spawn(e.x+(R()-.5)*e.def.w,e.y,(R()-.5)*.3,-.2,rgb(220,240,255),14,0,1,0,1);}
   if(s.stun>0){s.stun--;if(!e.def.titan)e.frozen=Math.max(e.frozen||0,2);if(ST.frame%8===0)spawn(e.x+(R()-.5)*8,e.y-e.def.h/2-3,0,-.3,rgb(255,240,120),12,0,1,0,1);}
   if(s.mark>0)s.mark--;}
-export function drawStatus(pix,enemies){for(const e of enemies){const s=e.st;if(!s||!(s.mark>0))continue;const r=Math.max(e.def.w,e.def.h)/2+4,c=(ST.frame>>2)&1?rgb(255,60,60):rgb(255,200,80);
+export function drawStatus(pix,enemies){if(ST.drawOv)ST.drawOv(pix,enemies); // the overhaul's enemy states (heroes/kits4a.js)
+  for(const e of enemies){const s=e.st;if(!s||!(s.mark>0))continue;const r=Math.max(e.def.w,e.def.h)/2+4,c=(ST.frame>>2)&1?rgb(255,60,60):rgb(255,200,80);
   for(let k=0;k<16;k++){if(k%4===3)continue;const a=k/16*6.283+ST.frame*.05;pix(e.x+Math.cos(a)*r,e.y+Math.sin(a)*r,c,c);}pix(e.x,e.y-r-2,c,c);pix(e.x,e.y+r+2,c,c);}}
 // ---- ultimate meter
 ST.ult=0;ST.ultT=0;
