@@ -1,16 +1,23 @@
 // Juggernaut (playable): sprite, palette, rig entry, powers and roster entry.
 import { crushAhead, hurlBody, wallChunk } from './villains.js';
 import { ST } from '../state.js';
-import { R, rgb } from '../world/materials.js';
-import { bodies } from '../world/support.js';
+import { KIND, R, S, rgb } from '../world/materials.js';
+import { bodies, q } from '../world/support.js';
 import { afters, flash, fxWord } from '../render/fx.js';
 import { explode } from '../world/destruction.js';
 import { ANIM, rect } from '../render/rig.js';
 import { snd } from '../sfx.js';
-import { crackCell, pickC, quake, shockFx } from './powers.js';
+import { crackCell, pickC, quake, shockFx, shots, surfaceY } from './powers.js';
 import { ACT } from './xmen.js';
 import { carve, mouse } from '../player.js';
-import { damageEnemies, enemies, hitEnemy } from '../enemies/core.js';
+import { damageEnemies, enemies, hitEnemy, nearestEnemy } from '../enemies/core.js';
+import { sliceLine } from '../world/slice.js';
+import { solidCells } from './wave2.js';
+import { t } from '../world/grid.js';
+import { makeBody } from '../world/bodies.js';
+import { fig8 } from './kitlib.js';
+import { groundBelow } from '../ui/spawn.js';
+import { spawn } from '../world/particles.js';
 
 export const SPR_JUGG=[
 ".....hhhhh.....",
@@ -64,8 +71,27 @@ const JUGG_POWERS=[
  // a stampede: five earth-shaking strides, each one a quake, crushing everything ahead
  {n:'Seismic Stampede',fn:(a,p,use)=>{if(!p.ground||!use(30))return;ST.cd=60;const dir=a.dx<0?-1:1;let k=0;p.face=dir;fxWord(p.x,p.y-ST.PH-10,'STAMPEDE!',1.2,'#e23b2e',true);
    ACT.push(()=>{k++;p.vx=dir*3.4;p.face=dir;crushAhead(p.x+dir*ST.PW/2,p.y-ST.PH/2,dir,ST.PH+4,4);if(k%12===0){quake(p.x+dir*6,p.y,{col:[214,184,130],r:22});for(const e of enemies)if(Math.abs(e.x-p.x)<70&&!e.def.fly){e.vy=-5;hitEnemy(e,10,dir*3,0);}}return k<60;});}},
+ // a headbutt that sends a shock through a whole structure: it splits along a dozen cracks
+ {n:'Structural Shatter',fn:(a,p,use)=>{if(!use(28))return;ST.cd=55;const cx=mouse.wx,cy=mouse.wy,r=60*ST.aoeC;p.punchF=10;fxWord(cx,cy-20,'KRRRSSSHH!',1.3,'#e23b2e',true);ST.shake=14;snd('slam',cx,cy);
+   for(let k=0;k<9;k++){const an=R()*Math.PI,ox=(R()-.5)*r,oy=(R()-.5)*r;sliceLine(cx+ox-Math.cos(an)*r,cy+oy-Math.sin(an)*r,cx+ox+Math.cos(an)*r,cy+oy+Math.sin(an)*r,{edge:[255,120,90],push:1.5,quiet:k>0});}
+   explode(cx|0,cy|0,8,{self:true,col:[255,90,70]});damageEnemies(cx,cy,r,20,0,-2);}},
+ // he tears a wedge out of the ground ahead and bowls it down the street
+ {n:'Cyttorak Slab',fn:(a,p,use)=>{const dir=a.dx<0?-1:1,gx=p.x+dir*16,gy=surfaceY(gx|0,Math.max(0,p.y-6|0),30);if(!use(22))return;ST.cd=45;
+   sliceLine(gx-dir*12,gy-2,gx+dir*4,gy+26,{edge:[255,120,90],quiet:true});sliceLine(gx+dir*30,gy-2,gx+dir*14,gy+26,{edge:[255,120,90],quiet:true});sliceLine(gx-dir*12,gy+26,gx+dir*30,gy+26,{edge:[255,120,90],quiet:true});
+   const n0=solidCells(gx+dir*9,gy+12,12,true);let n=0;for(let j=0;j<n0;j++)if(KIND[t[q[j]]]===S)q[n++]=q[j];if(n<20)return;const b=makeBody(q,n,false);if(!b)return;b.vx=dir*8;b.vy=-4;b.va=dir*.08;b.thrown=true;b.safeP=ST.frame+30;fxWord(gx,gy-16,'OUT OF MY WAY!',1,'#e23b2e',true);snd('rip',gx,gy);}},
+ // he grabs the enemy in front, carries it over his head and drives it into the ground behind him
+  {n:'Juggernaut Suplex',fn:(a,p,use)=>{const e=nearestEnemy(p.x+p.face*(ST.PW/2+8),p.y-ST.PH/2,ST.PW/2+30);if(!e||fig8(e)){fxWord(p.x,p.y-ST.PH-6,'NOTHING TO GRAB',.7,'#ff7a5c',true);return;}if(!use(16))return;ST.cd=36;let k=0;const f=p.face;
+    ACT.push(()=>{k++;p.script=2;if(e.hp<=0)return false;const an=Math.min(1,k/24)*Math.PI;e.x=p.x+Math.cos(an)*f*18;e.y=p.y-ST.PH/2-Math.sin(an)*26;e.vx=e.vy=0;e.frozen=Math.max(e.frozen||0,2);if(k<24)return true;
+      const gy=groundBelow(e.x|0,e.y);e.y=gy-e.def.h/2;hitEnemy(e,40,-f*2,-3);quake(e.x,gy,{r:24,col:[200,60,40]});explode(e.x|0,gy|0,8,{self:true,col:[200,60,40]});fxWord(e.x,gy-30,'SUPLEX!',1.1,'#ff7a5c',true);ST.shake=16;return false;});}},
+ // the Crimson Gem flares: for four seconds everything is shoved away from him and enemy fire burns up
+  {n:'Crimson Aura',fn:(a,p,use)=>{if(p.caura>0||!use(24))return;ST.cd=60;p.caura=240;fxWord(p.x,p.y-ST.PH-12,'THE CRIMSON GEM!',1,'#ff7a5c',true);
+    ACT.push(()=>{if(--p.caura<=0||ST.CH.id!=='juggernaut'){p.caura=0;return false;}const cx=p.x,cy=p.y-ST.PH/2,r=36;
+      for(const e of enemies){const dx=e.x-cx,dy=e.y-cy,d=Math.hypot(dx,dy)||1;if(d<r+e.def.w/2){if(!e.def.titan){e.vx+=dx/d*1.2;e.vy+=dy/d*.8-.2;}if(ST.frame-(e.mem.caura||-99)>12){e.mem.caura=ST.frame;hitEnemy(e,8,0,0);}}}
+      for(const b of bodies){const dx=b.x-cx,dy=b.y-cy,d=Math.hypot(dx,dy)||1;if(d<r+b.rmax){b.vx+=dx/d*.6;b.vy+=dy/d*.6;b.rest=0;}}
+      for(let n=shots.length-1;n>=0;n--){const s=shots[n];if(s.owner==='enemy'&&Math.hypot(s.x-cx,s.y-cy)<r){shots.splice(n,1);flash(s.x,s.y,6,[255,60,40],2);}}
+      if(ST.frame%2===0){const an=R()*6.283;spawn(cx+Math.cos(an)*r,cy+Math.sin(an)*r,Math.cos(an),Math.sin(an),rgb(220,40,30),10,0,1,0,1);}return true;});}},
  // a double-fisted overhead smash: a huge crater and a crack running ahead
- {n:'Juggernaut Smash',fn:(a,p,use)=>{if(!use(32))return;ST.cd=60;p.throwF=10;const dir=p.face,x=p.x+dir*12,y=p.y;explode(x|0,y|0,16,{self:true,col:[214,184,130],word:'KRA-KOOM!'});shockFx(x,y,1);for(let k=1;k<10;k++)crackCell(x+dir*k*4|0,y+(R()*6|0),dir);damageEnemies(x,y,40,50,dir*5,-4);ST.hitstop=Math.max(ST.hitstop,4);}},
+ {n:'Juggernaut Smash',ult:true,fn:(a,p,use)=>{if(!use(32))return;ST.cd=60;p.throwF=10;const dir=p.face,x=p.x+dir*12,y=p.y;explode(x|0,y|0,16,{self:true,col:[214,184,130],word:'KRA-KOOM!'});shockFx(x,y,1);for(let k=1;k<10;k++)crackCell(x+dir*k*4|0,y+(R()*6|0),dir);damageEnemies(x,y,40,50,dir*5,-4);ST.hitstop=Math.max(ST.hitstop,4);}}
 ];
 
 // roster entry (CHARS in heroes/index.js)

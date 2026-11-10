@@ -8,10 +8,16 @@ import { beams, flash, fxWord, rings } from '../render/fx.js';
 import { explode, punchOut } from '../world/destruction.js';
 import { ANIM, rect } from '../render/rig.js';
 import { snd } from '../sfx.js';
-import { aim, beamCore, drones, isMetal, shockFx, shots, zap } from './powers.js';
+import { aim, beamCore, drones, grabRegion, isMetal, shockFx, shots, zap } from './powers.js';
 import { ACT, aimFrom, eyes } from './xmen.js';
 import { boxHit, mouse } from '../player.js';
-import { damageEnemies, enemies, hitEnemy } from '../enemies/core.js';
+import { damageEnemies, enemies, hitEnemy, nearestEnemy } from '../enemies/core.js';
+import { summons } from './abilities.js';
+import { groundBelow } from '../ui/spawn.js';
+import { bodyImpact, chunkAt, drawPix, ghost, noTarget, tagged } from './kitlib.js';
+import { makeBody } from '../world/bodies.js';
+import { bodies, q } from '../world/support.js';
+import { spawn } from '../world/particles.js';
 
 export const SPR_ULTRON=[
 "....sSSSs....",
@@ -62,12 +68,29 @@ const ULTRON_POWERS=[
  // an overload nova: arcs of electricity to everything nearby, robots get stunned
  {n:'Overload Pulse',fn:(a,p,use)=>{if(!use(35))return;ST.cd=60;const cx=p.x,cy=p.y-ST.PH/2;for(const e of enemies){const d=Math.hypot(e.x-cx,e.y-cy);if(d<120){zap(cx,cy,e.x,e.y,[255,200,190],[255,40,40]);hitEnemy(e,30*(1-d/160),0,-2);if(isMetal(e))e.frozen=Math.max(e.frozen||0,90);}}
    explode(cx|0,cy|0,10,{self:true,col:[255,60,40]});shockFx(cx,cy,1);flash(cx,cy,120,[255,50,40],10);fxWord(cx,cy-30,'OVERLOAD!',1.3,'#ff6b5c',true);}},
- // a sweeping arc of encephalo fire from his eyes that cuts the city in half
- {n:'Annihilation Sweep',fn:(a,p,use)=>{if(!use(38))return;ST.cd=70;const base=Math.atan2(a.dy,a.dx);let k=0;fxWord(p.x,p.y-ST.PH-10,'ANNIHILATION.',1.2,'#ff6b5c',true);
-   ACT.push(()=>{k++;const an=base-.9+k/40*1.8;beamCore({h:eyes(),dx:Math.cos(an),dy:Math.sin(an)},{pow:900,rad:4,len:520,w:5,c:[255,220,210],g:[255,30,20],spark:()=>rgb(255,60+R()*120,40),dmg:10,noAsh:true});ST.shake=Math.max(ST.shake,8);return k<40;});}},
  // upload into the nearest robot: Ultron's mind jumps bodies, the old shell explodes
  {n:'Upload',fn:(a,p,use)=>{let tg=null,bd=170;for(const e of enemies){if(!isMetal(e)||e.def.title)continue;const d=Math.hypot(e.x-p.x,e.y-p.y);if(d<bd){bd=d;tg=e;}}if(!tg){fxWord(p.x,p.y-ST.PH-6,'NO HOST',.8,'#ff6b5c',true);return;}if(!use(25))return;ST.cd=60;
    const ox=p.x,oy=p.y;zap(ox,oy-ST.PH/2,tg.x,tg.y,[255,200,190],[255,40,40]);p.x=tg.x;p.y=tg.y+tg.def.h/2;tg.hp=0;p.hp=Math.min(ST.CH.hp,p.hp+ST.CH.hp*.3);explode(ox|0,oy-ST.PH/2|0,8,{self:true,col:[255,80,60]});if(boxHit(p.x,p.y))punchOut(p);fxWord(p.x,p.y-ST.PH-8,'UPLOADED.',1.1,'#ff6b5c',true);snd('zap',p.x,p.y);}},
+ // three laser turrets bolt themselves to the surface around the cursor
+ {n:'Turret Grid',fn:(a,p,use)=>{if(summons.filter(s=>s.turret).length>=3||!use(26))return;ST.cd=50;for(let i=0;i<3;i++){const x=mouse.wx+(i-1)*30,y=groundBelow(x|0,mouse.wy);
+   summons.push({turret:true,x,y,life:720,cd:20+i*10,upd(s){if(--s.cd<=0){const e=nearestEnemy(s.x,s.y-6,260);if(e){s.cd=30;const d=Math.hypot(e.x-s.x,e.y-s.y+6)||1;let x=s.x,y=s.y-6;for(let k=0;k<d;k+=2){x+=(e.x-s.x)/d*2;y+=(e.y-s.y+6)/d*2;}beams.push({x0:s.x,y0:s.y-6,x1:e.x,y1:e.y,life:3,w:0,c:[255,220,210],g:[255,30,20]});hitEnemy(e,10,0,0);snd('elaser',s.x,s.y,{v:.3});}}},
+     draw(s){for(let y=0;y<6;y++)for(let x=-3;x<=3;x++)if(Math.abs(x)<=3-(y>>1))drawPix(s.x+x,s.y-y,y<2?rgb(80,84,96):rgb(160,166,180));drawPix(s.x,s.y-6,rgb(255,40,40),true);}});}
+   fxWord(mouse.wx,mouse.wy-24,'GRID ONLINE.',.9,'#ff6b5c',true);}},
+ // a copy of himself marches to the nearest enemy and self-destructs
+ {n:'Ultron Clone Bomb',fn:(a,p,use)=>{if(!use(20))return;ST.cd=40;fxWord(p.x,p.y-ST.PH-8,'THERE ARE NO STRINGS ON ME',.8,'#ff6b5c',true);
+   summons.push({x:p.x+p.face*10,y:p.y,life:300,face:p.face,upd(s){const e=nearestEnemy(s.x,s.y-8,300);if(e){s.face=e.x>s.x?1:-1;s.x+=s.face*2;s.y=groundBelow(s.x|0,s.y-12);if(Math.hypot(e.x-s.x,e.y-s.y+8)<14)s.life=1;}},
+     end(s){explode(s.x|0,s.y-8|0,16,{self:true,fire:.3,col:[255,60,40]});shockFx(s.x,s.y,1);},draw(s){ghost(s.x,s.y,s.face,[255,120,110]);}});}},
+ // Sokovia: the ground under the cursor tears loose, rises on thrusters, and comes down where he points
+  {n:'Sokovia',fn:(a,p,use)=>{const n=grabRegion(mouse.wx|0,mouse.wy|0,10)||chunkAt(mouse.wx,mouse.wy,16);if(n<40){noTarget('#ff6060','NOTHING TO LIFT');return;}if(!use(32))return;ST.cd=80;const b=makeBody(q,n,false);if(!b)return;fxWord(b.x,b.y-30,'DO YOU SEE THE BEAUTY OF IT?',.9,'#ff6060',true);let k=0;
+    ACT.push(()=>{k++;if(!bodies.includes(b))return false;b.rest=0;if(k<50){b.vy=-3.5;b.vx*=.8;for(let j=0;j<2;j++)spawn(b.x+(R()-.5)*b.rmax,b.y+b.rmax*.6,(R()-.5),1.5,R()<.5?rgb(150,200,255):rgb(255,120,90),10,0,1,0,1);return true;}
+      if(k<80){b.vy=-.3;b.vx=0;return true;}b.vx=Math.max(-6,Math.min(6,(mouse.wx-b.x)*.05));b.vy=7;b.thrown=true;bodyImpact(b,45,[255,90,90]);return false;});}},
+ // a lattice of beams lifts everything near the cursor, shocks it, and slams it back down
+  {n:'Repulsor Lattice',fn:(a,p,use)=>{const cx=mouse.wx,cy=mouse.wy,r=70*ST.aoeC,list=enemies.filter(e=>!e.def.titan&&Math.hypot(e.x-cx,e.y-cy)<r);if(!list.length){noTarget('#ff6060');return;}if(!use(26))return;ST.cd=60;let k=0;fxWord(cx,cy-r,'NO STRINGS ON ME',1,'#ff6060',true);
+    ACT.push(()=>{k++;for(const e of list){if(e.hp<=0)continue;if(k<60){e.vy=0;e.vx*=.8;e.frozen=Math.max(e.frozen||0,2);e.y-=.7*(1-k/60);if(k%3===0)beams.push({x0:e.x,y0:e.y+e.def.h/2+30,x1:e.x,y1:e.y,life:3,w:0,c:[255,220,220],g:[255,60,60]});if(k%15===0)tagged('shock',()=>hitEnemy(e,8,0,0));}
+      else{e.frozen=0;e.vy=9;e.thrownT=60;hitEnemy(e,18,0,6);}}return k<60;});}},
+ // a sweeping arc of encephalo fire from his eyes that cuts the city in half
+ {n:'Annihilation Sweep',ult:true,fn:(a,p,use)=>{if(!use(38))return;ST.cd=70;const base=Math.atan2(a.dy,a.dx);let k=0;fxWord(p.x,p.y-ST.PH-10,'ANNIHILATION.',1.2,'#ff6b5c',true);
+   ACT.push(()=>{k++;const an=base-.9+k/40*1.8;beamCore({h:eyes(),dx:Math.cos(an),dy:Math.sin(an)},{pow:900,rad:4,len:520,w:5,c:[255,220,210],g:[255,30,20],spark:()=>rgb(255,60+R()*120,40),dmg:10,noAsh:true});ST.shake=Math.max(ST.shake,8);return k<40;});}}
 ];
 
 // roster entry (CHARS in heroes/index.js)

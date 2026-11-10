@@ -16,6 +16,9 @@ import { SKY, boxHit, carve, keys, mouse } from '../player.js';
 import { damageEnemies, damageLine, enemies, hitEnemy, nearestEnemy } from '../enemies/core.js';
 import { pix } from '../render/canvas.js';
 import { groundBelow } from '../ui/spawn.js';
+import { summons } from './abilities.js';
+import { drawPix } from './kitlib.js';
+import { sliceLine } from '../world/slice.js';
 
 // ---- Venom: hulking black symbiote, white eyes and spider, a mouthful of fangs
 const SPR_VENOM=[ // hunched brute: small head, huge shoulders, long clawed arms
@@ -88,6 +91,7 @@ function tendril(x0,y0,x1,y1,life=2,wig=6){const n=Math.max(3,Math.hypot(x1-x0,y
   for(let k=0;k<=n;k++){const f=k/n,w=Math.sin(f*Math.PI)*Math.sin(f*7+ST.frame*.4)*wig;pts.push([x0+(x1-x0)*f+nx/L*w,y0+(y1-y0)*f+ny/L*w]);}
   beams.push({pts,life,c:[44,44,64],g:[70,70,120]});}
 const VC=[150,150,200];
+function drawSnare(s){const c=rgb(30,30,44),g=rgb(70,60,110);for(let j=0;j<7;j++){const an=s.t*.05+j*.9,r=10+Math.sin(s.t*.1+j)*4;for(let m=0;m<=8;m++){const u=m/8;pix(s.x+Math.cos(an)*r*u,s.y-Math.abs(Math.sin(an))*r*u*.7,c,g);}}}
 const VENOM_POWERS=[
  // switch between the hulking Venom and the Carrion form: a crawling mass that clings to walls and ceilings
  {n:'Symbiote Form',fn:(a,p,use)=>{if(!use(4))return;ST.cd=20;p.blob=!p.blob;p.blobA=null;venomSize(p);if(p.blob){p.vy=0;}
@@ -134,12 +138,25 @@ const VENOM_POWERS=[
    ACT.push(()=>{k++;const dir=Math.sign(tx-x)||1;x+=dir*4;const gy=groundBelow(x|0,y-20);y=gy+8;carve(x,y,6,dir*2,0);p.x=x;p.y=gy+30;p.vx=p.vy=0;p.script=3;p.stealth=Math.max(p.stealth||0,2);
      if(k%3===0)spawn(x,gy-1,(R()-.5)*2,-1-R()*2,rgb(120,110,100),30,0,0,1);damageEnemies(x,gy,14,1.5,0,-2);
      if(Math.abs(tx-x)<6||k>70){p.y=gy;p.vy=-6;explode(x|0,gy|0,14,{self:true,col:VC,word:'ERUPT!'});ringChunks(x,gy+4,20,true);damageEnemies(x,gy,40,40,0,-6);p.stealth=0;if(boxHit(p.x,p.y))punchOut(p);return false;}return true;});}},
+ // three little symbiotes split off and hunt
+ {n:'Symbiote Spawn',fn:(a,p,use)=>{if(!use(24))return;ST.cd=50;fxWord(p.x,p.y-ST.PH-8,'GO, CHILDREN!',.9,'#e6e6f2',true);for(let i=0;i<3;i++)summons.push({x:p.x+(i-1)*6,y:p.y,vy:0,life:480,cd:0,face:1,
+   upd(s){const e=nearestEnemy(s.x,s.y,300);s.vy+=.35*(ST.gk||1);const g=groundBelow(s.x|0,s.y-6);if(s.y+s.vy>=g){s.y=g;s.vy=0;if(e&&Math.abs(e.x-s.x)<40&&--s.cd<=0){s.cd=30;s.vy=-5;}}else s.y+=s.vy;
+     if(e){s.face=e.x>s.x?1:-1;s.x+=s.face*1.6;if(Math.hypot(e.x-s.x,e.y-s.y)<e.def.w/2+5&&ST.frame%10===0){hitEnemy(e,9,0,0);spawn(e.x,e.y,(R()-.5)*2,-1,rgb(30,30,40),14,0,0,1);}}},
+   draw(s){const w=(ST.frame>>2)&1;for(let y=0;y<4;y++)for(let x=-3;x<=3;x++)if(Math.abs(x)<=3-(y===0?1:0))drawPix(s.x+x,s.y-y-1,y===3?rgb(40,38,52):rgb(18,16,24));drawPix(s.x+s.face,s.y-3,rgb(240,240,250));drawPix(s.x+s.face*2,s.y-3,rgb(240,240,250));if(w)drawPix(s.x-s.face*4,s.y-1,rgb(18,16,24));}});}},
+ // Carnage takes over for a while: red tendril-axes lash out at anything near
+ {n:'Carnage Mode',fn:(a,p,use)=>{if(p.carnage>0||!use(34))return;ST.cd=60;p.carnage=480;fxWord(p.x,p.y-ST.PH-10,'CARNAGE RULES!',1.2,'#ff3b3b',true);snd('roar',p.x,p.y,{pitch:1.2});
+   ACT.push(()=>{if(--p.carnage<=0)return false;const cx=p.x,cy=p.y-ST.PH/2;if(ST.frame%3===0)spawn(cx+(R()-.5)*10,cy+(R()-.5)*14,(R()-.5),-1,rgb(200+R()*55|0,20,30),14,0,1,0,1);
+     if(ST.frame%12===0){const e=nearestEnemy(cx,cy,70);const an=e?Math.atan2(e.y-cy,e.x-cx):R()*6.283,L=e?Math.min(70,Math.hypot(e.x-cx,e.y-cy)+8):40;sliceLine(cx,cy,cx+Math.cos(an)*L,cy+Math.sin(an)*L,{edge:[220,30,40],quiet:true,push:1.2});
+       if(e)hitEnemy(e,14,Math.cos(an)*3,Math.sin(an)*3);beams.push({pts:[[cx,cy],[cx+Math.cos(an+.3)*L*.5,cy+Math.sin(an+.3)*L*.5],[cx+Math.cos(an)*L,cy+Math.sin(an)*L]],life:4,c:[255,80,80],g:[200,20,30]});}return true;});}},
+ {n:'Symbiote Snare',fn:(a,p,use)=>{if(!use(16))return;ST.cd=36;shots.push({x:a.h.x,y:a.h.y,vx:a.dx*7,vy:a.dy*7-1,grav:.15,type:'goo',life:80,col:[40,40,60],boom:0,onHit:s=>{const x=s.x,y=s.y;fxWord(x,y-14,'GOTCHA.',.9,'#c8c8ff',true);
+    summons.push({x,y,life:360,upd(o){for(const e of enemies){if(e.def.titan)continue;const dx=o.x-e.x,dy=o.y-e.y,d=Math.hypot(dx,dy)||1;if(d<34){e.vx+=dx/d*.4;e.vy+=dy/d*.3;e.webbed=Math.max(e.webbed||0,10);if(o.t%20===0)hitEnemy(e,4,0,0);}}
+      if(o.t%3===0){const an=R()*6.283;spawn(o.x+Math.cos(an)*16,o.y+Math.sin(an)*6,-Math.cos(an)*.4,-Math.sin(an)*.2,rgb(30,30,44),14,0,0,0,1);}},draw:drawSnare});}});}},
  // WE ARE VENOM: the symbiote swells to full size and tendrils tear at everything around it
- {n:'We Are Venom',fn:(a,p,use)=>{if(p.wav>0||!use(50))return;ST.cd=150;p.wav=420;venomSize(p);fxWord(p.x,p.y-ST.PH-16,'WE ARE VENOM!',1.6,'#ff6b8a',true);snd('roar',p.x,p.y,{pitch:.55});ST.shake=22;
+ {n:'We Are Venom',ult:true,fn:(a,p,use)=>{if(p.wav>0||!use(50))return;ST.cd=150;p.wav=420;venomSize(p);fxWord(p.x,p.y-ST.PH-16,'WE ARE VENOM!',1.6,'#ff6b8a',true);snd('roar',p.x,p.y,{pitch:.55});ST.shake=22;
    ACT.push(()=>{if(--p.wav<=0){venomSize(p);return false;}const cx=p.x,cy=p.y-ST.PH/2;
      if(p.wav%5===0){const e=nearestEnemy(cx,cy,150);let tx,ty;if(e&&R()<.6){tx=e.x;ty=e.y;hitEnemy(e,14,(e.x-cx)*.03,-2);}else{const an=R()*6.283,d=50+R()*80;tx=cx+Math.cos(an)*d;ty=cy+Math.sin(an)*d;}
        tendril(cx,cy,tx,ty,5,8);explode(tx|0,ty|0,8,{self:true,quiet:true,col:VC});}
-     if(p.wav%3===0)spawn(cx+(R()-.5)*16,cy+(R()-.5)*20,(R()-.5),-R(),rgb(30,30,46),20,0,0,1);return true;});}},
+     if(p.wav%3===0)spawn(cx+(R()-.5)*16,cy+(R()-.5)*20,(R()-.5),-R(),rgb(30,30,46),20,0,0,1);return true;});}}
 ];
 
 // roster entry (CHARS in heroes/index.js)

@@ -14,6 +14,9 @@ import { scriptMove, shockFx, shots, surfaceY } from './powers.js';
 import { ACT } from './xmen.js';
 import { carve, mouse } from '../player.js';
 import { damageCone, damageEnemies, damageLine, enemies, hitEnemy, nearestEnemy } from '../enemies/core.js';
+import { summons } from './abilities.js';
+import { groundBelow } from '../ui/spawn.js';
+import { echo, tagged } from './kitlib.js';
 
 const SPR_PANTHER=[
 "....k...k....",
@@ -85,11 +88,21 @@ const PANTHER_POWERS=[
  {n:'Panther Dash',fn:(a,p,use)=>{if(!use(9))return;ST.cd=20;const dir=a.dx<0?-1:1;let k=0;p.dodge=14;
    ACT.push(()=>{k++;p.vx=dir*8;p.vy=0;p.script=2;carve(p.x+dir*6,p.y-ST.PH/2,ST.PH*.45,dir*4,0,Math.floor(p.y));scriptMove(p,p.vx,0);sliceLine(p.x-dir*6,p.y-2,p.x+dir*10,p.y-2,{edge:EDGE,quiet:true});sliceLine(p.x-dir*6,p.y-ST.PH+1,p.x+dir*10,p.y-ST.PH+1,{edge:EDGE,quiet:true});
      if(k%2===0)afters.push({x:p.x,y:p.y,ang:p.ang,face:p.face,life:12});damageLine(p.x-dir*8,p.y-ST.PH/2,p.x+dir*8,p.y-ST.PH/2,6,6);return k<14;});}},
+ // the ancestral plane opens: three spirit panthers run down the nearest enemies
+ {n:'Ancestral Plane',fn:(a,p,use)=>{if(!use(30))return;ST.cd=70;fxWord(p.x,p.y-ST.PH-10,'MY ANCESTORS RUN WITH ME',1,'#c8a0ff',true);for(let i=0;i<3;i++)summons.push({x:p.x-p.face*10*i,y:p.y,vy:0,life:360,cd:0,face:p.face,
+   upd(s){const e=nearestEnemy(s.x,s.y-8,320);s.vy+=.3;const g=groundBelow(s.x|0,s.y-6);if(s.y+s.vy>=g){s.y=g;s.vy=0;}else s.y+=s.vy;
+     if(e){s.face=e.x>s.x?1:-1;s.x+=s.face*3;if(Math.abs(e.x-s.x)<30&&s.vy===0&&e.y<s.y-6)s.vy=-5;if(Math.hypot(e.x-s.x,e.y-s.y+8)<14&&--s.cd<=0){s.cd=16;hitEnemy(e,16,s.face*3,-2);clawSlice(s.x,s.y-8,s.face,0,20,3,3,{edge:[200,170,255],quiet:true});}}},
+   draw(s){echo('panther',s.x,s.y,s.face,[180,130,255]);}});}},
+ // Shuri's panther gauntlets: two sonic blasts that stun what they hit
+ {n:'Shuri Gauntlets',fn:(a,p,use)=>{if(!use(10))return;ST.cd=20;for(const o of [-.08,.08]){const an=Math.atan2(a.dy,a.dx)+o;shots.push({x:a.h.x,y:a.h.y,vx:Math.cos(an)*7,vy:Math.sin(an)*7,type:'sonic',life:70,col:[190,140,255],boom:5,
+   onHit:s=>{explode(s.x|0,s.y|0,6,{self:true,col:[190,140,255]});tagged('shock',()=>damageEnemies(s.x,s.y,14,16,0,-1));}});}snd('zap',a.h.x,a.h.y,{pitch:.7});}},
+ {n:'Panther Prowl',fn:(a,p,use)=>{if(p.prowl>0||!use(18))return;ST.cd=70;p.prowl=300;p.stealth=300;p.lastSeen={x:p.x,y:p.y-8};ST.buffT=Math.max(ST.buffT||0,ST.frame+300);fxWord(p.x,p.y-ST.PH-8,'*PROWLS*',.8,'#c8a0ff',true);
+    ACT.push(()=>{if(--p.prowl<=0||ST.CH.id!=='panther'){p.prowl=0;return false;}if(p.ground&&Math.abs(p.vx)>1)p.vx=Math.max(-4.5,Math.min(4.5,p.vx*1.04));if(ST.frame%5===0)spawn(p.x,p.y-2,0,-.2,rgb(150,100,230),10,0,1,0,1);return true;});}},
  // Bast's wrath: a spectral panther the height of a tower bounds across the screen, cutting it to pieces
- {n:"Bast's Wrath",fn:(a,p,use)=>{if(!use(60))return;ST.cd=180;const dir=p.face,y0=p.y-ST.PH/2;let x=p.x-dir*40,k=0;fxWord(p.x,p.y-50,'WAKANDA FOREVER!',1.6,'#c8a0ff',true);snd('roar',p.x,p.y,{pitch:1.3});ST.hitstop=Math.max(ST.hitstop,6);
+ {n:"Bast's Wrath",ult:true,fn:(a,p,use)=>{if(!use(60))return;ST.cd=180;const dir=p.face,y0=p.y-ST.PH/2;let x=p.x-dir*40,k=0;fxWord(p.x,p.y-50,'WAKANDA FOREVER!',1.6,'#c8a0ff',true);snd('roar',p.x,p.y,{pitch:1.3});ST.hitstop=Math.max(ST.hitstop,6);
    ACT.push(()=>{k++;x+=dir*9;const hy=y0-40+Math.sin(k*.25)*30;
      for(let j=0;j<10;j++){const an=R()*6.283,r=R()*40;spawn(x+Math.cos(an)*r*1.4,hy+Math.sin(an)*r,dir*2,(R()-.5),R()<.5?rgb(200,160,255):rgb(120,80,220),14,0,1,0,1);}
      if(k%3===0){const an=(R()-.5)*1.2+(dir>0?.6:Math.PI-.6);sliceLine(x,hy-50,x+Math.cos(an)*110,hy-50+Math.sin(an)*110,{edge:EDGE,push:1.6,quiet:k%6!==0});}
-     damageEnemies(x,hy,46,12,dir*4,-3);flash(x,hy,60,VIB,2);ST.shake=Math.max(ST.shake,6);return k<60;});}},
+     damageEnemies(x,hy,46,12,dir*4,-3);flash(x,hy,60,VIB,2);ST.shake=Math.max(ST.shake,6);return k<60;});}}
 ];
 export const CHAR_PANTHER={id:'panther',name:'Black Panther',spr:SPR_PANTHER,pal:PAL_PANTHER,pw:7,ph:19,fly:false,fs:2.4,boost:2,run:2.4,jump:5.6,hp:340,armor:.7,glow:VIB,cape:null,thrust:()=>rgb(170,120,255),powers:PANTHER_POWERS};

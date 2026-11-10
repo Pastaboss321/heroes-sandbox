@@ -13,7 +13,8 @@ import { snd } from '../sfx.js';
 import { GAMMA, crackCell, grabbable, pickC, quake, shockFx, smashOverlap, surfaceY, thunderclap } from './powers.js';
 import { ACT } from './xmen.js';
 import { carve, keys, mouse, pressed, toggleFly } from '../player.js';
-import { damageEnemies, enemies, hitEnemy } from '../enemies/core.js';
+import { damageEnemies, enemies, hitEnemy, nearestEnemy } from '../enemies/core.js';
+import { sliceLine } from '../world/slice.js';
 
 const SPR_HULK=[
 "......hhhhh......",
@@ -56,8 +57,6 @@ const HULK_POWERS=[
    for(let k=0;k<24;k++)spawn(p.x+(R()-.5)*8,p.y,(R()-.5)*4,-R()*2,rgb(160,150,130),20,0,0,0,1);}},
  {n:'Rip & Throw',tk:{r:14,range:26,tether:false,throwMul:0,overhead:true}},
  {n:'Gamma Quake',fn:(a,p,use)=>{if(!use(28))return;if(p.ground){p.vy=-5;p.ground=false;}p.slam=true;p.slamOpt={col:GAMMA,r:46};ST.cd=50;}},
-];
-HULK_POWERS.push(
  {n:'Gamma Roar',fn:(a,p,use)=>{if(!use(20))return;ST.cd=45;const cx=a.h.x,cy=a.h.y-6,R0=120,ang=Math.atan2(a.dy,a.dx);fxWord(cx+a.dx*30,cy-16,'RRRAAAARGH!',1.6,'#bff07a',true);fxImpact(cx,cy,3);ST.hitstop=Math.max(ST.hitstop,3);
    for(let n=0;n<5000;n++){const d=Math.sqrt(R())*R0,t2=ang+(R()-.5)*1.3,X=cx+Math.cos(t2)*d|0,Y=cy+Math.sin(t2)*d|0;if(X<0||X>=W||Y<0||Y>=H)continue;const i=Y*W+X,m=t[i];
      if(m===GLASS){spawn(X,Y,Math.cos(t2)*4,Math.sin(t2)*4-1,col[i],60,0,1);setc(i,EMPTY);}else if((KIND[m]===P||KIND[m]===L)&&R()<.5){spawn(X,Y,Math.cos(t2)*4,Math.sin(t2)*4-1,col[i],60,m,0);t[i]=0;wake(i);}else if(KIND[m]===G||KIND[m]===F){t[i]=0;wake(i);}}
@@ -68,9 +67,6 @@ HULK_POWERS.push(
    if(n<12)return;const b=makeBody(q,n,false);if(!b)return;b.x=p.x;b.y=p.y-ST.SH-b.rmax;smashOverlap(b);
    const dx=mouse.wx-b.x,dy=mouse.wy-b.y,d=Math.hypot(dx,dy)||1;b.vx=dx/d*10;b.vy=dy/d*10-2.5;b.va=p.face*.08;b.thrown=true;b.safeP=ST.frame+40;p.throwF=10;
    fxWord(b.x,b.y-10,'HUP!',1,'#bff07a',true);for(let k=0;k<30;k++)spawn(X0+(R()-.5)*12,Y0,(R()-.5)*3,-R()*3,rgb(150,140,125),25,0,0,1);ST.shake+=5;}},
- {n:'Worldbreaker',fn:(a,p,use)=>{if(p.rage>0||!use(45))return;p.rage=420;ST.cd=40;fxWord(p.x,p.y-ST.PH-14,'HULK SMASH!!',1.7,'#bff07a',true);fxBurst(p.x,p.y-ST.PH/2,60,'#bff07a');quake(p.x,p.y,{col:GAMMA,r:30});}},
-);
-HULK_POWERS.push(
  // grab a foe and smash it into the ground, side to side, five times
  {n:'Puny God',fn:(a,p,use)=>{const e=grabbable(p.x+p.face*10,p.y-ST.PH/2,44);if(!e){if(ST.frame-(p.denyT||-99)>20){p.denyT=ST.frame;fxWord(p.x,p.y-ST.PH-6,'HRRM?',.8,'#bff07a',true);snd('deny',p.x,p.y);}return;}
    if(!use(26))return;ST.cd=80;e.grabbed=true;let k=0,side=p.face,hits=0;const N=5;fxWord(p.x,p.y-ST.PH-10,'PUNY...',1.2,'#bff07a',true);snd('rip',p.x,p.y);
@@ -126,7 +122,23 @@ HULK_POWERS.push(
      p.ang+=vx*.11;p.face=vx<0?-1:1;if(k%2===0)afters.push({x:p.x,y:p.y,ang:p.ang,face:p.face,life:9});spawn(p.x,p.y-r,(R()-.5),(R()-.5),pickC(GAMMA),12,0,1,0,1);
      if(k>=240||(pressed.KeyS&&k>15)){p.ball=0;p.ang=0;p.script=0;p.vx=vx*.6;p.vy=Math.min(vy,0);explode(p.x|0,p.y-4|0,8,{self:true,col:GAMMA});return false;}
      return true;});}},
-);
+ // grab the nearest enemy and swing it like a flail through the others, then hurl it
+ {n:'Hulk Flail',fn:(a,p,use)=>{const e=nearestEnemy(p.x,p.y-ST.PH/2,46);if(!e||e.def.titan||e.def.title){fxWord(p.x,p.y-ST.PH-6,'NOTHING TO GRAB',.7,'#bff07a',true);return;}if(!use(16))return;ST.cd=40;let k=0;fxWord(p.x,p.y-ST.PH-10,'PUNY THING!',1.1,'#bff07a',true);
+   ACT.push(()=>{k++;if(e.hp<=0||!enemies.includes(e))return false;p.script=2;const an=k*.42,r=22,cx=p.x,cy=p.y-ST.PH/2;e.x=cx+Math.cos(an)*r;e.y=cy+Math.sin(an)*r*.7;e.vx=e.vy=0;e.frozen=Math.max(e.frozen||0,2);
+     for(const o of enemies)if(o!==e&&Math.hypot(o.x-e.x,o.y-e.y)<o.def.w/2+e.def.w/2+3){hitEnemy(o,14,(o.x-cx)*.1,-2);hitEnemy(e,4,0,0);}carve(e.x,e.y,3,0,0);
+     if(k>=36){const dx=mouse.wx-e.x,dy=mouse.wy-e.y,d=Math.hypot(dx,dy)||1;e.vx=dx/d*11;e.vy=dy/d*11;e.thrownT=60;hitEnemy(e,20,0,0);fxWord(e.x,e.y-10,'HULK THROW!',1,'#bff07a',true);return false;}return true;});}},
+ // a punch into the ground opens a jagged fissure that runs ahead and splits the street into slabs
+ {n:'Fault Fissure',fn:(a,p,use)=>{if(!use(26))return;ST.cd=50;const dir=a.dx<0?-1:1;let x=p.x+dir*6,y=p.y+1,k=0;p.punchF=10;quake(p.x,p.y,{r:16,col:[130,255,90]});
+   ACT.push(()=>{k++;const nx=x+dir*(6+R()*4),ny=surfaceY(nx|0,Math.max(0,y-20|0),50)+(R()*4|0);sliceLine(x,y,nx,ny+24,{edge:[150,255,110],w:1,push:1.4,quiet:k%3!==0});
+     if(k%3===0)sliceLine(nx,ny-2,nx+dir*2,ny+30,{edge:[150,255,110],quiet:true});damageEnemies(nx,ny-6,12,9,dir,-5);if(R()<.5)spawn(nx,ny,(R()-.5)*2,-2-R()*3,rgb(150,140,125),30,0,0,1);ST.shake=Math.max(ST.shake,4);x=nx;y=ny;return k<36;});
+   fxWord(p.x+dir*40,p.y-24,'KRRRAAAK!',1.3,'#bff07a',true);}},
+ {n:'The Madder Hulk Gets',fn:(a,p,use)=>{if(p.madder>0||!use(22))return;ST.cd=80;p.madder=360;p.sizeT=1.3;ST.buffT=Math.max(ST.buffT||0,ST.frame+360);let hp0=p.hp;fxWord(p.x,p.y-ST.PH-14,'THE MADDER HULK GETS...',1.1,'#7fff6a',true);snd('roar',p.x,p.y,{pitch:.6});
+    ACT.push(()=>{if(--p.madder<=0||ST.CH.id!=='hulk'){if(ST.CH.id==='hulk')p.sizeT=1;p.madder=0;return false;}if(p.hp<hp0){p.en=Math.min(100,p.en+(hp0-p.hp)*.6);ST.buffT=Math.max(ST.buffT,ST.frame+90);}hp0=p.hp;
+      if(ST.frame%4===0)spawn(p.x+(R()-.5)*ST.PW*1.4,p.y-R()*ST.PH,(R()-.5)*.4,-.8,rgb(140,255,120),14,0,1,0,1);return true;});}},
+ {n:'Worldbreaker',ult:true,fn:(a,p,use)=>{if(p.rage>0||!use(45))return;p.rage=420;ST.cd=40;fxWord(p.x,p.y-ST.PH-14,'HULK SMASH!!',1.7,'#bff07a',true);fxBurst(p.x,p.y-ST.PH/2,60,'#bff07a');quake(p.x,p.y,{col:GAMMA,r:30});}}
+];
+
+
 
 // roster entry (CHARS in heroes/index.js)
 export const CHAR_HULK={id:'hulk',name:'Hulk',spr:SPR_HULK,pal:PAL_HULK,pw:9,ph:23,fly:false,fs:2.6,boost:1,run:2.3,jump:6.2,hp:500,armor:.45,glow:GAMMA,cape:null,thrust:()=>pickC(GAMMA),powers:HULK_POWERS};

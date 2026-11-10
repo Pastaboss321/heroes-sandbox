@@ -15,8 +15,10 @@ import { ACT } from './xmen.js';
 import { solidCells } from './wave2.js';
 import { SUEC } from './f4.js';
 import { carve, mouse } from '../player.js';
-import { damageEnemies, enemies, hitEnemy } from '../enemies/core.js';
+import { damageEnemies, damageLine, enemies, hitEnemy } from '../enemies/core.js';
 import { groundBelow } from '../ui/spawn.js';
+import { sliceLine } from '../world/slice.js';
+import { atCursor, noTarget } from './kitlib.js';
 
 const SPR_SUE=[
 "....YYYYY....",
@@ -72,11 +74,25 @@ const SUE_POWERS=[
    ACT.push(()=>{k++;for(const m of ms){if(m[2]===k)explode(m[0]|0,m[1]|0,11,{self:true,col:SUEC});else if(m[2]>k&&k%6===0)spawn(m[0],m[1],0,0,rgb(200,235,255),4,0,1,0,1);}return k<80;});}},
  // hold: a thin, unbreakable lance of force that bores through the city
  {n:'Force Lance',fn:(a,p,use)=>{if(!use(.8))return;beamCore(a,{pow:220,rad:2,len:420,w:2,c:[230,248,255],g:SUEC,spark:()=>rgb(200,235,255),dmg:4,noAsh:true});}},
+ // a force field thin as a razor: one long clean cut through whatever is in front of her
+ {n:'Force Blade',fn:(a,p,use)=>{if(!use(16))return;ST.cd=30;const h=a.h,L=260;sliceLine(h.x,h.y,h.x+a.dx*L,h.y+a.dy*L,{edge:[170,220,255],w:1,push:1.4});damageLine(h.x,h.y,h.x+a.dx*L,h.y+a.dy*L,5,26);snd('slash',h.x,h.y,{pitch:1.5});}},
+ // rings of force ripple out from her and push everything away
+ {n:'Force Ripples',fn:(a,p,use)=>{if(!use(22))return;ST.cd=45;let k=0;const cx=p.x,cy=p.y-ST.PH/2;
+   ACT.push(()=>{k++;if(k%10===1){const r0=6;rings.push({x:cx,y:cy,r:r0,vr:3.4*ST.aoeC,life:24,c:[170,220,255]});}const band=(k%10)*3.4*ST.aoeC+6;
+     for(const b of bodies){const dx=b.x-cx,dy=b.y-cy,d=Math.hypot(dx,dy)||1;if(Math.abs(d-band)<b.rmax+6){b.vx+=dx/d*.9;b.vy+=dy/d*.9-.2;b.rest=0;}}
+     if(k%10===5)for(const e of enemies){const dx=e.x-cx,dy=e.y-cy,d=Math.hypot(dx,dy)||1;if(d<band+8&&d>band-30)hitEnemy(e,8,dx/d*4,dy/d*4-1);}return k<40;});}},
+ // invisible steps: for five seconds she can stand and jump on thin air (crouch to drop)
+  {n:'Force Steps',fn:(a,p,use)=>{if(p.fsteps>0||!use(14))return;ST.cd=40;p.fsteps=300;fxWord(p.x,p.y-ST.PH-10,'INVISIBLE STAIRS',.9,'#9ec8ff',true);
+    ACT.push(()=>{if(--p.fsteps<=0||ST.CH.id!=='sue'){p.fsteps=0;return false;}if(!p.ground&&p.vy>0&&!(p.crouch>0)){p.vy=0;p.ground=true;if(ST.frame%3===0)for(let x=-6;x<=6;x+=3)spawn(p.x+x,p.y+1,0,0,rgb(150,200,255),4,0,1,0,0);}return true;});}},
+ // a force bubble inside the enemy, swelling until it bursts
+  {n:'Inner Bubble',fn:(a,p,use)=>{const e=atCursor(60);if(!e){noTarget('#9ec8ff');return;}if(!use(24))return;ST.cd=50;let k=0;fxWord(e.x,e.y-e.def.h/2-8,'HOLD STILL.',.9,'#9ec8ff',true);
+    ACT.push(()=>{k++;if(e.hp<=0)return false;if(!e.def.titan)e.frozen=Math.max(e.frozen||0,2);if(k%2===0)rings.push({x:e.x,y:e.y,r:2+k*.4,vr:0,life:2,c:[150,200,255]});if(k<40)return true;
+      hitEnemy(e,e.def.titan?40:55,0,-3);damageEnemies(e.x,e.y,30,14,0,-3,true);rings.push({x:e.x,y:e.y,r:6,vr:4,life:12,c:[150,200,255]});flash(e.x,e.y,30,[150,200,255],8);snd('pop',e.x,e.y,{pitch:.4});return false;});}},
  // everything she has: a force sphere that swells out and levels the block
- {n:'Force Nova',fn:(a,p,use)=>{if(!use(55))return;ST.cd=140;const cx=p.x,cy=p.y-ST.PH/2;let k=0;fxWord(cx,cy-40,'ENOUGH!',1.5,'#aee0ff',true);snd('charge',cx,cy);
+ {n:'Force Nova',ult:true,fn:(a,p,use)=>{if(!use(55))return;ST.cd=140;const cx=p.x,cy=p.y-ST.PH/2;let k=0;fxWord(cx,cy-40,'ENOUGH!',1.5,'#aee0ff',true);snd('charge',cx,cy);
    ACT.push(()=>{k++;if(k<20){p.vx*=.5;p.vy*=.5;rings.push({x:cx,y:cy,r:50-k*2,vr:0,life:2,c:SUEC});return true;}
      const r=(k-19)*7;for(let j=0;j<8;j++){const an=R()*6.283;explode(cx+Math.cos(an)*r|0,cy+Math.sin(an)*r|0,9,{self:true,quiet:true,col:SUEC});}
-     if(k===20){shockFx(cx,cy,1.6);flash(cx,cy,160,SUEC,12);ST.hitstop=Math.max(ST.hitstop,5);}damageEnemies(cx,cy,r+10,6,0,0,true);ST.shake=Math.max(ST.shake,10);return k<34;});}},
+     if(k===20){shockFx(cx,cy,1.6);flash(cx,cy,160,SUEC,12);ST.hitstop=Math.max(ST.hitstop,5);}damageEnemies(cx,cy,r+10,6,0,0,true);ST.shake=Math.max(ST.shake,10);return k<34;});}}
 ];
 
 // roster entry (CHARS in heroes/index.js)

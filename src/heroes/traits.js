@@ -20,7 +20,8 @@ import { damageEnemies, enemies, hitEnemy, nearestEnemy } from '../enemies/core.
 import { boxHit, carve, hurt, mouse, pl_ } from '../player.js';
 import { TSL, aim, quake, zap } from './powers.js';
 import { ACT } from './xmen.js';
-import { applyStatus, gainUlt, powerKind, stOf, summons } from './abilities.js';
+import { applyStatus, gainUlt, stOf, summons } from './abilities.js';
+import { firePower, powerKind } from './kit.js';
 import { venomSize } from './venom.js';
 import { pix } from '../render/canvas.js';
 
@@ -61,7 +62,7 @@ function uDrone(x,y,life){summons.push({ud:true,x,y,life,ph:R()*6.283,cool:30,up
 // Strange's echoes: replay a power from where he stands now, aimed where he first cast it
 const echoable=pw=>!pw.ult&&!pw.tk&&powerKind(pw)==='tap'&&!/Portal|Astral|Time Loop|Cloak|Mirror Fold|Ward|Shield|Stealth|Shrink|Giant|Form|Mode/.test(pw.n);
 function replay(q,p){const sx=mouse.wx,sy=mouse.wy,cd=ST.cd,cm=ST.cdMax,en=p.en;mouse.wx=q.mx;mouse.wy=q.my;ST.echoK=q.k;
-  try{q.pw.fn(aim(),p,()=>true);}catch(err){}
+  try{firePower(q.pw,aim(),p,()=>true);}catch(err){}
   mouse.wx=sx;mouse.wy=sy;ST.cd=cd;ST.cdMax=cm;p.en=en;ST.echoK=0;const h=aim().h;rings.push({x:h.x,y:h.y,r:3,vr:2,life:14,c:[255,200,90]});glow(h.x,h.y,rgb(255,210,90),8,1.5);}
 const EL=['fire','ice','shock'],ELC={fire:'#ff8a3c',ice:'#aee8ff',shock:'#ffe84a'};
 const STONEC={Power:'#c070ff',Space:'#5a8cff',Reality:'#ff4a4a',Soul:'#ffa040',Time:'#4aff7a',Mind:'#ffe04a'};

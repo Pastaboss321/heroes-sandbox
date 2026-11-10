@@ -9,10 +9,14 @@ import { afters, beams, flash, fxBurst, fxImpact, fxWord, rings } from '../rende
 import { explode } from '../world/destruction.js';
 import { ANIM, rect } from '../render/rig.js';
 import { snd, sndLoop } from '../sfx.js';
-import { BLUE, beamCore, lightning, lightningStrike, pickC, pins, shots, zap } from './powers.js';
+import { BLUE, beamCore, lightning, lightningStrike, pickC, pins, shots, surfaceY, zap } from './powers.js';
 import { ACT, aimFrom } from './xmen.js';
-import { SKY, boxHit, carve, hand, mouse, toggleFly } from '../player.js';
+import { SKY, boxHit, carve, hand, mouse, pl_, toggleFly } from '../player.js';
 import { damageEnemies, enemies, hitEnemy, nearestEnemy } from '../enemies/core.js';
+import { tagged } from './kitlib.js';
+import { groundBelow } from '../ui/spawn.js';
+import { drawHammer } from '../render/sprites.js';
+import { summons } from './abilities.js';
 
 const SPR_THOR=[
 "....zyYYy....",
@@ -44,11 +48,12 @@ ANIM.thor={leg:14,mid:6,armC:'ffF',tipC:'fFF',aw:2,al:6,fs:2,sh:[10,7],hide:rect
 const THOR_POWERS=[
  {n:'Hammer Throw',fn:(a,p,use)=>{if(shots.some(s=>s.type==='hammer')||!use(8))return;shots.push({x:a.h.x,y:a.h.y,vx:a.dx*7,vy:a.dy*7,type:'hammer',life:400,out:Math.min(55,a.d/7+8),hitSet:new Set(),spin:0});ST.cd=10;ST.shake+=1.5;flash(a.h.x,a.h.y,12,BLUE,4);}},
  {n:'Lightning Call',fn:(a,p,use)=>{if(!use(16))return;lightningStrike(mouse.wx,mouse.wy,13);ST.cd=22;}},
- {n:'Lightning Arc',fn:(a,p,use)=>{if(!use(.8))return;lightning(a,{c:[230,240,255],g:[120,170,255],f:[170,210,255],spark:()=>pickC(BLUE)});}},
+ {n:'Lightning Dome',fn:(a,p,use)=>{if(!use(28))return;ST.cd=60;let k=0;fxWord(p.x,p.y-30,'FOR ASGARD!',1.1,'#bfe3ff',true);snd('thunder',p.x,p.y,{v:.7});
+   ACT.push(()=>{k++;const cx=p.x,cy=p.y-ST.PH/2,r=34*ST.aoeC;if(k%2===0){const an=R()*6.283,an2=an+(R()-.5)*1.4;zap(cx+Math.cos(an)*r,cy+Math.sin(an)*r,cx+Math.cos(an2)*r,cy+Math.sin(an2)*r,[230,240,255],[120,170,255]);}
+     if(k%6===0)tagged('shock',()=>{for(const e of enemies){const d=Math.hypot(e.x-cx,e.y-cy);if(d<r+e.def.w/2)hitEnemy(e,7,(e.x-cx)/(d||1)*2,(e.y-cy)/(d||1)*2);}});
+     for(let n=shots.length-1;n>=0;n--){const s=shots[n];if(s.owner==='enemy'&&Math.hypot(s.x-cx,s.y-cy)<r){shots.splice(n,1);flash(s.x,s.y,6,[150,190,255],2);}}return k<240;});}},
  {n:'Thunder Slam',fn:(a,p,use)=>{if(!use(24))return;if(p.fly)toggleFly(false);if(p.ground){p.vy=-4.5;p.ground=false;}p.slam=true;p.slamOpt={col:BLUE,r:40,bolts:true};ST.cd=45;}},
  {n:'Storm Call',fn:(a,p,use)=>{if(ST.storm||!use(50))return;ST.storm={x:mouse.wx,life:480};ST.cd=60;flash(mouse.wx,ST.camY,140,BLUE,12);ST.shake+=4;}},
-];
-THOR_POWERS.push(
  {n:'Bifrost',fn:(a,p,use)=>{if(!use(35))return;ST.cd=60;let x=mouse.wx|0,y=mouse.wy|0;for(let k=0;k<60&&boxHit(x,y);k++)y--;if(boxHit(x,y))return;
    const RB=[[255,70,70],[255,170,60],[255,240,80],[90,240,110],[80,170,255],[170,100,255]];
    for(const [ox,c] of RB.map((c,k)=>[k-2.5,c])){beams.push({x0:p.x+ox,y0:p.y-ST.PH/2,x1:p.x+ox,y1:ST.camY-10,life:10,w:1,c,g:c});beams.push({x0:x+ox,y0:ST.camY-10,x1:x+ox,y1:y,life:12,w:1,c,g:c});}
@@ -57,12 +62,6 @@ THOR_POWERS.push(
    damageEnemies(p.x,p.y-ST.PH/2,16,2.5,0,0,true);for(let n=shots.length-1;n>=0;n--){const s2=shots[n];if(s2.owner==='enemy'&&Math.hypot(s2.x-p.x,s2.y-p.y+ST.PH/2)<18){spawn(s2.x,s2.y,0,0,rgb(200,220,255),8,0,1,0);shots.splice(n,1);}}
    for(let n=0;n<ST.np;n++){const dx=px[n]-p.x,dy=py[n]-p.y+ST.PH/2,d=Math.hypot(dx,dy);if(d<30&&d>1){pvx[n]+=-dy/d*.6;pvy[n]+=dx/d*.6;}}
    if(p.fly){p.vx+=(mouse.wx>p.x?1:-1)*.12;}if(ST.frame%20===0)fxWord(p.x,p.y-ST.PH-6,'WHUM WHUM',.7,'#bfe3ff',true);}},
- {n:'God Blast',fn:(a,p,use)=>{if(!use(.6))return;p.god=Math.min(70,(p.godT===ST.frame-1?p.god||0:0)+1.4);p.godT=ST.frame;const h=hand();
-   for(let k=0;k<3;k++){const an=R()*6.283,r=16+R()*10;spawn(h.x+Math.cos(an)*r,h.y+Math.sin(an)*r,-Math.cos(an)*1.8,-Math.sin(an)*1.8,pickC(BLUE),9,0,1,0,1);}if(ST.frame%4===0)zap(h.x,h.y,h.x+(R()-.5)*30,h.y-20-R()*20,[230,240,255],[120,170,255]);
-   if(p.god>=70){p.god=0;ST.cd=70;p.en=Math.max(0,p.en-30);let tf=30;fxWord(h.x,h.y-24,'ODINFORCE!',1.5,'#bfe3ff',true);ST.hitstop=Math.max(ST.hitstop,4);fxImpact(h.x,h.y,4);
-     ACT.push(()=>{const b=aimFrom(hand());beamCore(b,{pow:1600,rad:4,len:650,w:6+((ST.frame>>1)&1),c:[240,248,255],g:[110,160,255],spark:()=>pickC(BLUE),dmg:12,noAsh:true});if(ST.frame%3===0)zap(b.h.x,b.h.y,b.h.x+b.dx*120+(R()-.5)*40,b.h.y+b.dy*120+(R()-.5)*40,[230,240,255],[120,170,255]);ST.shake=Math.max(ST.shake,10);return--tf>0;});}}},
-);
-THOR_POWERS.push(
  // hurl Mjolnir and hang on: Thor is dragged along behind it, smashing through anything
  {n:'Hammer Tow',fn:(a,p,use)=>{if(p.tow||!use(20))return;ST.cd=40;const dx=a.dx,dy=a.dy;let k=0;if(ST.CH.fly&&!p.fly)toggleFly(true);p.tow={dx,dy};fxWord(p.x,p.y-ST.PH-8,'HYAAAH!',1.1,'#bfe3ff',true);snd('whoosh',p.x,p.y);
    ACT.push(()=>{k++;p.script=2;p.fly=true;
@@ -86,7 +85,26 @@ THOR_POWERS.push(
    ACT.push(()=>{if(++k===20){for(const e of hitL)if(e.hp>0&&enemies.includes(e))lightningStrike(e.x,e.y,7);return false;}return true;});}},
  // the axe: flies straight and cleaves a razor-thin line through everything, so buildings split and fall
  {n:'Stormbreaker',fn:(a,p,use)=>{if(shots.some(s=>s.type==='axe')||!use(22))return;ST.cd=40;shots.push({x:a.h.x,y:a.h.y,vx:a.dx*7.5,vy:a.dy*7.5,type:'axe',life:56,spin:0,hitSet:new Set()});fxWord(a.h.x,a.h.y-14,'STORMBREAKER!',1.1,'#bfe3ff',true);p.throwF=8;}},
-);
+ // Mjolnir into the ground: the street itself carries the lightning for a few seconds
+ {n:'Thunder Anvil',fn:(a,p,use)=>{if(!use(26))return;ST.cd=55;const cx=mouse.wx,gy=groundBelow(cx|0,mouse.wy),r=70*ST.aoeC;let k=0;lightningStrike(cx,gy,8);
+   ACT.push(()=>{k++;for(let j=0;j<3;j++){const x=cx+(R()-.5)*r*2,y=surfaceY(x|0,Math.max(0,gy-30),60);zap(x,y-1,x+(R()-.5)*16,y-2-R()*6,[230,240,255],[120,170,255]);}
+     if(k%10===0)tagged('shock',()=>{for(const e of enemies)if(Math.abs(e.x-cx)<r&&e.y>gy-30&&e.y<gy+10)hitEnemy(e,9,0,-2);});return k<300;});}},
+ // the hammer circles him like a moon, smashing anything it meets
+ {n:'Mjolnir Orbit',fn:(a,p,use)=>{if(!use(24))return;ST.cd=60;const s={x:p.x,y:p.y,life:360,an:0,hit:new Map(),
+     upd(s){s.an+=.18;const cx=pl_.x,cy=pl_.y-ST.PH/2,r=26;s.x=cx+Math.cos(s.an)*r;s.y=cy+Math.sin(s.an)*r*.8;carve(s.x,s.y,3.5,0,0);
+       for(const e of enemies){if(Math.abs(e.x-s.x)<e.def.w/2+4&&Math.abs(e.y-s.y)<e.def.h/2+4&&ST.frame-(s.hit.get(e)||-99)>20){s.hit.set(e,ST.frame);hitEnemy(e,18,Math.cos(s.an)*4,Math.sin(s.an)*4-1);flash(s.x,s.y,10,[150,190,255],3);snd('clang',s.x,s.y,{v:.5});}}
+       for(const b of bodies)if(Math.hypot(b.x-s.x,b.y-s.y)<b.rmax+3){b.vx+=Math.cos(s.an)*.6;b.vy+=Math.sin(s.an)*.6;b.thrown=true;}spawn(s.x,s.y,0,0,rgb(150,190,255),6,0,1,0,1);},
+     draw(s){drawHammer(s.x,s.y,s.an+Math.PI);}};summons.push(s);fxWord(p.x,p.y-ST.PH-8,'MJOLNIR, TO ME!',1,'#bfe3ff',true);}},
+ {n:'Lightning Body',fn:(a,p,use)=>{if(p.lbody>0||!use(24))return;ST.cd=70;p.lbody=300;fxWord(p.x,p.y-ST.PH-12,'GOD OF THUNDER!',1.1,'#9ec8ff',true);
+    ACT.push(()=>{if(--p.lbody<=0||ST.CH.id!=='thor'){p.lbody=0;return false;}const cx=p.x,cy=p.y-ST.PH/2;if(ST.frame%8===0){const e=nearestEnemy(cx,cy,70);if(e){zap(cx,cy,e.x,e.y,[230,240,255],[120,170,255]);tagged('shock',()=>hitEnemy(e,10,0,0));}}
+      if(ST.frame%3===0)zap(cx,cy,cx+(R()-.5)*16,cy+(R()-.5)*20,[230,240,255],[120,170,255]);return true;});}},
+ {n:'God Blast',ult:true,fn:(a,p,use)=>{if(!use(.6))return;p.god=Math.min(70,(p.godT===ST.frame-1?p.god||0:0)+1.4);p.godT=ST.frame;const h=hand();
+   for(let k=0;k<3;k++){const an=R()*6.283,r=16+R()*10;spawn(h.x+Math.cos(an)*r,h.y+Math.sin(an)*r,-Math.cos(an)*1.8,-Math.sin(an)*1.8,pickC(BLUE),9,0,1,0,1);}if(ST.frame%4===0)zap(h.x,h.y,h.x+(R()-.5)*30,h.y-20-R()*20,[230,240,255],[120,170,255]);
+   if(p.god>=70){p.god=0;ST.cd=70;p.en=Math.max(0,p.en-30);let tf=30;fxWord(h.x,h.y-24,'ODINFORCE!',1.5,'#bfe3ff',true);ST.hitstop=Math.max(ST.hitstop,4);fxImpact(h.x,h.y,4);
+     ACT.push(()=>{const b=aimFrom(hand());beamCore(b,{pow:1600,rad:4,len:650,w:6+((ST.frame>>1)&1),c:[240,248,255],g:[110,160,255],spark:()=>pickC(BLUE),dmg:12,noAsh:true});if(ST.frame%3===0)zap(b.h.x,b.h.y,b.h.x+b.dx*120+(R()-.5)*40,b.h.y+b.dy*120+(R()-.5)*40,[230,240,255],[120,170,255]);ST.shake=Math.max(ST.shake,10);return--tf>0;});}}}
+];
+
+
 
 // roster entry (CHARS in heroes/index.js)
 export const CHAR_THOR={id:'thor',name:'Thor',spr:SPR_THOR,pal:PAL_THOR,pw:7,ph:19,fly:true,fs:3.2,boost:2.2,run:1.9,jump:4.6,hp:350,armor:.7,glow:BLUE,cape:null,thrust:()=>R()<.6?pickC(BLUE):rgb(255,255,255),powers:THOR_POWERS};

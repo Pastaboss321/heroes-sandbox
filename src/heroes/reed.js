@@ -1,8 +1,8 @@
 // Mister Fantastic: sprite, palette, rig entry, powers and roster entry.
 import { F4C, stretchFx } from './f4.js';
 import { ST } from '../state.js';
-import { R, rgb } from '../world/materials.js';
-import { H } from '../world/grid.js';
+import { R, WEB, rgb } from '../world/materials.js';
+import { H, W, col, setc, t } from '../world/grid.js';
 import { bodies, q } from '../world/support.js';
 import { makeBody } from '../world/bodies.js';
 import { pvx, pvy, px, py, spawn } from '../world/particles.js';
@@ -10,12 +10,13 @@ import { afters, beams, flash, fxWord, rings } from '../render/fx.js';
 import { explode } from '../world/destruction.js';
 import { ANIM, rect } from '../render/rig.js';
 import { snd } from '../sfx.js';
-import { crackCell, pickC, shockFx, shots } from './powers.js';
+import { crackCell, pickC, scriptMove, shockFx, shots } from './powers.js';
 import { ACT } from './xmen.js';
 import { solidCells } from './wave2.js';
 import { hurlBody } from './villains.js';
 import { carve, hand, mouse } from '../player.js';
 import { damageEnemies, damageLine, enemies, hitEnemy, nearestEnemy } from '../enemies/core.js';
+import { applyStatus } from './abilities.js';
 
 // ---- Fantastic Four (Earth-828): pale-blue retro suits with the white 4; Johnny is all flame; Ben is orange rock in blue trunks
 const SPR_REED=[
@@ -75,18 +76,33 @@ const REED_POWERS=[
  // a stretched fist hammers straight down, again and again, drilling a shaft
  {n:'Pile Driver',fn:(a,p,use)=>{if(!use(28))return;ST.cd=50;const x=mouse.wx|0;let y=(mouse.wy|0)-30,k=0;fxWord(x,y-20,'PILE DRIVER!',1.2,'#9fd0f0',true);
    ACT.push(()=>{if(k%3===0){explode(x+(R()-.5)*4|0,y|0,9,{self:true,quiet:k%9!==0,col:F4C});damageEnemies(x,y,14,14,0,5);const h=hand();stretchFx(h.x,h.y,x,y,3);y+=10;}ST.shake=Math.max(ST.shake,5);return++k<36&&y<H-46;});}},
- // a rift to the Negative Zone drinks in wreckage and enemies, then blows
- {n:'Negative Zone Rift',fn:(a,p,use)=>{if(!use(40))return;ST.cd=90;const cx=mouse.wx,cy=mouse.wy;let k=0;fxWord(cx,cy-30,'NEGATIVE ZONE!',1.3,'#c8a0ff',true);snd('psi',cx,cy);
-   ACT.push(()=>{k++;for(const b of bodies){if(b.held)continue;const dx=cx-b.x,dy=cy-b.y,d=Math.hypot(dx,dy)||1;if(d<170){b.vx+=dx/d*.7;b.vy+=dy/d*.7-.3;b.rest=0;}}
-     for(let n=0;n<ST.np;n++){const dx=cx-px[n],dy=cy-py[n],d2=dx*dx+dy*dy;if(d2<28900){const d=Math.sqrt(d2)||1;pvx[n]+=dx/d*.4;pvy[n]+=dy/d*.4-.15;}}
-     for(const e of enemies){if(e.def.title)continue;const d=Math.hypot(e.x-cx,e.y-cy);if(d<120){e.vx+=(cx-e.x)*.015;e.vy+=(cy-e.y)*.015;hitEnemy(e,.8,0,0);}}
-     if(k%2===0){carve(cx+(R()-.5)*30,cy+(R()-.5)*30,5,0,0);rings.push({x:cx,y:cy,r:40,vr:-3,life:8,c:[170,120,255]});}
-     flash(cx,cy,26,[120,60,255],2);if(k>=100){explode(cx|0,cy|0,24,{self:true,col:[170,120,255],word:'KRA-VOOM!'});shockFx(cx,cy,1.2);return false;}return true;});}},
  // the Fantasti-Car makes a bombing run across the cursor
  {n:'Fantasti-Car Run',fn:(a,p,use)=>{if(!use(45))return;ST.cd=120;const dir=mouse.wx>p.x?1:-1;let x=mouse.wx-dir*200,k=0;const y=Math.max(ST.camY+16,mouse.wy-90);fxWord(mouse.wx,y-10,'FANTASTI-CAR!',1.3,'#9fd0f0',true);snd('jet',x,y);
    ACT.push(()=>{k++;x+=dir*7;for(let j=0;j<4;j++)spawn(x-dir*(4+j*3),y+(R()-.5)*3,-dir*2,(R()-.5)*.5,R()<.5?rgb(150,200,240):rgb(255,255,255),12,0,1,0,1);
      beams.push({x0:x-dir*8,y0:y,x1:x+dir*8,y1:y,life:1,w:3,c:[230,236,244],g:[120,180,230]});
      if(k%5===0)shots.push({x,y:y+4,vx:dir*1.5,vy:3,type:'bomb',life:200,boom:12,fire:.2,grav:.2,col:[150,200,240],ecol:[150,200,240]});return k<58;});}},
+ // he stretches into a rubber net between his hand and the cursor: it holds whatever hits it
+ {n:'Elastic Net',fn:(a,p,use)=>{if(!use(18))return;ST.cd=40;const h=a.h,tx=mouse.wx,ty=mouse.wy,d=Math.hypot(tx-h.x,ty-h.y)||1,n=Math.min(200,d)|0;
+   for(let k=0;k<n;k++){const x=h.x+(tx-h.x)*k/d+Math.sin(k*.4)*1.5|0,y=h.y+(ty-h.y)*k/d+Math.cos(k*.3)*1.5|0;for(const [ox,oy] of [[0,0],[0,1]]){const X=x+ox,Y=y+oy;if(X<0||X>=W||Y<0||Y>=H-44)continue;const i=Y*W+X;if(t[i]===0){setc(i,WEB);col[i]=rgb(80,130+R()*30|0,200);}}}
+   for(const e of enemies){const u=Math.max(0,Math.min(1,((e.x-h.x)*(tx-h.x)+(e.y-h.y)*(ty-h.y))/(d*d)));if(Math.hypot(h.x+(tx-h.x)*u-e.x,h.y+(ty-h.y)*u-e.y)<10&&!e.def.titan)e.webbed=Math.max(e.webbed||0,180);}fxWord((h.x+tx)/2,(h.y+ty)/2-12,'BOINNNG!',.9,'#9fd0f0',true);snd('whoosh',h.x,h.y,{pitch:.8});}},
+ // he works out every enemy's weak point: all marked for eight seconds
+ {n:'Weakness Analysis',fn:(a,p,use)=>{if(!use(22))return;ST.cd=80;let n=0;for(const e of enemies){if(Math.abs(e.x-p.x)>260||Math.abs(e.y-p.y)>160)continue;applyStatus(e,'mark',480);n++;}fxWord(p.x,p.y-ST.PH-10,n?'FASCINATING... '+n+' WEAK POINTS':'NOTHING TO ANALYSE',.9,'#9fd0f0',true);}},
+ // he coils down like a spring and launches himself at the cursor, bowling through what he hits
+  {n:'Coil Spring',fn:(a,p,use)=>{if(!use(10))return;ST.cd=26;let k=0;const dx=a.dx,dy=a.dy;fxWord(p.x,p.y-ST.PH-6,'BOI-OI-OING!',.9,'#7fb0ff',true);
+    const hit=new Set();ACT.push(()=>{k++;if(k<12){p.vx*=.5;p.crouch=4;return true;}p.script=2;carve(p.x+dx*9,p.y-ST.PH/2+dy*9,ST.PH*.45,dx*5,dy*5);scriptMove(p,dx*10,dy*10-(k<18?1.5:0));afters.push({x:p.x,y:p.y,ang:0,face:p.face,life:6,col:[90,140,230]});
+    for(const e of enemies)if(!hit.has(e)&&Math.abs(e.x-p.x)<e.def.w/2+ST.PW&&Math.abs(e.y-(p.y-ST.PH/2))<e.def.h/2+ST.PH/2){hit.add(e);hitEnemy(e,22,dx*7,dy*7-3);}if(k<28)return true;p.vx=dx*4;p.vy=dy*4-1;return false;});}},
+ // he stretches into an elastic wall: enemy shots bounce back, enemies bounce off
+  {n:'Bouncing Barrier',fn:(a,p,use)=>{if(!use(18))return;ST.cd=50;const f=a.dx<0?-1:1,x=p.x+f*14,y0=p.y-ST.PH-14,y1=p.y+2;let k=0;fxWord(p.x,p.y-ST.PH-10,'STRETCH!',.9,'#7fb0ff',true);
+    ACT.push(()=>{k++;const wob=Math.sin(k*.4)*2;beams.push({pts:[[x,y0],[x+wob,(y0+y1)/2],[x,y1]],life:1,c:[120,170,255],g:[40,80,200]});
+      for(const s of shots)if(s.owner==='enemy'&&Math.abs(s.x-x)<5&&s.y>y0&&s.y<y1){s.vx=-s.vx*1.2;s.vy*=-.5;s.owner='player';s.col=[120,170,255];s.x=x+Math.sign(s.vx)*6;}
+      for(const e of enemies)if(!e.def.titan&&Math.abs(e.x-x)<e.def.w/2+3&&e.y>y0-e.def.h/2&&e.y<y1+e.def.h/2){e.vx=(Math.sign(e.x-x)||f)*5;e.vy=-2;if(k%10===0)hitEnemy(e,5,0,0);}return k<240;});}},
+ // a rift to the Negative Zone drinks in wreckage and enemies, then blows
+ {n:'Negative Zone Rift',ult:true,fn:(a,p,use)=>{if(!use(40))return;ST.cd=90;const cx=mouse.wx,cy=mouse.wy;let k=0;fxWord(cx,cy-30,'NEGATIVE ZONE!',1.3,'#c8a0ff',true);snd('psi',cx,cy);
+   ACT.push(()=>{k++;for(const b of bodies){if(b.held)continue;const dx=cx-b.x,dy=cy-b.y,d=Math.hypot(dx,dy)||1;if(d<170){b.vx+=dx/d*.7;b.vy+=dy/d*.7-.3;b.rest=0;}}
+     for(let n=0;n<ST.np;n++){const dx=cx-px[n],dy=cy-py[n],d2=dx*dx+dy*dy;if(d2<28900){const d=Math.sqrt(d2)||1;pvx[n]+=dx/d*.4;pvy[n]+=dy/d*.4-.15;}}
+     for(const e of enemies){if(e.def.title)continue;const d=Math.hypot(e.x-cx,e.y-cy);if(d<120){e.vx+=(cx-e.x)*.015;e.vy+=(cy-e.y)*.015;hitEnemy(e,.8,0,0);}}
+     if(k%2===0){carve(cx+(R()-.5)*30,cy+(R()-.5)*30,5,0,0);rings.push({x:cx,y:cy,r:40,vr:-3,life:8,c:[170,120,255]});}
+     flash(cx,cy,26,[120,60,255],2);if(k>=100){explode(cx|0,cy|0,24,{self:true,col:[170,120,255],word:'KRA-VOOM!'});shockFx(cx,cy,1.2);return false;}return true;});}}
 ];
 
 // roster entry (CHARS in heroes/index.js)

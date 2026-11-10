@@ -7,16 +7,17 @@ import { bodies, gnd, q } from '../world/support.js';
 import { makeBody } from '../world/bodies.js';
 import { disc, tint } from '../maps/gen.js';
 import { pvx, pvy, px, py, spawn } from '../world/particles.js';
-import { beams, fxWord, rings } from '../render/fx.js';
+import { beams, flash, fxWord, rings } from '../render/fx.js';
 import { ANIM, rect } from '../render/rig.js';
 import { snd, sndLoop } from '../sfx.js';
 import { isMetal, pickC, shieldAs, shockFx, shots } from './powers.js';
 import { ACT } from './xmen.js';
 import { solidCells } from './wave2.js';
 import { hurlBody } from './villains.js';
-import { mouse } from '../player.js';
+import { carve, mouse } from '../player.js';
 import { damageLine, enemies, hitEnemy, nearestEnemy } from '../enemies/core.js';
 import { groundBelow } from '../ui/spawn.js';
+import { fig8, nearestN, noTarget } from './kitlib.js';
 
 export const SPR_MAGNETO=[
 "....RRRRR....",
@@ -58,9 +59,10 @@ const MAG_POWERS=[
    let crushed=0;for(const e of enemies)if(isMetal(e)&&!e.def.title&&Math.hypot(e.x-cx,e.y-cy)<r+10){hitEnemy(e,60,0,0);crushed++;}
    const rr=Math.max(4,Math.min(12,Math.sqrt(n/3.1)|0));if(n>20){disc(cx,cy,rr,STEEL);tint(cx-rr,cy-rr,cx+rr+1,cy+rr+1,120,126,140,14);const m=solidCells(cx,cy,rr,true);const b=m>=12?makeBody(q,m,false):null;if(b){hurlBody(b,cx+(cx-p.x)*2,cy-20,7);}}
    fxWord(cx,cy-r,crushed?'CRUSHED':'COMPACTED',1.1,'#c88cff',true);snd('clang',cx,cy);ST.shake+=6;}},
- // pull iron out of the sky: steel spikes rain down around the cursor
- {n:'Iron Rain',fn:(a,p,use)=>{if(!use(30))return;ST.cd=55;const cx=mouse.wx;let k=0;fxWord(cx,ST.camY+20,'IRON RAIN',1.1,'#c88cff',true);
-   ACT.push(()=>{if(k%2===0)shots.push({x:cx+(R()-.5)*120,y:ST.camY-6,vx:(R()-.5)*.4,vy:6,type:'spike',life:120,col:[170,176,190],boom:4,grav:.12});return++k<90;});}},
+ {n:'Iron Maelstrom',fn:(a,p,use)=>{const cx=mouse.wx,cy=mouse.wy,L=[];for(let k=0;k<5000&&L.length<90;k++){const X=cx+(R()-.5)*280|0,Y=cy+(R()-.5)*280|0;if(X<1||X>=W-1||Y<1||Y>=H-44)continue;const i=Y*W+X;if(t[i]===STEEL)L.push(i);}
+   if(L.length<12){fxWord(cx,cy,'NO METAL',.8,'#c88cff',true);return;}if(!use(34))return;ST.cd=70;const sh=[];for(const i of L){const X=i%W,Y=(i/W)|0;setc(i,EMPTY);const s={x:X,y:Y,vx:0,vy:0,type:'spike',life:200,col:[170,176,190],boom:4,grav:0};shots.push(s);sh.push(s);}
+   let k=0;fxWord(cx,cy-30,'IRON MAELSTROM!',1.2,'#c88cff',true);snd('rip',cx,cy);
+   ACT.push(()=>{k++;for(const s of sh){if(!shots.includes(s))continue;if(k<50){const dx=s.x-cx,dy=s.y-cy,d=Math.hypot(dx,dy)||1,tr=20+(s.life%30);s.vx=-dy/d*4+(tr-d)*dx/d*.08;s.vy=dx/d*4+(tr-d)*dy/d*.08;s.life=200;}else if(k===50){s.home=true;const e=nearestEnemy(s.x,s.y,260);if(e){const d=Math.hypot(e.x-s.x,e.y-s.y)||1;s.vx=(e.x-s.x)/d*7;s.vy=(e.y-s.y)/d*7;}}}return k<60;});}},
  // a magnetic pulse that throws everything metal, and every enemy, away from him
  {n:'Repulse',fn:(a,p,use)=>{if(!use(22))return;ST.cd=36;const cx=p.x,cy=p.y-ST.PH/2;for(const e of enemies){const dx=e.x-cx,dy=e.y-cy,d=Math.hypot(dx,dy)||1;if(d<120){const k=isMetal(e)?9:5;e.vx+=dx/d*k;e.vy+=dy/d*k-2;e.thrownT=40;hitEnemy(e,12,0,0);}}
    for(const b of bodies){const dx=b.x-cx,dy=b.y-cy,d=Math.hypot(dx,dy)||1;if(d<140){b.vx+=dx/d*6;b.vy+=dy/d*6-1;b.thrown=true;}}rings.push({x:cx,y:cy,r:6,vr:6,life:14,c:[200,120,255]});shockFx(cx,cy,.8);fxWord(cx,cy-24,'REPULSE!',1.2,'#c88cff',true);}},
@@ -80,8 +82,25 @@ const MAG_POWERS=[
    if(L.length<10){fxWord(p.x,p.y-ST.PH-8,'NO METAL',.8,'#c88cff',true);return;}if(!use(45))return;ST.cd=80;
    L.forEach((i,n)=>{const X=i%W,Y=(i/W)|0;setc(i,EMPTY);const dx=mouse.wx-X,dy=mouse.wy-Y,d=Math.hypot(dx,dy)||1,v=6+R()*2;shots.push({x:X,y:Y,vx:dx/d*v,vy:dy/d*v,type:'spike',life:120,col:[170,176,190],boom:5,grav:.05,delay:n>>1});});
    fxWord(p.x,p.y-ST.PH-12,'GIRDER STORM!',1.4,'#c88cff',true);snd('rip',p.x,p.y);ST.shake+=8;}},
- {n:'Asteroid M',fn:(a,p,use)=>{if(!use(55))return;ST.cd=140;const cx=mouse.wx|0,cy=groundBelow(cx,mouse.wy)+10,n=solidCells(cx,cy,18,true);if(n<60)return;const b=makeBody(q,n,true);if(!b)return;b.tx=cx;b.ty=Math.max(30,ST.camY+40);let k=0;
-   fxWord(cx,cy-40,'ASTEROID M!',1.5,'#c88cff',true);snd('rip',cx,cy);ST.shake+=10;ACT.push(()=>{k++;if(!bodies.includes(b))return false;if(k<60){b.tx=mouse.wx;b.ty=Math.max(30,ST.camY+40);return true;}b.held=false;b.vx=0;b.vy=10;b.thrown=true;b.safeP=ST.frame+30;return false;});}},
+ // every enemy shot on screen turns round and goes home
+ {n:'Polarity Reverse',fn:(a,p,use)=>{let n=0;for(const s of shots){if(s.owner!=='enemy')continue;if(Math.abs(s.x-p.x)>260||Math.abs(s.y-p.y)>160)continue;n++;s.owner='player';const src=s.src&&s.src.hp>0?s.src:null;if(src){const d=Math.hypot(src.x-s.x,src.y-s.y)||1,v=Math.hypot(s.vx,s.vy)*1.4;s.vx=(src.x-s.x)/d*v;s.vy=(src.y-s.y)/d*v;}else{s.vx*=-1.4;s.vy*=-1.4;}s.col=[200,120,255];}
+   if(!use(14))return;ST.cd=30;rings.push({x:p.x,y:p.y-8,r:10,vr:6,life:14,c:[200,120,255]});fxWord(p.x,p.y-ST.PH-8,n?'RETURN TO SENDER':'POLARITY REVERSED',.9,'#c88cff',true);}},
+ // a storm of torn steel orbits him and shreds what comes close
+ {n:'Metal Storm Armor',fn:(a,p,use)=>{if(p.mstorm>0||!use(30))return;ST.cd=60;p.mstorm=480;fxWord(p.x,p.y-ST.PH-10,'MASTER OF MAGNETISM',1,'#c88cff',true);
+   ACT.push(()=>{if(--p.mstorm<=0)return false;const cx=p.x,cy=p.y-ST.PH/2;for(let k=0;k<6;k++){const an=ST.frame*.15+k*1.047,r=20+Math.sin(ST.frame*.07+k)*4;spawn(cx+Math.cos(an)*r,cy+Math.sin(an)*r*.8,0,0,k&1?rgb(170,176,190):rgb(120,126,140),3,0,0,0,0);}
+     if(ST.frame%5===0){for(const e of enemies){const d=Math.hypot(e.x-cx,e.y-cy);if(d<28+e.def.w/2)hitEnemy(e,6,(e.x-cx)/(d||1)*2,(e.y-cy)/(d||1)*2);}carve(cx+(R()-.5)*44,cy+(R()-.5)*36,3,0,0);}
+     for(let n=shots.length-1;n>=0;n--){const s=shots[n];if(s.owner==='enemy'&&Math.hypot(s.x-cx,s.y-cy)<26)shots.splice(n,1);}return true;});}},
+ // he takes hold of the iron in their blood: held up, shaking, hurt, then flung apart
+  {n:'Blood Iron',fn:(a,p,use)=>{const list=nearestN(mouse.wx,mouse.wy,100,6).filter(e=>!fig8(e));if(!list.length){noTarget('#c86bff');return;}if(!use(26))return;ST.cd=60;const cx=mouse.wx,cy=mouse.wy;let k=0;fxWord(cx,cy-40,'THE IRON IN YOUR BLOOD',.9,'#c86bff',true);
+    rings.push({x:cx,y:cy,r:6,vr:3,life:20,c:[200,80,255]});
+    ACT.push(()=>{k++;for(const e of list){if(e.hp<=0)continue;e.frozen=Math.max(e.frozen||0,2);if(k<20)e.y-=1;e.x+=(R()-.5)*1.2;if(k%10===0)hitEnemy(e,7,0,0);if(k%3===0)spawn(e.x+(R()-.5)*e.def.w,e.y+(R()-.5)*e.def.h,(cx-e.x)*.03,(cy-e.y)*.03,rgb(200,30,40),10,0,1,0,1);}
+      if(k<60)return true;for(const e of list)if(e.hp>0){const dx=e.x-cx,dy=e.y-cy,d=Math.hypot(dx,dy)||1;e.frozen=0;e.vx=dx/d*6;e.vy=-4;e.thrownT=60;hitEnemy(e,14,0,0);}return false;});}},
+ // one coin: it creeps toward the cursor, then accelerates through everything in its line
+  {n:'Coin Drill',fn:(a,p,use)=>{if(!use(14))return;ST.cd=30;let x=a.h.x,y=a.h.y,k=0;const hit=new Set(),dx0=mouse.wx-x,dy0=mouse.wy-y,d0=Math.hypot(dx0,dy0)||1,ux=dx0/d0,uy=dy0/d0;fxWord(x,y-12,'*CLINK*',.7,'#ffd36a',true);
+    ACT.push(()=>{k++;const sp=k<20?1.2:Math.min(14,1.2+(k-20)*1.5);x+=ux*sp;y+=uy*sp;carve(x,y,1.6,ux*2,uy*2);beams.push({x0:x-ux*3,y0:y-uy*3,x1:x,y1:y,life:2,w:0,c:[255,230,140],g:[200,120,40]});
+      for(const e of enemies)if(!hit.has(e)&&Math.abs(e.x-x)<e.def.w/2+2&&Math.abs(e.y-y)<e.def.h/2+2){hit.add(e);hitEnemy(e,k<20?12:34,ux*3,uy*3);flash(x,y,8,[255,220,120],3);}return k<70&&x>1&&x<W-1&&y<H-2;});}},
+ {n:'Asteroid M',ult:true,fn:(a,p,use)=>{if(!use(55))return;ST.cd=140;const cx=mouse.wx|0,cy=groundBelow(cx,mouse.wy)+10,n=solidCells(cx,cy,18,true);if(n<60)return;const b=makeBody(q,n,true);if(!b)return;b.tx=cx;b.ty=Math.max(30,ST.camY+40);let k=0;
+   fxWord(cx,cy-40,'ASTEROID M!',1.5,'#c88cff',true);snd('rip',cx,cy);ST.shake+=10;ACT.push(()=>{k++;if(!bodies.includes(b))return false;if(k<60){b.tx=mouse.wx;b.ty=Math.max(30,ST.camY+40);return true;}b.held=false;b.vx=0;b.vy=10;b.thrown=true;b.safeP=ST.frame+30;return false;});}}
 ];
 
 // roster entry (CHARS in heroes/index.js)

@@ -6,16 +6,19 @@ import { H, W, setc, t } from '../world/grid.js';
 import { ignite } from '../world/sim.js';
 import { bodies } from '../world/support.js';
 import { spawn } from '../world/particles.js';
-import { afters, flash, fxWord, rings } from '../render/fx.js';
+import { afters, beams, flash, fxWord, rings } from '../render/fx.js';
 import { explode } from '../world/destruction.js';
 import { clawSlice, sliceLine } from '../world/slice.js';
 import { ANIM, rect } from '../render/rig.js';
 import { snd } from '../sfx.js';
 import { scriptMove, shockFx, shots, surfaceY } from './powers.js';
 import { ACT } from './xmen.js';
-import { boxHit, carve, mouse } from '../player.js';
+import { boxHit, carve, mouse, pl_ } from '../player.js';
 import { damageCone, damageEnemies, damageLine, enemies, hitEnemy, nearestEnemy } from '../enemies/core.js';
 import { groundBelow } from '../ui/spawn.js';
+import { drawPix, nearestN, tagged } from './kitlib.js';
+import { applyStatus, summons } from './abilities.js';
+import { TK } from '../render/titan.js';
 
 const HF=[255,130,30],HFE=[255,170,60];
 const burnAt=(x,y)=>{const X=x|0,Y=y|0;if(X<0||X>=W||Y<0||Y>=H-6)return;const i=Y*W+X;if(t[i]===0){if(R()<.4)setc(i,FIRE);}else if(FLAM[t[i]]>0)ignite(i);};
@@ -77,8 +80,10 @@ const RIDER_POWERS=[
  {n:'Chain Grab',fn:(a,p,use)=>{const e=nearestEnemy(mouse.wx,mouse.wy,60);let b=null;if(!e){let bd=60;for(const c of bodies){const d=Math.hypot(c.x-mouse.wx,c.y-mouse.wy);if(d<bd){bd=d;b=c;}}}if(!e&&!b)return;if(!use(12))return;ST.cd=24;
    const tx=e?e.x:b.x,ty=e?e.y:b.y,dx=p.x-tx,dy=p.y-8-ty,d=Math.hypot(dx,dy)||1;if(e&&!e.def.titan){e.vx=dx/d*9;e.vy=dy/d*9-2;e.thrownT=30;hitEnemy(e,12,0,0);}else if(e)hitEnemy(e,30,0,0);else{b.vx=dx/d*8;b.vy=dy/d*8-2;b.thrown=true;b.rest=0;}
    ST.chain={pts:[[a.h.x,a.h.y],[tx,ty]],life:10};fxWord(tx,ty-12,'GET OVER HERE',.9,'#ff9a3c',true);snd('whoosh',tx,ty,{pitch:.7});}},
- {n:'Brimstone Rain',fn:(a,p,use)=>{if(!use(30))return;ST.cd=60;const cx=mouse.wx;let k=0;fxWord(cx,ST.camY+24,'BRIMSTONE!',1.1,'#ff9a3c',true);
-   ACT.push(()=>{if(k%3===0)shots.push({x:cx+(R()-.5)*140,y:ST.camY-6,vx:(R()-.5)*.6,vy:5.5,type:'fire',life:160,boom:8,fire:.7,col:HF,ecol:HF,grav:.06});return++k<70;});}},
+ // chains burst out of the ground under every enemy near the cursor and drag them down, burning
+ {n:'Chains of Hell',fn:(a,p,use)=>{const list=nearestN(mouse.wx,mouse.wy,120*ST.aoeC,8);if(!list.length)return;if(!use(26))return;ST.cd=55;let k=0;fxWord(mouse.wx,mouse.wy-30,'CHAINS OF HELL!',1.1,'#ff9a3c',true);snd('rip',mouse.wx,mouse.wy);
+   const roots=list.map(e=>[e,e.x+(R()-.5)*10,groundBelow(e.x|0,e.y)]);
+   ACT.push(()=>{k++;for(const [e,x,g] of roots){if(e.hp<=0)continue;if(!e.def.titan){e.frozen=Math.max(e.frozen||0,2);e.vy+=.8;}beams.push({pts:[[x,g],[(x+e.x)/2+Math.sin(k*.3)*4,(g+e.y)/2],[e.x,e.y]],life:2,c:[200,200,210],g:[255,120,30]});if(k%20===0)tagged('fire',()=>hitEnemy(e,10,0,1));}return k<140;});}},
  // the gate of Hell opens under the cursor: pillars of hellfire burst up around it
  {n:'Hell Gate',fn:(a,p,use)=>{if(!use(34))return;ST.cd=70;const cx=mouse.wx,gy=groundBelow(cx|0,mouse.wy);let k=0;fxWord(cx,gy-40,'THE GATES OPEN',1.2,'#ff9a3c',true);
    ACT.push(()=>{k++;if(k<25){if(k%5===0)rings.push({x:cx,y:gy,r:40*ST.aoeC,vr:-1,life:8,c:HF});return true;}
@@ -86,9 +91,20 @@ const RIDER_POWERS=[
      if(k===25){explode(cx|0,gy|0,16,{self:true,fire:.7});shockFx(cx,gy,1);}return k<80;});}},
  {n:'Hellfire Breath',fn:(a,p,use)=>{if(!use(1.2))return;const h=a.h;for(let j=0;j<6;j++){const an=Math.atan2(a.dy,a.dx)+(R()-.5)*.5,sp=3+R()*3;spawn(h.x,h.y-4,Math.cos(an)*sp,Math.sin(an)*sp,R()<.5?rgb(255,220,90):rgb(255,90,20),30,R()<.08?FIRE:0,1,1);}
    damageCone(h.x,h.y,a.dx,a.dy,60,1.8,1);for(let j=0;j<2;j++){const d=R()*60;burnAt(h.x+a.dx*d+(R()-.5)*8,h.y+a.dy*d+(R()-.5)*8);}}},
+ // the chain hooks the nearest overhang and he swings on it
+ {n:'Chain Swing',fn:(a,p,use)=>{let ax=-1,ay=-1;for(let s=0;s<200;s++){const x=a.h.x+a.dx*s|0,y=a.h.y+a.dy*s|0;if(x<0||x>=W||y<0||y>=H)break;if(KIND[t[y*W+x]]===S){ax=x;ay=y;break;}}if(ax<0){fxWord(mouse.wx,mouse.wy,'NOTHING TO HOOK',.7,'#ff9a3c',true);return;}if(!use(8))return;ST.cd=20;
+   const L=Math.max(20,Math.hypot(ax-p.x,ay-p.y+8));let k=0;ACT.push(()=>{k++;const dx=p.x-ax,dy=p.y-8-ay,d=Math.hypot(dx,dy)||1;if(d>L){const ux=dx/d,uy=dy/d,vr=p.vx*ux+p.vy*uy;p.x=ax+ux*L;p.y=ay+uy*L+8;if(vr>0){p.vx-=vr*ux;p.vy-=vr*uy;}}p.vx+=p.face*.12;
+     ST.chain={pts:[[ax,ay],[p.x,p.y-8]],life:2};damageEnemies(p.x,p.y-8,10,2,p.vx,p.vy);if(R()<.4)spawn(p.x,p.y-4,(R()-.5),-.5,rgb(255,140,40),10,0,1,0,1);return k<110&&!p.ground;});}},
+ // for eight seconds the souls of what he kills feed him
+ {n:'Soul Harvest',fn:(a,p,use)=>{if(p.harvest>0||!use(28))return;ST.cd=70;p.harvest=480;fxWord(p.x,p.y-ST.PH-10,'YOUR SOUL IS MINE',1,'#ff9a3c',true);
+   ACT.push(()=>{if(--p.harvest<=0)return false;if(ST.frame%8===0){for(const e of enemies){if(Math.hypot(e.x-p.x,e.y-p.y+8)>70)continue;tagged('fire',()=>hitEnemy(e,3,0,0));p.hp=Math.min(ST.CH.hp,p.hp+1.2);for(let k=0;k<3;k++)spawn(e.x,e.y,(p.x-e.x)*.04,(p.y-8-e.y)*.04,rgb(160,255,220),24,0,1,0,0);}}return true;});}},
+ {n:'Flaming Skull',fn:(a,p,use)=>{if(!use(14))return;ST.cd=30;let x=a.h.x,y=a.h.y,vx=a.dx*5,vy=a.dy*5,k=0,n=0,cd=0;fxWord(p.x,p.y-ST.PH-8,'LOOK INTO MY EYES',.8,'#ff9a3c',true);
+    ACT.push(()=>{k++;const e=nearestEnemy(x,y,240);if(e){const dx=e.x-x,dy=e.y-y,d=Math.hypot(dx,dy)||1;vx+=(dx/d*6-vx)*.12;vy+=(dy/d*6-vy)*.12;if(d<8&&cd<=0){tagged('fire',()=>hitEnemy(e,18,vx*.5,vy*.5));applyStatus(e,'burn',200);n++;cd=14;vx=-vx;vy=-vy-2;fxWord(e.x,e.y-12,'CHOMP',.8,'#ff9a3c',true);}}
+      if(cd>0)cd--;x+=vx;y+=vy;for(let j=0;j<3;j++)spawn(x+(R()-.5)*4,y-2,(R()-.5)*.5,-1,R()<.5?rgb(255,200,60):rgb(255,90,20),10,0,1,0,1);for(const [ox,oy] of [[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[0,1]])spawn(x+ox,y+oy,0,0,rgb(240,236,220),2,0,0,0,0);
+      return n<4&&k<220;});}},
  // Judgement: every enemy in sight is made to feel its sins
- {n:'Judgement',fn:(a,p,use)=>{if(!use(65))return;ST.cd=200;fxWord(p.x,p.y-50,'YOUR SOUL IS STAINED WITH INNOCENT BLOOD',1.1,'#ff9a3c',true);ST.hitstop=Math.max(ST.hitstop,8);flash(p.x,p.y,240,HF,16);
-   for(const e of enemies){if(Math.abs(e.x-p.x)>260||Math.abs(e.y-p.y)>170)continue;hitEnemy(e,e.def.titan?140:120,0,-2);if(!e.def.titan)e.frozen=Math.max(e.frozen||0,90);for(let k=0;k<20;k++)spawn(e.x+(R()-.5)*e.def.w,e.y+(R()-.5)*e.def.h,(R()-.5)*2,-1-R()*2,rgb(255,140+R()*100|0,40),30,0,1,0,1);}}},
+ {n:'Judgement',ult:true,fn:(a,p,use)=>{if(!use(65))return;ST.cd=200;fxWord(p.x,p.y-50,'YOUR SOUL IS STAINED WITH INNOCENT BLOOD',1.1,'#ff9a3c',true);ST.hitstop=Math.max(ST.hitstop,8);flash(p.x,p.y,240,HF,16);
+   for(const e of enemies){if(Math.abs(e.x-p.x)>260||Math.abs(e.y-p.y)>170)continue;hitEnemy(e,e.def.titan?140:120,0,-2);if(!e.def.titan)e.frozen=Math.max(e.frozen||0,90);for(let k=0;k<20;k++)spawn(e.x+(R()-.5)*e.def.w,e.y+(R()-.5)*e.def.h,(R()-.5)*2,-1-R()*2,rgb(255,140+R()*100|0,40),30,0,1,0,1);}}}
 ];
 export const CHAR_RIDER={id:'rider',name:'Ghost Rider',spr:SPR_RIDER,pal:PAL_RIDER,pw:7,ph:19,fly:false,fs:2.4,boost:2,run:2.3,jump:5,hp:420,armor:.6,glow:HF,cape:null,thrust:()=>rgb(255,140,40),powers:RIDER_POWERS};
 
@@ -121,6 +137,15 @@ ANIM.pool={leg:14,mid:6,armC:'LRr',tipC:'kkk',aw:2,al:6,fs:2,sh:[10,7],hide:rect
 const STEELC=[230,232,240];
 const QUIPS=['MAXIMUM EFFORT!','CHIMICHANGAS!','HI, MOM!','THAT WAS AWESOME','*FOURTH WALL*','SAY MY NAME!','PEW PEW!','I FEEL A CRITICAL HIT COMING'];
 const quip=(p,s)=>fxWord(p.x,p.y-ST.PH-10,s||QUIPS[R()*QUIPS.length|0],.85,'#ff6b5c',true);
+const POUCH=[
+ ['ROCKET LAUNCHER!',(a,p)=>shots.push({x:a.h.x,y:a.h.y,vx:a.dx*6,vy:a.dy*6,type:'missile',life:120,tx:mouse.wx,ty:mouse.wy,wob:0,boom:14,fire:.4})],
+ ['BEAR TRAP!',(a,p)=>{const x=mouse.wx,y=groundBelow(mouse.wx|0,mouse.wy);summons.push({x,y,life:600,upd(s){for(const e of enemies)if(Math.abs(e.x-s.x)<8&&Math.abs(e.y+e.def.h/2-s.y)<8&&!e.def.titan){e.frozen=Math.max(e.frozen||0,120);hitEnemy(e,30,0,0);fxWord(s.x,s.y-10,'SNAP!',.9,'#ff6b5c',true);return false;}},draw(s){for(let k=-4;k<=4;k++)drawPix(s.x+k,s.y-1-(Math.abs(k)%2),rgb(150,150,160));}});}],
+ ['BOOMERANG KATANA!',(a,p)=>{let x=a.h.x,y=a.h.y,vx=a.dx*8,vy=a.dy*8,k=0;ACT.push(()=>{k++;const lx=x,ly=y;if(k>18){vx+=(pl_.x-x)*.03;vy+=(pl_.y-8-y)*.03;}x+=vx;y+=vy;sliceLine(lx,ly,x,y,{edge:[230,232,240],quiet:true,push:1});damageLine(lx,ly,x,y,5,8);return k<50&&Math.hypot(pl_.x-x,pl_.y-8-y)>8;});}],
+ ['TACO! (HEALS)',(a,p)=>{p.hp=Math.min(ST.CH.hp,p.hp+ST.CH.hp*.2);}],
+ ['RUBBER CHICKEN?!',(a,p)=>{explode(mouse.wx|0,mouse.wy|0,18,{fire:.3,word:'BAWK!'});}],
+];
+function drawUni(s){const x=s.x,y=s.y,f=s.face,o={},Wc=rgb(250,250,255),st=Math.sin(s.t*.6)*4;TK.begin();TK.ell(x,y-14,12,6,Wc,o);TK.cap(x+f*8,y-16,x+f*14,y-26,3,2.5,Wc,o);TK.ell(x+f*17,y-26,5,3,Wc,o);TK.cap(x+f*18,y-29,x+f*22,y-38,1,.3,rgb(255,215,90),o);
+  for(const [lx,ph] of [[-8,0],[-4,1],[5,0],[9,1]])TK.cap(x+lx,y-10,x+lx+(ph?st:-st),y,1.8,1.4,Wc,o);TK.cap(x-f*12,y-16,x-f*18,y-10,2,1,rgb(255,120,200),o);TK.end();}
 const POOL_POWERS=[
  {n:'Katana Slash',fn:(a,p,use)=>{if(!use(3))return;ST.cd=8;p.punchF=8;const sw=(p.slashN=(p.slashN||0)+1)&1?.5:-.5,an=Math.atan2(a.dy,a.dx)+sw;
    clawSlice(a.h.x,a.h.y,Math.cos(an),Math.sin(an),30,2,4,{edge:STEELC,vx:a.dx*3,vy:a.dy*3,push:.9});damageCone(a.h.x,a.h.y,a.dx,a.dy,34,15,2.5);snd('slash',a.h.x,a.h.y,{pitch:1.1});}},
@@ -145,16 +170,25 @@ const POOL_POWERS=[
    flash(p.x,p.y,240,[255,230,150],10);}},
  {n:'Katana Throw',fn:(a,p,use)=>{if(!use(9))return;ST.cd=18;let lx=a.h.x,ly=a.h.y;const s={x:a.h.x,y:a.h.y,vx:a.dx*10,vy:a.dy*10,type:'katana',life:50,col:STEELC,boom:4,ecol:STEELC};shots.push(s);
    ACT.push(()=>{if(!shots.includes(s))return false;sliceLine(lx,ly,s.x,s.y,{edge:STEELC,quiet:true,push:1.3});lx=s.x;ly=s.y;return true;});}},
- // healing factor, but louder
- {n:'Regenerate',fn:(a,p,use)=>{if(p.hp>=ST.CH.hp||!use(.4))return;p.hp=Math.min(ST.CH.hp,p.hp+2);if(ST.frame%3===0)spawn(p.x+(R()-.5)*8,p.y-R()*ST.PH,0,-.7,rgb(255,120,120),18,0,1,0);if(ST.frame%70===0)quip(p,'GROWING BACK MY... EVERYTHING');}},
+ {n:'Pouch Roulette',fn:(a,p,use)=>{if(!use(14))return;ST.cd=28;const it=POUCH[R()*POUCH.length|0];it[1](a,p);fxWord(p.x,p.y-ST.PH-10,it[0],.9,'#ff6b5c',true);snd('pop',p.x,p.y,{pitch:1.3});}},
  // C4: plants a charge on the cursor that blows after a beat, with a countdown
  {n:'C4',fn:(a,p,use)=>{if(!use(24))return;ST.cd=50;const cx=mouse.wx,cy=mouse.wy;let k=0;
    ACT.push(()=>{k++;if(k%20===0){fxWord(cx,cy-12,String(3-k/20|0),1,'#ff6b5c',true);snd('deny',cx,cy,{v:.4,pitch:2});}if(ST.frame%6<3)spawn(cx,cy,0,0,rgb(255,40,40),4,0,1,0,0);
      if(k>=60){explode(cx|0,cy|0,20,{fire:.4,word:'KA-BLOOEY!'});shockFx(cx,cy,1.2);return false;}return true;});}},
+ // a katana pogo: straight down, cutting, and back up off whatever it hits
+ {n:'Katana Pogo',fn:(a,p,use)=>{if(!use(12))return;ST.cd=26;let k=0;fxWord(p.x,p.y-ST.PH-8,'BOING!',.9,'#ff6b5c',true);
+   ACT.push(()=>{k++;p.script=2;const ox=p.x,oy=p.y;const moved=scriptMove(p,0,9);sliceLine(ox,oy,p.x,p.y+12,{edge:[230,232,240],quiet:true,push:1.2});damageEnemies(p.x,p.y,10,14,0,4);
+     if(!moved||k>40){clawSlice(p.x,p.y+4,1,0,20,2,6,{edge:[230,232,240]});explode(p.x|0,p.y+4|0,8,{self:true});p.vy=-8;p.ground=false;return false;}return true;});}},
+ // a taunt: everything comes for him, and he barely feels it for six seconds
+ {n:'Taunt',fn:(a,p,use)=>{if(!use(18))return;ST.cd=80;p.shell=360;fxWord(p.x,p.y-ST.PH-12,'HEY! UGLIES! OVER HERE!',1,'#ff6b5c',true);
+   for(const e of enemies)if(!e.def.titan&&Math.hypot(e.x-p.x,e.y-p.y)<220){e.vx+=(p.x-e.x)*.03;e.vy+=(p.y-e.y)*.02;e.cd=Math.min(e.cd,10);}}},
+ {n:'Unicorn Charge',fn:(a,p,use)=>{if(summons.some(s=>s.uni)||!use(24))return;ST.cd=70;const dir=a.dx<0?-1:1;fxWord(p.x,p.y-ST.PH-10,'MAGICAL!',1.1,'#ff9ad8',true);const RB=[[255,60,60],[255,160,40],[255,240,60],[60,220,90],[60,140,255],[170,80,255]];
+    summons.push({uni:true,x:Math.max(10,Math.min(W-10,p.x-dir*60)),y:p.y,face:dir,life:140,upd(s){s.x+=s.face*5.5;s.y=groundBelow(s.x|0,s.y-24);carve(s.x+s.face*14,s.y-12,9,s.face*4,-1,s.y);damageEnemies(s.x+s.face*12,s.y-14,16,14,s.face*7,-6);
+      for(let j=0;j<6;j++)spawn(s.x-s.face*10,s.y-14+j*1.5,-s.face*.5,0,rgb(...RB[j]),30,0,1,0,0);if(s.x<4||s.x>W-4)return false;},draw:drawUni});}},
  // the Deadpool Corps: a line of Deadpools from across the multiverse dashes across the screen, katanas out
- {n:'Deadpool Corps',fn:(a,p,use)=>{if(!use(60))return;ST.cd=200;quip(p,'THE CORPS! (LADYPOOL, DOGPOOL, HEADPOOL...)');snd('wave',p.x,p.y);
+ {n:'Deadpool Corps',ult:true,fn:(a,p,use)=>{if(!use(60))return;ST.cd=200;quip(p,'THE CORPS! (LADYPOOL, DOGPOOL, HEADPOOL...)');snd('wave',p.x,p.y);
    const dir=p.face;let k=0;ACT.push(()=>{k++;if(k%6===0&&k<60){const y=ST.camY+40+R()*180,x0=dir>0?ST.camX-10:ST.camX+VW0+10;let x=x0,j=0;
-       ACT.push(()=>{j++;const nx=x+dir*14;sliceLine(x,y,nx,y+(R()-.5)*4,{edge:STEELC,quiet:j%5!==0,push:1.2});damageLine(x,y,nx,y,8,10);afters.push({x:nx,y:y+ST.PH/2,ang:0,face:dir,life:8,col:[255,60,70]});x=nx;return j<40;});}return k<60;});}},
+       ACT.push(()=>{j++;const nx=x+dir*14;sliceLine(x,y,nx,y+(R()-.5)*4,{edge:STEELC,quiet:j%5!==0,push:1.2});damageLine(x,y,nx,y,8,10);afters.push({x:nx,y:y+ST.PH/2,ang:0,face:dir,life:8,col:[255,60,70]});x=nx;return j<40;});}return k<60;});}}
 ];
 const VW0=480;
 export const CHAR_POOL={id:'pool',name:'Deadpool',spr:SPR_POOL,pal:PAL_POOL,pw:7,ph:19,fly:false,fs:2.4,boost:2,run:2.3,jump:5.4,hp:360,armor:.75,glow:[255,80,90],cape:null,thrust:()=>rgb(255,80,90),powers:POOL_POWERS};

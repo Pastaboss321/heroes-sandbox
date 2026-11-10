@@ -15,9 +15,11 @@ import { pickC, shockFx, shots } from './powers.js';
 import { ACT, freezeArea, iceAt } from './xmen.js';
 import { gzones, ray, solidCells } from './wave2.js';
 import { hurlBody } from './villains.js';
-import { hand, mouse } from '../player.js';
-import { damageEnemies, enemies, hitEnemy } from '../enemies/core.js';
+import { hand, mouse, pl_ } from '../player.js';
+import { damageEnemies, enemies, hitEnemy, nearestEnemy } from '../enemies/core.js';
 import { OBJS, placeStruct } from '../ui/spawn.js';
+import { fxDome } from '../render/vfxcore.js';
+import { fig8, nearestN, noTarget } from './kitlib.js';
 
 const SPR_WANDA=[
 "...M..M..M...",
@@ -83,11 +85,31 @@ const WANDA_POWERS=[
  {n:'Conjure Chaos',fn:(a,p,use)=>{if(!use(30))return;ST.cd=50;const pool=['car','propane','boulder','crates','oil','girder','tree'];
    for(let k=0;k<4;k++){const id=pool[R()*pool.length|0],o=OBJS.find(z=>z.id===id)||OBJS[0];const x=Math.max(30,Math.min(W-30,mouse.wx+(k-1.5)*30|0)),y=(ST.camY|0)+30+(R()*20|0);if(y<40){shots.push({x,y,vx:(R()-.5),vy:3,type:'hex',life:160,boom:10,col:[255,60,130],ecol:[255,60,130]});continue;}placeStruct(o.place,x,y);}
    fxWord(mouse.wx,ST.camY+20,'ABRA-CHAOS!',1.2,'#ff6fa8',true);flash(mouse.wx,ST.camY+40,90,[255,60,130],8);snd('psi',mouse.wx,ST.camY+40,{pitch:.7});}},
+ // reality flips: inside the hex, up is down for wreckage, enemies and dust
+ {n:'Gravity Flip',fn:(a,p,use)=>{if(!use(30))return;ST.cd=60;const cx=mouse.wx,cy=mouse.wy,r=70*ST.aoeC;let k=0;fxWord(cx,cy-r-8,'UP IS DOWN',1.1,'#ff6fa8',true);snd('psi',cx,cy,{pitch:.7});
+   ACT.push(()=>{k++;if(k%6===0)rings.push({x:cx,y:cy,r,vr:0,life:6,c:[255,60,130]});for(const b of bodies)if(Math.hypot(b.x-cx,b.y-cy)<r){b.vy-=.62*(ST.gk||1);b.rest=0;b.thrown=true;}
+     for(const e of enemies)if(!e.def.titan&&Math.hypot(e.x-cx,e.y-cy)<r){e.vy-=e.def.fly?.15:.7;if(e.y<cy-r+4)hitEnemy(e,1.5,0,0);}
+     if(k===1){const n0=solidCells(cx,cy,r*.5|0,false);let n=0;for(let j=0;j<n0;j++)if(KIND[t[q[j]]]===S)q[n++]=q[j];if(n>20){const b=makeBody(q,n,false);if(b){b.vy=-1;b.thrown=true;}}}
+     return k<240;});}},
+ // three spears of chaos magic circle her, then hunt the nearest enemies
+ {n:'Chaos Spears',fn:(a,p,use)=>{if(!use(18))return;ST.cd=36;for(let i=0;i<3;i++){let k=0,x=p.x,y=p.y-ST.PH/2;const c=[255,60,130];
+     ACT.push(()=>{k++;if(k<30){const an=k*.25+i*2.09;x=pl_.x+Math.cos(an)*18;y=pl_.y-ST.PH/2+Math.sin(an)*18;spawn(x,y,0,0,rgb(255,90,150),6,0,1,0,1);return true;}
+       if(k===30){const e=nearestEnemy(x,y,260)||{x:mouse.wx,y:mouse.wy},d=Math.hypot(e.x-x,e.y-y)||1;shots.push({x,y,vx:(e.x-x)/d*8,vy:(e.y-y)/d*8,type:'hex',life:90,boom:8,col:c,ecol:c,home:true});snd('psi',x,y,{pitch:1.4});}return false;});}}},
+ // a Westview hex: inside the dome enemies wade through a sitcom, slowed and unable to attack
+  {n:'Westview',fn:(a,p,use)=>{if(!use(30))return;ST.cd=80;const cx=mouse.wx,cy=mouse.wy,r=60*ST.aoeC;let k=0;fxDome(cx,cy,r,[255,80,120],{life:420});fxWord(cx,cy-r-8,'WELCOME TO WESTVIEW',1,'#ff5c8a',true);
+    ACT.push(()=>{k++;for(const e of enemies){if(Math.hypot(e.x-cx,e.y-cy)>r)continue;e.vx*=.7;if(e.vy<0)e.vy*=.7;e.cd=Math.max(e.cd||0,3);if(k%40===0)hitEnemy(e,6,0,0);}
+      for(let n=shots.length-1;n>=0;n--){const s=shots[n];if(s.owner==='enemy'&&Math.hypot(s.x-cx,s.y-cy)<r){shots.splice(n,1);flash(s.x,s.y,6,[255,80,120],2);}}
+      if(k%90===0)fxWord(cx+(R()-.5)*r,cy-r*.5,['*LAUGH TRACK*',"HONEY, I'M HOME!",'*APPLAUSE*'][R()*3|0],.7,'#ffd6e0',true);return k<420;});}},
+ // crimson chains bind everything near the cursor and smash them into each other
+  {n:'Hex Chains',fn:(a,p,use)=>{const list=nearestN(mouse.wx,mouse.wy,100,5).filter(e=>!fig8(e));if(!list.length){noTarget('#ff5c8a');return;}if(!use(20))return;ST.cd=40;const cx=mouse.wx,cy=mouse.wy;let k=0;
+    ACT.push(()=>{k++;const h=hand();for(const e of list){if(e.hp<=0)continue;if(k%2===0)beams.push({pts:[[h.x,h.y],[(h.x+e.x)/2+(R()-.5)*10,(h.y+e.y)/2+(R()-.5)*10],[e.x,e.y]],life:2,c:[255,120,150],g:[220,20,60]});
+        if(k>12){const dx=cx-e.x,dy=cy-e.y,d=Math.hypot(dx,dy)||1;e.x+=dx/d*Math.min(7,d);e.y+=dy/d*Math.min(7,d);e.vx=e.vy=0;e.frozen=Math.max(e.frozen||0,2);}}
+      if(k<34)return true;const n=list.filter(e=>e.hp>0).length;for(const e of list)if(e.hp>0)hitEnemy(e,16+n*8,(e.x-cx)*.3,-4);explode(cx|0,cy|0,6+n*2,{self:true,col:[255,40,90]});fxWord(cx,cy-20,n>2?'CRASH!':'BONK!',1,'#ff5c8a',true);return false;});}},
  // chaos unleashed: everything around her turns into something else
- {n:'Chaos Unleashed',fn:(a,p,use)=>{if(!use(55))return;ST.cd=140;const cx=p.x|0,cy=p.y-ST.PH/2|0,r=62;fxWord(cx,cy-40,'CHAOS!',1.8,'#ff6fa8',true);ST.hitstop=Math.max(ST.hitstop,4);fxImpact(cx,cy,4);shockFx(cx,cy,1.3);
+ {n:'Chaos Unleashed',ult:true,fn:(a,p,use)=>{if(!use(55))return;ST.cd=140;const cx=p.x|0,cy=p.y-ST.PH/2|0,r=62;fxWord(cx,cy-40,'CHAOS!',1.8,'#ff6fa8',true);ST.hitstop=Math.max(ST.hitstop,4);fxImpact(cx,cy,4);shockFx(cx,cy,1.3);
    for(let y=-r;y<=r;y++)for(let x=-r;x<=r;x++){const d2=x*x+y*y;if(d2>r*r||d2<100)continue;const X=cx+x,Y=cy+y;if(X<0||X>=W||Y<0||Y>=H-44)continue;const i=Y*W+X,m=t[i];if(KIND[m]!==S)continue;const q2=R(),c=col[i];
      if(q2<.3){setc(i,SAND);col[i]=c;}else if(q2<.36)setc(i,WATER);else if(q2<.42)setc(i,GLASS);else if(q2<.44)setc(i,LAVA);else if(q2<.5)setc(i,R()<.5?WOOD:NEON);}
-   damageEnemies(cx,cy,r+10,70,0,-4,true);flash(cx,cy,180,[255,40,120],12);rings.push({x:cx,y:cy,r:8,vr:5,life:16,c:[255,60,130]});ST.shake=22;snd('boom',cx,cy,{size:1.6});}},
+   damageEnemies(cx,cy,r+10,70,0,-4,true);flash(cx,cy,180,[255,40,120],12);rings.push({x:cx,y:cy,r:8,vr:5,life:16,c:[255,60,130]});ST.shake=22;snd('boom',cx,cy,{size:1.6});}}
 ];
 
 // roster entry (CHARS in heroes/index.js)

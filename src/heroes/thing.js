@@ -2,21 +2,23 @@
 import './torch.js'; // evaluation order: runs after heroes/torch.js
 import { ST } from '../state.js';
 import { KIND, R, S, rgb } from '../world/materials.js';
-import { t } from '../world/grid.js';
+import { H, W, t } from '../world/grid.js';
 import { bodies, q } from '../world/support.js';
 import { makeBody } from '../world/bodies.js';
-import { afters, fxWord } from '../render/fx.js';
-import { explode } from '../world/destruction.js';
+import { afters, beams, fxWord } from '../render/fx.js';
+import { explode, ringChunks } from '../world/destruction.js';
 import { ANIM, rect } from '../render/rig.js';
 import { snd } from '../sfx.js';
-import { aim, pickC, quake, shockFx } from './powers.js';
+import { aim, pickC, quake, shockFx, surfaceY } from './powers.js';
 import { ACT } from './xmen.js';
 import { solidCells } from './wave2.js';
 import { crushAhead, hurlBody, wallChunk } from './villains.js';
 import { TC } from './f4.js';
 import { carve, mouse } from '../player.js';
-import { damageCone, damageEnemies, enemies, hitEnemy } from '../enemies/core.js';
+import { damageCone, damageEnemies, enemies, hitEnemy, nearestEnemy } from '../enemies/core.js';
 import { groundBelow } from '../ui/spawn.js';
+import { spawn } from '../world/particles.js';
+import { fig8 } from './kitlib.js';
 
 const SPR_THING=[
 "......kkkkk......",
@@ -69,10 +71,28 @@ const THING_POWERS=[
  {n:'Pummel Barrage',fn:(a,p,use)=>{if(!use(16))return;ST.cd=30;let k=0;ACT.push(()=>{if(k%4===0){p.punchF=8;const A2=aim(),x=A2.h.x+A2.dx*8,y=A2.h.y+A2.dy*8;explode(x|0,y|0,7,{self:true,quiet:true,col:TC});damageEnemies(x,y,12,14,A2.dx*4,A2.dy*4-1);snd('punch',x,y);}return++k<24;});fxWord(p.x,p.y-ST.PH-8,'WHAM-WHAM-WHAM!',1,'#ffb070',true);}},
  // punch a whole section of wall clean off and send it flying
  {n:'Wall Wrecker',fn:(a,p,use)=>{const dir=a.dx<0?-1:1,b=wallChunk(p.x,p.y-ST.PH/2,dir,11);if(!b)return;if(!use(18)){b.vx=0;return;}ST.cd=32;p.punchF=10;b.vx=dir*9;b.vy=-1.5;b.va=dir*.08;b.thrown=true;b.safeP=ST.frame+40;fxWord(p.x,p.y-ST.PH-8,'KRAKK!',1.1,'#ffb070',true);snd('punch',p.x,p.y);ST.shake+=5;}},
+ // his rock hide bristles: almost nothing gets through and what touches him gets clobbered
+ {n:'Rock Armor',fn:(a,p,use)=>{if(p.shell>0||!use(26))return;ST.cd=60;p.shell=420;fxWord(p.x,p.y-ST.PH-10,'ROCK HARD!',1,'#ffb070',true);
+   ACT.push(()=>{if(!(p.shell>0))return false;if(ST.frame%6===0){for(const e of enemies){if(Math.abs(e.x-p.x)<e.def.w/2+ST.PW&&Math.abs(e.y-(p.y-ST.PH/2))<e.def.h/2+ST.PH/2)hitEnemy(e,8,(e.x-p.x)*.3,-2);}spawn(p.x+(R()-.5)*12,p.y-R()*ST.PH,(R()-.5),-R(),rgb(218,118,50),20,0,0,1);}return true;});}},
+ // he stamps and the whole street jumps: cars, wreckage and enemies thrown in the air
+ {n:'Yancy Street Shake',fn:(a,p,use)=>{if(!use(30))return;ST.cd=60;const r=220*ST.aoeC;quake(p.x,p.y,{r:22,col:[218,118,50]});fxWord(p.x,p.y-ST.PH-12,'YANCY STREET SHAKE!',1.2,'#ffb070',true);ST.shake=22;
+   for(const b of bodies)if(Math.abs(b.x-p.x)<r){b.vy-=4+R()*3;b.vx+=(R()-.5)*3;b.va+=(R()-.5)*.1;b.rest=0;b.thrown=true;}
+   for(const e of enemies)if(!e.def.titan&&Math.abs(e.x-p.x)<r&&!e.def.fly){e.vy=-5-R()*2;hitEnemy(e,12,0,0);}
+   for(let k=0;k<5;k++){const x=p.x+(R()-.5)*r*1.6,y=surfaceY(x|0,Math.max(0,p.y-40|0),100);ringChunks(x,y+4,7,true);}}},
+ // a manhole cover thrown like a frisbee: it skips off walls and the floor
+  {n:'Manhole Frisbee',fn:(a,p,use)=>{if(!use(10))return;ST.cd=22;let x=a.h.x,y=a.h.y,vx=a.dx*8,vy=a.dy*8,k=0,b=3;const hit=new Set();fxWord(p.x,p.y-ST.PH-6,'FORE!',.9,'#ffb070',true);
+    ACT.push(()=>{k++;for(let s=0;s<4;s++){const nx=x+vx/4,ny=y+vy/4,solid=(X,Y)=>X<1||X>=W-1||Y>=H-2||Y>=0&&KIND[t[(Y|0)*W+(X|0)]]===S;
+        if(solid(nx,ny)){carve(nx,ny,3,vx,vy);if(--b<0)return false;if(solid(nx,y))vx=-vx;else vy=-vy;snd('punch',nx,ny,{v:.4,pitch:1.6});break;}x=nx;y=ny;}
+      vy+=.05;for(const e of enemies)if(!hit.has(e)&&Math.abs(e.x-x)<e.def.w/2+4&&Math.abs(e.y-y)<e.def.h/2+4){hit.add(e);hitEnemy(e,20,vx*.6,vy*.6-1);}
+      const an=k*.5,c=Math.cos(an)*5;beams.push({x0:x-c,y0:y-1,x1:x+c,y1:y+1,life:2,w:1,c:[150,150,160],g:[90,90,100]});return k<120;});}},
+ // a bear hug: squeezed until something cracks, then tossed
+  {n:'Bear Hug',fn:(a,p,use)=>{const e=nearestEnemy(p.x+p.face*12,p.y-ST.PH/2,30);if(!e||fig8(e)){fxWord(p.x,p.y-ST.PH-6,"NOTHIN' TO HUG",.7,'#ffb070',true);return;}if(!use(14))return;ST.cd=40;let k=0;const f=p.face;fxWord(p.x,p.y-ST.PH-10,"C'MERE, YA BUM!",.9,'#ffb070',true);
+    ACT.push(()=>{k++;p.script=2;if(e.hp<=0)return false;e.x=p.x+f*(ST.PW/2+e.def.w/2-2);e.y=p.y-ST.PH/2;e.vx=e.vy=0;e.frozen=Math.max(e.frozen||0,2);p.punchF=4;
+      if(k%10===0){hitEnemy(e,8,0,0);fxWord(e.x,e.y-e.def.h/2-4,'*CRACK*',.6,'#ffb070',true);ST.shake=Math.max(ST.shake,3);}if(k<60)return true;e.frozen=0;e.vx=f*8;e.vy=-5;e.thrownT=60;hitEnemy(e,16,0,0);return false;});}},
  // four escalating haymakers walking forward, then one that flattens the block
- {n:"It's Clobberin' Time!",fn:(a,p,use)=>{if(!use(45))return;ST.cd=110;const dir=p.face;let k=0;fxWord(p.x,p.y-ST.PH-12,"IT'S CLOBBERIN' TIME!",1.4,'#ffb070',true);snd('roar',p.x,p.y,{pitch:.75});
+ {n:"It's Clobberin' Time!",ult:true,fn:(a,p,use)=>{if(!use(45))return;ST.cd=110;const dir=p.face;let k=0;fxWord(p.x,p.y-ST.PH-12,"IT'S CLOBBERIN' TIME!",1.4,'#ffb070',true);snd('roar',p.x,p.y,{pitch:.75});
    ACT.push(()=>{k++;p.vx=dir*2;if(k%10===0&&k<=40){p.punchF=10;const st=k/10,x=p.x+dir*(10+st*4),y=p.y-ST.PH/2;explode(x|0,y|0,8+st*2,{self:true,col:TC});damageEnemies(x,y,20,20,dir*6,-3);crushAhead(p.x+dir*ST.PW/2,p.y-ST.PH/2,dir,ST.PH+6,8);}
-     if(k===52){p.throwF=12;const x=p.x+dir*16,y=p.y-4;explode(x|0,y|0,20,{self:true,col:TC,word:'KA-KLOBBER!'});quake(x,p.y,{col:TC,r:30});shockFx(x,y,1.3);damageEnemies(x,y,50,60,dir*8,-6);ST.hitstop=Math.max(ST.hitstop,6);return false;}return true;});}},
+     if(k===52){p.throwF=12;const x=p.x+dir*16,y=p.y-4;explode(x|0,y|0,20,{self:true,col:TC,word:'KA-KLOBBER!'});quake(x,p.y,{col:TC,r:30});shockFx(x,y,1.3);damageEnemies(x,y,50,60,dir*8,-6);ST.hitstop=Math.max(ST.hitstop,6);return false;}return true;});}}
 ];
 
 // roster entry (CHARS in heroes/index.js)

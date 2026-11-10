@@ -18,7 +18,7 @@ import { boxHit, carve, mouse, pl_ } from '../player.js';
 import { damageCone, damageEnemies, enemies, hitEnemy, nearestEnemy } from '../enemies/core.js';
 import { groundBelow } from '../ui/spawn.js';
 import { applyStatus, summons } from './abilities.js';
-import { atCursor, noTarget } from './kits3a.js';
+import { atCursor, noTarget } from './kitlib.js';
 import { fxCone, fxDome, fxGlitch, fxPillar, fxSigil, screenFlash, zoomPunch } from '../render/vfxcore.js';
 
 // ---- hero sprite: 3/4 front view, heroic proportions (small head, broad shoulders, V-taper, long legs),
@@ -172,7 +172,7 @@ const KANG_POWERS=[
      if(k%6===0)ST.shake=Math.min(24,ST.shake+7);
      if(k>=22){ST.hitstop=Math.max(ST.hitstop,10);explode(cx|0,cy|0,30,{col:[215,175,255],fire:.2});quake(cx,p.y,{col:[195,150,255],r:40});
        screenFlash([230,200,255],.3);return false;}
-     return true;});}},
+     return true;});}}
 ];
 
 // roster entry (CHARS in heroes/index.js)

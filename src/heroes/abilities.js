@@ -9,7 +9,7 @@
 //  - Ultimate meter (ST.ult, 0-100): fills with damage the hero deals and kills; G fires the hero's
 //    ultimate power for free (one per hero, pw.ult). Ultimates cost no energy, they cost the meter.
 //  - Summons (summons[]): allies and constructs that live for a while: {x,y,life,upd(s),draw(s)}.
-//  - Power kinds for the HUD (powerKind): tap / hold / move / ult.
+//  - Power kinds for the HUD (powerKind in heroes/kit.js): tap / hold / move / ult.
 // Damage is tagged through ST.dmgTag ('fire' | 'shock' | 'ice' | null) by the code that deals it.
 import { ST } from '../state.js';
 import { FIRE, GFIRE, LAVA, R, SNOW, WATER, ICE, rgb } from '../world/materials.js';
@@ -56,14 +56,7 @@ export function drawStatus(pix,enemies){for(const e of enemies){const s=e.st;if(
 // ---- ultimate meter
 ST.ult=0;ST.ultT=0;
 export function gainUlt(v){if(!(v>0))return;const was=ST.ult;ST.ult=Math.min(100,ST.ult+v);if(was<100&&ST.ult>=100){fxWord(ST.camX+240,ST.camY+60,'ULTIMATE READY · G',1.2,'#ffc93c',true);snd('charge',ST.camX+240,ST.camY+130,{pitch:1.6,v:.6});}}
-// the one ultimate per hero (by power name); new heroes set pw.ult themselves
-export const ULTS={doom:'Orbital Strike',hulk:'Worldbreaker',thor:'God Blast',iron:'Proton Cannon',wolverine:'Berserker Barrage',cyclops:'Uncontrolled Blast',iceman:'Absolute Zero',jean:'Phoenix Force',
-  spidey:'Maximum Spider',wanda:'Chaos Unleashed',strange:'Seraphim Disc',antman:'Keychain Tank',juggernaut:'Juggernaut Smash',ultron:'Annihilation Sweep',magneto:'Asteroid M',storm:'Eye of the Storm',
-  venom:'We Are Venom',reed:'Negative Zone Rift',sue:'Force Nova',torch:'Supernova',thing:"It's Clobberin' Time!",panther:"Bast's Wrath",cap:'Avengers Assemble',marvel:'Binary Supernova',
-  surfer:'Sentinel of the Spaceways',rider:'Judgement',pool:'Deadpool Corps'};
-export function markUlt(CH){const u=ULTS[CH.id];for(const pw of CH.powers){if(u&&pw.n===u)pw.ult=true;}}
-// what the HUD shows for a power: 'ult', 'move' (steers the hero), 'hold' (no cooldown: hold the button) or 'tap'
-export function powerKind(pw){if(pw.ult)return'ult';if(pw.tk)return'hold';if(pw.kind)return pw.kind;const s=String(pw.fn);if(/p\.script=2|scriptMove|p\.slam=true/.test(s))return'move';if(!/ST\.cd=/.test(s))return'hold';return'tap';}
+// the one ultimate per hero is marked `ult:true` on the power itself; the HUD kind is worked out in heroes/kit.js
 // ---- summons: allies and constructs that act on their own for a while
 export function updSummons(){for(let n=summons.length-1;n>=0;n--){const s=summons[n];s.t=(s.t||0)+1;if(s.upd&&s.upd(s)===false||--s.life<=0){if(s.end)s.end(s);summons.splice(n,1);}}}
 export function drawSummons(){for(const s of summons)if(s.draw)s.draw(s);}

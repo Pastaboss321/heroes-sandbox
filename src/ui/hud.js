@@ -2,7 +2,7 @@
 import '../render/render.js'; // evaluation order: runs after render/render.js
 import { ST } from '../state.js';
 import { CHARS, setChar, setSelHook } from '../heroes/index.js';
-import { powerKind } from '../heroes/abilities.js';
+import { powerKind } from '../heroes/kit.js';
 import { startWave } from '../enemies/core.js';
 
 // ================= HUD / input =================

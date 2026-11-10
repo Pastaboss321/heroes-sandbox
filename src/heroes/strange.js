@@ -15,8 +15,12 @@ import { ACT } from './xmen.js';
 import { slide } from './iceman.js';
 import { limbo, portals, solidCells } from './wave2.js';
 import { hand, mouse, pl_ } from '../player.js';
-import { damageEnemies, enemies, enemyAt, hitEnemy } from '../enemies/core.js';
+import { damageEnemies, enemies, enemyAt, hitEnemy, nearestEnemy } from '../enemies/core.js';
 import { groundBelow } from '../ui/spawn.js';
+import { TK } from '../render/titan.js';
+import { summons } from './abilities.js';
+import { atCursor, fig8, ghost, noTarget } from './kitlib.js';
+import { fxSigil } from '../render/vfxcore.js';
 
 const SPR_STRANGE=[
 "....hhhhh....",
@@ -45,6 +49,7 @@ const PAL_STRANGE={h:rgb(40,30,30),g:rgb(184,184,190),f:rgb(226,180,146),F:rgb(1
 
 // animation rig entry (see render/rig.js)
 ANIM.strange={leg:13,mid:6,armC:'BBb',tipC:'kkk',aw:2,al:5,fs:2,sh:[10,7],hide:rect(10,11,7,11),blink:null,cape:'Cc'};
+function drawCloak(s){const x=s.x,y=s.y,o={},wv=Math.sin(s.t*.3)*3;TK.begin();TK.poly([[x-5,y-8],[x+5,y-8],[x+9+wv,y+8],[x+3,y+5],[x-3,y+9],[x-9-wv,y+6]],rgb(196,30,40),o);TK.cap(x-6,y-9,x+6,y-9,2,2,rgb(230,190,60),o);TK.poly([[x-4,y-7],[x+4,y-7],[x,y+4]],rgb(120,16,24),o);TK.end();}
 const STRANGE_POWERS=[
  {n:'Bolts of Balthakk',fn:(a,p,use)=>{if(!use(7))return;ST.cd=12;for(let k=0;k<3;k++)shots.push({x:a.h.x,y:a.h.y,vx:a.dx*4.5+(R()-.5)*2.5,vy:a.dy*4.5+(R()-.5)*2.5,type:'mbolt',life:150,col:[255,190,70],ecol:[255,190,70],boom:5,home:true,delay:k*3});}},
  // a pair of sling-ring portals. Anything that falls, flows, flies or walks into the blue one comes out of the orange one
@@ -67,10 +72,6 @@ const STRANGE_POWERS=[
    for(let y=-r;y<=r;y++)for(let x=-r;x<=r;x++){if(x*x+y*y>r*r)continue;const X=cx+x,Y=cy+y;if(X<0||X>=W||Y<0||Y>=H-44)continue;const i=Y*W+X;if(KIND[t[i]]===S&&t[i]!==OBSID){setc(i,GLASS);col[i]=(x+y)&3?rgb(200,220,240):rgb(255,230,160);}}
    fxWord(cx,cy-r-6,'MIRROR DIMENSION',1.1,'#ffc93c',true);snd('psi',cx,cy,{pitch:.4});
    ACT.push(()=>{if(++k<30)return true;for(let n=0;n<10;n++){const an=R()*6.283,d=R()*r;explode(cx+Math.cos(an)*d|0,cy+Math.sin(an)*d|0,7,{self:true,quiet:n>0,col:[220,235,255]});}damageEnemies(cx,cy,r+10,45,0,-4,true);fxWord(cx,cy-r-6,'SHATTER!',1.4,'#d8e4ff',true);snd('glass',cx,cy,{size:2});ST.shake=Math.max(ST.shake,12);return false;});}},
- // a floating golden mandala you (and anything else) can stand on, for eight seconds
- {n:'Seraphim Disc',fn:(a,p,use)=>{if(!use(15))return;ST.cd=20;const cx=mouse.wx|0,cy=mouse.wy|0;
-   for(let x=-14;x<=14;x++)for(let y=0;y<2;y++){const X=cx+x,Y=cy+y+(Math.abs(x)>11?1:0);if(X<0||X>=W||Y<0||Y>=H-44)continue;const i=Y*W+X;if(t[i]&&KIND[t[i]]!==G&&KIND[t[i]]!==F)continue;setc(i,NEON);col[i]=(x+y)&1?rgb(255,200,80):rgb(255,150,40);pin[i]=3;slide.push([i,ST.frame+480+(R()*20|0)]);}
-   fxWord(cx,cy-12,'SERAPHIM!',.9,'#ffc93c',true);snd('psi',cx,cy,{pitch:1.6});}},
  // fold space: the block under the cursor flips upside down, buildings and all
  {n:'Mirror Fold',fn:(a,p,use)=>{if(mouse.wy<-20||!use(32))return; // nothing to fold up in the open sky
   ST.cd=60;const cx=mouse.wx|0,cy=mouse.wy|0,R2=24,x0=Math.max(1,cx-R2),x1=Math.min(W-2,cx+R2),y0=Math.max(1,cy-R2),y1=Math.min(H-46,cy+R2);
@@ -93,6 +94,27 @@ const STRANGE_POWERS=[
    ACT.push(()=>{k++;for(let n=shots.length-1;n>=0;n--){const s=shots[n];if(s.owner==='enemy'&&Math.hypot(s.x-W0.x,s.y-W0.y)<W0.r){flash(s.x,s.y,6,[255,200,80],2);shots.splice(n,1);}}
      for(const e of enemies){const dx=e.x-W0.x,dy=e.y-W0.y,d=Math.hypot(dx,dy)||1;if(d<W0.r+e.def.w/2){e.vx+=dx/d*1.2;e.vy+=dy/d*1.2;if(ST.frame%10===0)hitEnemy(e,3,0,0);}}
      if(k%2===0){const an=k*.2;for(let q2=0;q2<6;q2++){const a2=an+q2*1.047;spawn(W0.x+Math.cos(a2)*W0.r,W0.y+Math.sin(a2)*W0.r,0,0,rgb(255,200,80),6,0,1,0,1);}}return k<480;});}},
+ // his astral self leaves his body, flies to the cursor and fights there
+ {n:'Astral Projection',fn:(a,p,use)=>{if(summons.some(s=>s.astral)||!use(26))return;ST.cd=60;fxWord(p.x,p.y-ST.PH-10,'ASTRAL FORM',1,'#bfe3ff',true);
+   summons.push({astral:true,x:p.x,y:p.y,life:360,cd:0,face:1,upd(s){const e=nearestEnemy(mouse.wx,mouse.wy,140);const tx=e?e.x:mouse.wx,ty=e?e.y+8:mouse.wy;s.x+=(tx-s.x)*.08;s.y+=(ty-s.y)*.08;s.face=tx>s.x?1:-1;
+     if(--s.cd<=0&&e&&Math.hypot(e.x-s.x,e.y-s.y+8)<16){s.cd=12;hitEnemy(e,12,s.face*3,-2);flash(e.x,e.y,10,[200,230,255],3);snd('punch',e.x,e.y,{v:.5});}if(R()<.3)spawn(s.x,s.y-8,(R()-.5)*.5,-.4,rgb(200,230,255),12,0,1,0,1);},
+     draw(s){ghost(s.x,s.y,s.face,[200,230,255]);}});}},
+ // the Images of Ikonn: three mirror images orbit him and cast bolts of their own
+ {n:'Images of Ikonn',fn:(a,p,use)=>{if(summons.some(s=>s.ikonn)||!use(28))return;ST.cd=80;fxWord(p.x,p.y-ST.PH-10,'IMAGES OF IKONN!',1,'#ffc93c',true);
+   for(let i=0;i<3;i++)summons.push({ikonn:true,i,x:p.x,y:p.y,life:480,cd:30+i*15,face:1,upd(s){const an=ST.frame*.03+s.i*2.09;s.x=pl_.x+Math.cos(an)*34;s.y=pl_.y+Math.sin(an)*10-6;s.face=pl_.face;
+     if(--s.cd<=0){const e=nearestEnemy(s.x,s.y,240);if(e){s.cd=50;const d=Math.hypot(e.x-s.x,e.y-s.y+8)||1;shots.push({x:s.x,y:s.y-8,vx:(e.x-s.x)/d*6,vy:(e.y-s.y+8)/d*6,type:'bolt',life:80,boom:5,col:[255,200,90],ecol:[255,200,90]});}}},
+     draw(s){ghost(s.x,s.y,s.face,[255,210,120]);}});}},
+ // the enemy is caught in a time loop: snapped back to the same spot and hurt again, six times over
+  {n:'Time Loop',fn:(a,p,use)=>{const e=atCursor(70);if(!e||fig8(e)||e.loop){noTarget('#8dffb0');return;}if(!use(24))return;ST.cd=50;e.loop={x:e.x,y:e.y,k:0,n:0};fxSigil(e.x,e.y,e.def.w/2+14,[120,255,140],{kind:'clock',life:360,spin:.05});
+    fxWord(e.x,e.y-e.def.h/2-10,"DORMAMMU, I'VE COME TO BARGAIN",.8,'#8dffb0',true);snd('psi',e.x,e.y,{pitch:.5});}},
+ // the Cloak of Levitation flies off on its own and smothers enemies one after another
+  {n:'Cloak of Levitation',fn:(a,p,use)=>{if(summons.some(s=>s.cloak)||!use(22))return;ST.cd=70;fxWord(p.x,p.y-ST.PH-10,'GO ON, THEN.',.9,'#ff8a5c',true);
+    summons.push({cloak:true,x:p.x,y:p.y-ST.PH,life:480,tg:null,hold:0,upd(s){if(!s.tg||s.tg.hp<=0||s.hold>90){s.tg=nearestEnemy(s.x,s.y,260);s.hold=0;}const e=s.tg,tx=e?e.x:pl_.x-pl_.face*12,ty=e?e.y-e.def.h*.2:pl_.y-ST.PH-10,dx=tx-s.x,dy=ty-s.y,d=Math.hypot(dx,dy)||1;
+      s.x+=dx/d*Math.min(4,d);s.y+=dy/d*Math.min(4,d);if(e&&d<8){s.hold++;if(!e.def.titan)e.frozen=Math.max(e.frozen||0,2);if(s.hold%15===0)hitEnemy(e,8,0,0);}},draw:drawCloak});}},
+ // a floating golden mandala you (and anything else) can stand on, for eight seconds
+ {n:'Seraphim Disc',ult:true,fn:(a,p,use)=>{if(!use(15))return;ST.cd=20;const cx=mouse.wx|0,cy=mouse.wy|0;
+   for(let x=-14;x<=14;x++)for(let y=0;y<2;y++){const X=cx+x,Y=cy+y+(Math.abs(x)>11?1:0);if(X<0||X>=W||Y<0||Y>=H-44)continue;const i=Y*W+X;if(t[i]&&KIND[t[i]]!==G&&KIND[t[i]]!==F)continue;setc(i,NEON);col[i]=(x+y)&1?rgb(255,200,80):rgb(255,150,40);pin[i]=3;slide.push([i,ST.frame+480+(R()*20|0)]);}
+   fxWord(cx,cy-12,'SERAPHIM!',.9,'#ffc93c',true);snd('psi',cx,cy,{pitch:1.6});}}
 ];
 
 // roster entry (CHARS in heroes/index.js)

@@ -1,21 +1,22 @@
 // Spider-Man: sprite, palette, rig entry, powers and roster entry.
 import { ray, solidCells, tramps, webCell, webEnemy, webLine } from './wave2.js';
 import { ST } from '../state.js';
-import { R, rgb } from '../world/materials.js';
-import { H, VH, W } from '../world/grid.js';
-import { q } from '../world/support.js';
+import { KIND, R, S, rgb } from '../world/materials.js';
+import { H, VH, W, t } from '../world/grid.js';
+import { bodies, q } from '../world/support.js';
 import { makeBody } from '../world/bodies.js';
 import { spawn } from '../world/particles.js';
 import { afters, beams, fxWord } from '../render/fx.js';
 import { explode, punchOut } from '../world/destruction.js';
 import { ANIM, rect } from '../render/rig.js';
 import { snd } from '../sfx.js';
-import { grabRegion, shots } from './powers.js';
+import { grabRegion, scriptMove, shots } from './powers.js';
 import { ACT } from './xmen.js';
 import { hurlBody } from './villains.js';
-import { SKY, boxHit, carve, mouse } from '../player.js';
+import { SKY, boxHit, carve, hand, mouse } from '../player.js';
 import { damageEnemies, damageLine, enemies, enemyAt, hitEnemy, nearestEnemy } from '../enemies/core.js';
 import { groundBelow } from '../ui/spawn.js';
+import { atCursor, fig8, nearestN, noTarget } from './kitlib.js';
 
 const SPR_SPIDEY=[
 "....rRRRr....",
@@ -84,14 +85,34 @@ const SPIDEY_POWERS=[
  {n:'Web Topple',fn:(a,p,use)=>{const r=ray(a.h.x,a.h.y,a.dx,a.dy,260);if(!r.hit)return;let n=grabRegion(r.x|0,r.y|0,6);if(!n)n=solidCells(r.x,r.y,6,false);if(n<12)return;if(!use(30))return;ST.cd=60;
    const b=makeBody(q,n,false);if(!b)return;const dir=p.x<b.x?-1:1;b.vx=dir*3.5;b.vy=-1.5;b.va=dir*.03;b.topple=dir;b.thrown=true;b.safeP=ST.frame+40;
    for(let k=0;k<3;k++)beams.push({x0:a.h.x,y0:a.h.y,x1:r.x+(R()-.5)*6,y1:r.y+(R()-.5)*6,life:10,w:0,c:[240,240,246],g:[160,160,170]});fxWord(r.x,r.y-12,'HEAVE!',1.2,'#f3e9d2',true);snd('rip',r.x,r.y);}},
+ // webs a chunk of building to an anchor overhead: a wrecking ball on a line
+ {n:'Web Wrecking Ball',fn:(a,p,use)=>{const n0=solidCells(mouse.wx,mouse.wy,9,false);let n=0;for(let j=0;j<n0;j++)if(KIND[t[q[j]]]===S)q[n++]=q[j];if(n<20){fxWord(mouse.wx,mouse.wy,'NEED SOMETHING HEAVY',.7,'#f3e9d2',true);return;}if(!use(26))return;ST.cd=50;
+   const b=makeBody(q,n,false);if(!b)return;b.thrown=true;b.safeP=ST.frame+600;let ax=b.x+(p.x<b.x?-60:60),ay=b.y-90;for(let y=b.y-10;y>Math.max(0,b.y-200);y--){if(KIND[t[(y|0)*W+(ax|0)]]===S){ay=y+1;break;}}const L=Math.hypot(b.x-ax,b.y-ay);let k=0;
+   b.vx=(p.x<b.x?3:-3);fxWord(b.x,b.y-14,'WRECKING BALL!',1.1,'#f3e9d2',true);
+   ACT.push(()=>{k++;if(!bodies.includes(b))return false;const dx=b.x-ax,dy=b.y-ay,d=Math.hypot(dx,dy)||1;if(d>L){const ux=dx/d,uy=dy/d,vr=b.vx*ux+b.vy*uy;b.x=ax+ux*L;b.y=ay+uy*L;if(vr>0){b.vx-=vr*ux;b.vy-=vr*uy;}}b.rest=0;b.vx*=1.004;
+     beams.push({x0:ax,y0:ay,x1:b.x,y1:b.y,life:1,w:0,c:[240,240,246],g:[160,160,170]});for(const e of enemies)if(Math.hypot(e.x-b.x,e.y-b.y)<b.rmax+e.def.w/2){hitEnemy(e,Math.hypot(b.vx,b.vy)*3,b.vx*.6,b.vy*.6);}return k<300;});}},
+ // a web zip to the cursor that ends in a flying kick
+ {n:'Thwip Zip',fn:(a,p,use)=>{if(!use(8))return;ST.cd=16;const tx=mouse.wx,ty=mouse.wy;let k=0;snd('whoosh',p.x,p.y,{pitch:1.9});
+   ACT.push(()=>{k++;p.script=2;beams.push({x0:hand().x,y0:hand().y,x1:tx,y1:ty,life:1,w:0,c:[240,240,246],g:[160,160,170]});const dx=tx-p.x,dy=ty-(p.y-ST.PH/2),d=Math.hypot(dx,dy)||1;
+     if(d<10||k>40){damageEnemies(p.x,p.y-ST.PH/2,14,20,dx/d*5,-3);fxWord(p.x,p.y-ST.PH-6,'THWIP-KICK!',.8,'#f3e9d2',true);p.vx=dx/d*3;p.vy=-2;return false;}scriptMove(p,dx/d*Math.min(9,d),dy/d*Math.min(9,d));return true;});}},
+ // Iron Spider waldoes: four mechanical legs stab whatever gets close for six seconds
+  {n:'Iron Spider Arms',fn:(a,p,use)=>{if(p.isp>0||!use(20))return;ST.cd=50;p.isp=360;fxWord(p.x,p.y-ST.PH-10,'IRON SPIDER, ENGAGE!',.9,'#ffd36a',true);snd('charge',p.x,p.y,{pitch:1.4});
+    ACT.push(()=>{if(--p.isp<=0||ST.CH.id!=='spidey'){p.isp=0;return false;}const bx=p.x-p.face*2,by=p.y-ST.PH*.6,tg=nearestN(bx,by,50,4);
+      for(let j=0;j<4;j++){const e=tg[j],side=j<2?-1:1,lift=j%2,ph=(ST.frame+j*3)%10;let ex,ey;if(e&&ph<3){ex=e.x;ey=e.y;if(ph===0)hitEnemy(e,9,(e.x-bx)*.08,-1);}else{ex=bx+side*(14+lift*4);ey=by-8+lift*10+Math.sin(ST.frame*.2+j)*2;}
+        beams.push({pts:[[bx,by],[(bx+ex)/2+side*4,Math.min(by,ey)-8],[ex,ey]],life:1,c:[240,200,90],g:[200,40,40]});}return true;});}},
+ // the enemy at the cursor is left hanging from a web line, the classic way
+  {n:'Web Hang',fn:(a,p,use)=>{const e=atCursor(70);if(!e||fig8(e)||e.hang){noTarget('#ff6b6b');return;}if(!use(14))return;ST.cd=30;const X=e.x|0;let ay=e.y-e.def.h/2-1,found=false;
+    for(let k=0;k<150;k++){const Y=ay|0;if(Y<1)break;if(KIND[t[Y*W+X]]===S){found=true;break;}ay--;}
+    const top=found?ay+1:e.y-e.def.h/2-60,len=Math.max(10,Math.min(40,(e.y-e.def.h/2-top)*.5));e.hang={x:e.x,y:top,len,life:360};fxWord(e.x,e.y-e.def.h/2-8,'HANG AROUND!',.9,'#ff6b6b',true);snd('whoosh',e.x,e.y,{pitch:1.8});
+    ACT.push(()=>{if(!e.hang||e.hp<=0)return false;beams.push({x0:e.hang.x,y0:e.hang.y,x1:e.x,y1:e.y-e.def.h/2,life:1,w:0,c:[240,240,246],g:[160,160,170]});return true;});}},
  // Maximum Spider: ricochet wall to wall to foe, every landing a blast
- {n:'Maximum Spider',fn:(a,p,use)=>{if(!use(40))return;ST.cd=80;let n=0,dx=a.dx,dy=a.dy,seg=0;fxWord(p.x,p.y-ST.PH-10,'MAXIMUM SPIDER!',1.4,'#e23b2e',true);snd('whoosh',p.x,p.y,{pitch:1.4});
+ {n:'Maximum Spider',ult:true,fn:(a,p,use)=>{if(!use(40))return;ST.cd=80;let n=0,dx=a.dx,dy=a.dy,seg=0;fxWord(p.x,p.y-ST.PH-10,'MAXIMUM SPIDER!',1.4,'#e23b2e',true);snd('whoosh',p.x,p.y,{pitch:1.4});
    ACT.push(()=>{p.script=2;const nx=p.x+dx*9,ny=p.y+dy*9;afters.push({x:p.x,y:p.y,ang:0,face:p.face,life:10});damageLine(p.x,p.y-ST.PH/2,nx,ny-ST.PH/2,5,10);
      if(boxHit(nx,ny)||nx<6||nx>W-6||ny<ST.PH+2-SKY+VH/2||ny>H-10||++seg>14){n++;seg=0;explode(p.x|0,p.y-ST.PH/2|0,9,{self:true,col:[220,40,40]});damageEnemies(p.x,p.y-ST.PH/2,22,24,0,-3,true);ST.shake=Math.max(ST.shake,6);
        const e=nearestEnemy(p.x,p.y,220);let tx,ty;if(e&&R()<.6){tx=e.x;ty=e.y+ST.PH/2;}else{const an=R()*6.283;tx=p.x+Math.cos(an)*100;ty=p.y+Math.sin(an)*60;}const d=Math.hypot(tx-p.x,ty-p.y)||1;dx=(tx-p.x)/d;dy=(ty-p.y)/d;p.face=dx<0?-1:1;
        fxWord(p.x,p.y-ST.PH-6,['THWAK!','KRAK!','WHAM!','SMASH!'][n%4],.9,'#f3e9d2',true);snd('punch',p.x,p.y);}
      else{p.x=nx;p.y=ny;}
-     if(n>=8){p.script=0;p.vx=0;p.vy=-2;if(boxHit(p.x,p.y))punchOut(p);return false;}return true;});}},
+     if(n>=8){p.script=0;p.vx=0;p.vy=-2;if(boxHit(p.x,p.y))punchOut(p);return false;}return true;});}}
 ];
 
 // roster entry (CHARS in heroes/index.js)

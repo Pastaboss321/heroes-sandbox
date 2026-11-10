@@ -1,6 +1,6 @@
 // Signature visuals: each hero's showpiece powers get effects only they have (magic circles, phoenix
-// fire, rainbow bridges, black holes, BAMF smoke...). applySigFx wraps the power functions after the kits
-// are applied; the power logic is untouched, the decorator only adds render/vfxcore.js effects after a cast.
+// fire, rainbow bridges, black holes, BAMF smoke...). SIG[heroId][powerName] is the effect; heroes/kit.js looks it
+// up once per power (sigOf) and plays it after a cast that really fired. Power logic never lives here.
 import { ST } from '../state.js';
 import { R } from '../world/materials.js';
 import { beams, rings } from '../render/fx.js';
@@ -243,17 +243,5 @@ const SIG = {
 // Nightcrawler's chained teleports: smoke wherever he lands for a while after the cast
 for (const n of ['BAMF Strike', 'Teleport Drop', 'Chain BAMF', 'BAMF Barrage']) SIG.kurt[n] = (c) => { let lx = c.ox, ly = c.oy; bamf(lx, ly - ST.PH / 2); loop(120, () => { const p = c.p; if (Math.hypot(p.x - lx, p.y - ly) > 18) { bamf(lx, ly - ST.PH / 2, .8); bamf(p.x, p.y - ST.PH / 2, .8); } lx = p.x; ly = p.y; }); };
 
-export function applySigFx(CHARS) {
-  for (const ch of CHARS) { const tab = SIG[ch.id]; if (!tab) continue;
-    for (const pw of ch.powers) { const d = tab[pw.n]; if (!d || !pw.fn) continue; const f = typeof d === 'function' ? d : d.f, opt = typeof d === 'function' ? {} : d, f0 = pw.fn;
-      pw.fn = (a, p, use) => {
-        const c0 = ST.cd, e0 = p.en, ult0 = pw.ult && ST.ultT === 200, b0 = beams.length, r0 = rings.length, ox = p.x, oy = p.y;
-        f0(a, p, use);
-        if (!(ST.cd > c0 || p.en < e0 - .01 || ult0)) return;
-        const fresh = ST.frame - (pw.sigT ?? -99) > 8; pw.sigT = ST.frame; if (!fresh && !opt.every) return;
-        if (opt.st) { for (let i = b0; i < beams.length; i++) beams[i].st = opt.st; for (let i = r0; i < rings.length; i++) rings[i].st = opt.st; }
-        try { f({ a, p, mx: a.h.x + a.dx * a.d, my: a.h.y + a.dy * a.d, hx: a.h.x, hy: a.h.y, ang: Math.atan2(a.dy, a.dx), ox, oy, fresh }); } catch (e) { console.warn('sigfx', ch.id, pw.n, e); }
-      };
-    }
-  }
-}
+// the signature effect for one power, or null (heroes/kit.js attaches it once and runs it after a cast that fired)
+export function sigOf(id, n) { const d = SIG[id] && SIG[id][n]; if (!d) return null; return typeof d === 'function' ? { f: d, opt: {} } : { f: d.f, opt: d }; }
