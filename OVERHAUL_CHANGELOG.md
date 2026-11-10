@@ -352,3 +352,43 @@ harness leaves them hovering above the dummies.
 
 - The new heroes have themes and default signatures but no bespoke `sigfx.js` entries yet.
 - Hawkeye's bow is only drawn in his signature pose; while aiming he uses the rig's bare arm.
+
+## Stage 6: modes and enemies
+
+### What changed
+
+- **Every mode runs with the new roster.** All ten modes were started with a new hero and ticked through combat
+  (Sandbox, Robots 2099, Doomsday, Sentinels, Demolition, Boss Rush, Savage Land Swarm, Titan Duel, Gauntlet,
+  Multiverse): no errors. Nothing in the mode code depended on the roster size.
+- **New enemies** (`src/enemies/sinister.js`):
+
+| Enemy | HP | What it does |
+|---|---|---|
+| Hand ninja | 40 | runs at 1.9, leaps from 70 px, 9 melee; below half health it vanishes in smoke and reappears behind you |
+| Pumpkin drone | 26 | hovers overhead and lobs bombs (8 damage, blast 5) |
+| Illusion | 6 | a copy of Mysterio: one hit kills it, its bolts do 4; fades after 15 s |
+| Training dummy | never dies | stands still so you can read your damage numbers (spawn menu) |
+
+- **Three new bosses**, wearing the heroes' own art and using the same sim materials:
+
+| Boss | HP | Attacks |
+|---|---|---|
+| Green Goblin | 2000 | pumpkin volley (3, or 5 enraged: 12 damage, blast 7), razor bats (6 x 6), a cloud of real gas that he ignites 70 ticks later, dive ram (22), up to 2-3 pumpkin drones |
+| Mysterio | 1700 | fans of mist bolts (6-9 x 7), 3-5 illusions, a bank of real smoke on the hero, teleports when you close to 40 px |
+| Sandman | 2800 | sand hammer (24 and a crater), sandblast (real sand piles up), burrows and erupts under you (26); every hit knocks real sand off him |
+
+  Bosses enrage below 40% health.
+- **New mode: Sinister Night** (`src/modes/sinister.js`): nine waves over New York with ninjas, Hydra and
+  drones; the Goblin on wave 3, Mysterio on 6, Sandman on 9. Three lives, 40% heal between waves, +2500 per
+  villain, +5000 for the win.
+- **Boss Rush is seven bosses** (was four): Juggernaut, Green Goblin, Ultron Prime, Mysterio, Magneto, Sandman,
+  Master Mold. Same three lives and 50% heal between fights.
+- **Enemies now react to the materials the new heroes bring** (in the status tick, `heroes/abilities.js`):
+  an enemy waist-deep in sand, snow or rubble wades (speed x0.6); an enemy in smoke or gas cannot fire (its
+  attack timer is held at 24 ticks). Existing rules are unchanged: water wets, fire burns, ice and snow chill.
+
+### Decisions
+
+- Boss Rush got longer rather than getting a second variant: one mode, more to fight. Its record table is the
+  same key, so an old best score stays (it is now easier to beat).
+- The old boss versions of Juggernaut, Ultron and Magneto keep their AI; only their sprites changed (stage 2).

@@ -12,7 +12,7 @@
 //  - Power kinds for the HUD (powerKind in heroes/kit.js): tap / hold / move / ult.
 // Damage is tagged through ST.dmgTag ('fire' | 'shock' | 'ice' | null) by the code that deals it.
 import { ST } from '../state.js';
-import { FIRE, GFIRE, LAVA, R, SNOW, WATER, ICE, rgb } from '../world/materials.js';
+import { FIRE, GFIRE, KIND, LAVA, P, PROPANE, R, SMOKE, SNOW, WATER, ICE, rgb } from '../world/materials.js';
 import { H, W, t } from '../world/grid.js';
 import { spawn } from '../world/particles.js';
 import { beams, flash, fxWord, rings } from '../render/fx.js';
@@ -43,7 +43,10 @@ function chain(src){let n=0;for(const o of ST.enemyList()){if(o===src||o.hp<=0||
   beams.push({pts:[[src.x,src.y],[(src.x+o.x)/2+(R()-.5)*12,(src.y+o.y)/2+(R()-.5)*12],[o.x,o.y]],life:6,c:[220,240,255],g:[90,160,255]});o.hp-=18;o.flash=5;}}
 // per tick for every enemy (enemies/core.js through ST.statusTick)
 function tickStatus(e){const s=e.st;const X=e.x|0,Y=e.y|0;
-  if(X>=0&&X<W&&Y>=0&&Y<H){const m=t[Y*W+X];if(m===WATER)applyStatus(e,'wet',240);else if(m===FIRE||m===GFIRE||m===LAVA)applyStatus(e,'burn',120);else if(m===ICE||m===SNOW)applyStatus(e,'chill',2);}
+  if(X>=0&&X<W&&Y>=0&&Y<H){const m=t[Y*W+X];if(m===WATER)applyStatus(e,'wet',240);
+    else if(KIND[m]===P&&!e.def.fly&&!e.def.titan&&!e.def.title){e.vx*=.6;if(e.vy<0)e.vy*=.7;} // buried to the waist in sand, snow or rubble: wading
+    else if((m===SMOKE||m===PROPANE)&&!e.def.titan){if(e.cd<24)e.cd=24;} // in smoke or gas: nothing to aim at
+    if(m===FIRE||m===GFIRE||m===LAVA)applyStatus(e,'burn',120);else if(m===ICE||m===SNOW)applyStatus(e,'chill',2);}
   if(!s)return;
   if(s.burn>0){s.burn--;if(!e.def.titan||ST.frame%2===0)e.hp-=.12;if(R()<.5)spawn(e.x+(R()-.5)*e.def.w,e.y-e.def.h/2+R()*e.def.h,(R()-.5)*.4,-.8-R(),R()<.5?rgb(255,200,80):rgb(255,100,30),14,0,1,0,1);}
   if(s.wet>0){s.wet--;if(R()<.15)spawn(e.x+(R()-.5)*e.def.w,e.y+e.def.h/2,0,.5,rgb(90,140,230),20,0,0,1);}

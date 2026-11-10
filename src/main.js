@@ -35,6 +35,8 @@ import { drawSprite } from './render/sprites.js';
 import { initZoom } from './ui/zoom.js'; // last: it pulls in player.js, which must load in its usual order
 import { triggerEvent } from './maps/events.js';
 import { PLACED } from './maps/setpieces.js';
+import './enemies/sinister.js'; // Hand ninjas, pumpkin drones, illusions, the Goblin, Mysterio and Sandman bosses, the training dummy
+import './modes/sinister.js';
 
 resize();
 onViewResize(()=>resizeGL(VW,VH)); // the zoom resized the sim canvas (ui/zoom.js)
