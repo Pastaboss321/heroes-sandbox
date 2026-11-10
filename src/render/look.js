@@ -5,7 +5,7 @@ import { cl, rgb } from '../world/materials.js';
 import { H } from '../world/grid.js';
 
 // ================= look: settings, time of day, colour grading =================
-export const SET=Object.assign({tod:'auto',dim:55,shake:80,words:true,ink:true,bloom:true,fps:false,sound:true,vol:70,fx:true,light:true,nums:true},(()=>{try{return JSON.parse(localStorage.getItem('ironsorc.settings')||'{}');}catch(e){return {};}})());
+export const SET=Object.assign({tod:'auto',dim:55,shake:80,words:true,ink:true,bloom:true,fps:false,sound:true,vol:70,fx:true,light:true,nums:true,events:true},(()=>{try{return JSON.parse(localStorage.getItem('ironsorc.settings')||'{}');}catch(e){return {};}})());
 export function saveSet(){try{localStorage.setItem('ironsorc.settings',JSON.stringify(SET));}catch(e){}}
 // sky gradient top/bottom, haze (what distant things fade into), light on the foreground, window lights on/off
 const TODS={
@@ -18,7 +18,7 @@ const TODS={
 export const fgL=new Uint8Array(768), bgL=new Uint8Array(768), rimL=new Uint8Array(768), inkL=new Uint8Array(768), htL=new Uint8Array(768);
 export const lut=(L,c)=>((255<<24)|(L[512+((c>>16)&255)]<<16)|(L[256+((c>>8)&255)]<<8)|L[c&255])>>>0;
 function buildLUT(){
-  const T=TODS[SET.tod],Lc=T?T.light:[1,1,1],dim=SET.dim/100;
+  const T=TODS[SET.tod],L0=T?T.light:[1,1,1],M=ST.mapLook||[1,1,1],Lc=[L0[0]*M[0],L0[1]*M[1],L0[2]*M[2]],dim=SET.dim/100; // time of day x the map's own grade
   for(let k=0;k<3;k++)for(let v=0;v<256;v++){const j=k*256+v;
     fgL[j]=cl(v*Lc[k]);bgL[j]=cl(v*Lc[k]*(1-dim*.55));rimL[j]=cl(v*1.22+12);inkL[j]=cl(v*.36);htL[j]=cl(v*.8);}
 }

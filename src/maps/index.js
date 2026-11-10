@@ -31,21 +31,24 @@ import { ambDark, genDark } from './dark.js';
 import { setWorld } from '../world/grid.js';
 import { detailPass } from './detail.js';
 import { lifeReset } from '../world/life.js';
+import { setPieces } from './setpieces.js';
+import { resetEvents } from './events.js';
 
 export const mapSel=document.getElementById('map');
+// look: the map's colour grade, light multipliers [r,g,b] on top of the time of day. Set pieces: maps/setpieces.js. Events: maps/events.js.
 // w: world width (heroes are fast, so maps are long); h: height (default 720: deep underground, and the
 // urban maps sit their street lower for taller skylines, ST.GYO); grav: gravity multiplier; space: off-world
-export const MAPDEFS={city:{name:'City',theme:'urban',gen:genCity,w:7200},nyc:{name:'New York',theme:'urban',gen:genNYC,w:8000},nyc2099:{name:'NYC 2099',theme:'urban',gen:genNYC2099,amb:amb2099,rain:true,w:8000},forest:{name:'Forest',theme:'nature',gen:genForest,w:6400},xmansion:{name:'X-Mansion',theme:'estate',gen:genXMansion,amb:ambXMansion,w:4800},
-  retro:{name:'Earth-828 NYC',theme:'urban',gen:genRetro,amb:ambRetro,w:7200},
-  incursion:{name:'Incursion NYC',theme:'urban',gen:genIncursion,amb:ambIncursion,w:7200},
-  savage:{name:'Savage Land',theme:'nature',gen:genSavageLand,amb:ambSavage,w:8000},arctic:{name:'Weapon X',theme:'snow',gen:genArctic,amb:ambArctic,wind:true,w:6400},
-  wakanda:{name:'Wakanda',theme:'wakanda',gen:genWakanda,amb:ambWakanda,w:8000},
-  asgard:{name:'Asgard',theme:'realm',gen:genAsgard,amb:ambAsgard,w:8000,space:true},
-  sakaar:{name:'Sakaar',theme:'junk',gen:genSakaar,amb:ambSakaar,w:7200,space:true,grav:.9},
-  knowhere:{name:'Knowhere',theme:'mine',gen:genKnowhere,amb:ambKnowhere,w:6400,space:true,grav:.7},
-  titan:{name:'Titan',theme:'ruin',gen:genTitan,amb:ambTitan,w:7200,space:true,grav:.85},
-  moon:{name:'The Moon',theme:'moon',gen:genMoon,amb:ambMoon,w:8000,space:true,grav:.4},
-  dark:{name:'Dark Dimension',theme:'hell',gen:genDark,amb:ambDark,w:6400,space:true,grav:.8}};
+export const MAPDEFS={city:{name:'City',look:[1,1,1.02],theme:'urban',gen:genCity,w:7200},nyc:{name:'New York',look:[1.05,1.01,0.95],theme:'urban',gen:genNYC,w:8000},nyc2099:{name:'NYC 2099',look:[0.94,1,1.1],theme:'urban',gen:genNYC2099,amb:amb2099,rain:true,w:8000},forest:{name:'Forest',look:[0.98,1.06,0.92],theme:'nature',gen:genForest,w:6400},xmansion:{name:'X-Mansion',look:[1.07,1.01,0.9],theme:'estate',gen:genXMansion,amb:ambXMansion,w:4800},
+  retro:{name:'Earth-828 NYC',look:[1.06,1.02,1],theme:'urban',gen:genRetro,amb:ambRetro,w:7200},
+  incursion:{name:'Incursion NYC',look:[1.1,0.92,0.94],theme:'urban',gen:genIncursion,amb:ambIncursion,w:7200},
+  savage:{name:'Savage Land',look:[0.96,1.08,0.94],theme:'nature',gen:genSavageLand,amb:ambSavage,w:8000},arctic:{name:'Weapon X',look:[0.92,1,1.12],theme:'snow',gen:genArctic,amb:ambArctic,wind:true,w:6400},
+  wakanda:{name:'Wakanda',look:[1.08,1.02,0.9],theme:'wakanda',gen:genWakanda,amb:ambWakanda,w:8000},
+  asgard:{name:'Asgard',look:[1.1,1.04,0.9],theme:'realm',gen:genAsgard,amb:ambAsgard,w:8000,space:true},
+  sakaar:{name:'Sakaar',look:[1.1,1,0.86],theme:'junk',gen:genSakaar,amb:ambSakaar,w:7200,space:true,grav:.9},
+  knowhere:{name:'Knowhere',look:[0.9,1.06,1.02],theme:'mine',gen:genKnowhere,amb:ambKnowhere,w:6400,space:true,grav:.7},
+  titan:{name:'Titan',look:[1.12,0.96,0.86],theme:'ruin',gen:genTitan,amb:ambTitan,w:7200,space:true,grav:.85},
+  moon:{name:'The Moon',look:[0.94,0.98,1.1],theme:'moon',gen:genMoon,amb:ambMoon,w:8000,space:true,grav:.4},
+  dark:{name:'Dark Dimension',look:[1.06,0.9,1.12],theme:'hell',gen:genDark,amb:ambDark,w:6400,space:true,grav:.8}};
 // the phone build keeps worlds shorter (memory)
 // Maps are generated at 2/3 size and resampled up by MAPK=1.5, so buildings, doors, cars and trees sit close to
 // the heroes' scale (a 16 px floor becomes 24 px next to a 22 px hero). mapW is the final width: 75% of the design
@@ -87,7 +90,7 @@ export function regen(){
   pins.length=0;therm.length=0;jets.length=0;waves.length=0;comics.length=0;ST.impactF=0;ST.hurtV=0;ST.decoy=null;ST.stasis=null;ST.slowT=0;ST.heatZ=null;
   Object.assign(pl_,{script:0,ball:0,tow:null,grip:null,cling:0,crouch:0,stealth:0,grit:0,dodge:0,sprint:0,leap:false,slam:false});ST.wave=0;ST.SPAWNX=50;ST.dark=0;ST.mindT=0;ST.chain=null;booms.length=0;rings.length=0;clearVfx();flashes.length=0;beams.length=0;afters.length=0;
   const def=MAPDEFS[mapSel.value]||MAPDEFS.city;if(anchK!==1){scaleAnch(1/anchK);anchK=1;}setWorld(Math.round(mapW(def)/MAPK/32)*32,def.h||720);ST.gk=def.grav||1;ST.GYO=H-640; // extra rows: urban maps drop their street by this for taller skylines
-  pin.fill(0);str.fill(10);rid.fill(0);rcount.length=1;ST.PIN2=null;ST.streetY=0;ST.neonCity=mapSel.value==='nyc2099';ST.genMode=true;def.gen();detailPass(def.theme);ST.genMode=false;upscaleWorld(MAPK);str.fill(10); // to hero scale (see MAPK) // props, interiors and caves (maps/detail.js)
+  pin.fill(0);str.fill(10);rid.fill(0);rcount.length=1;ST.PIN2=null;ST.streetY=0;ST.neonCity=mapSel.value==='nyc2099';ST.genMode=true;def.gen();detailPass(def.theme);setPieces(mapSel.value,def.theme);ST.genMode=false;upscaleWorld(MAPK);str.fill(10); // to hero scale (see MAPK) // props, interiors and caves (maps/detail.js)
   for(let i=0;i<N;i++)bgB[i]=bg[i]!==bgD[i]?1:0;
   // streets, decks and tunnel shells: built runs wider than any building act as ground, so buildings stand on them
   for(let i=0;i<N;i++)gnd[i]=NAT[t[i]];
@@ -104,7 +107,8 @@ export function regen(){
   ST.dx0=0;ST.dy0=0;ST.dx1=W-1;ST.dy1=H-1;supportCheck(false);
   R0gen=rcount.length;
   ST.T0=t.slice();ST.C0=col.slice();ST.B0=bg.slice(); // the untouched map, for Scarlet Witch's Reweave
-  applyTOD();
+  ST.mapLook=def.look||null; // the map's own colour grade (render/look.js)
+  applyTOD();resetEvents();
   lifeReset(mapSel.value); // civilians, people in windows, birds and planes (world/life.js)
   spawnPlayer();
 }

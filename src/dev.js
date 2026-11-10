@@ -16,6 +16,9 @@ function smokeHero(hi, frames = 25) {
   return errs;
 }
 window.DEV = {
+  // stand next to the first placed set piece of a kind and photograph it
+  async goto(name, file, dx = 20, n = 0) { const g = G(), p = g.pl_, pc = g.PLACED.filter(q => q[0] === name)[n]; if (!pc) return 'none'; p.x = pc[1] * 1.5 + dx; p.y = pc[2] * 1.5 - 30; p.vx = p.vy = 0; g.SPAWN.peace = true; for (let f = 0; f < 50; f++) g.tick(); g.snapCam && g.snapCam(); for (let f = 0; f < 5; f++) g.tick(); return this.shot(file, 200, 130, 4, 10, -40); },
+  mapTest(ids) { const g = G(), out = {}; for (const id of ids) { try { g.startRun('sandbox', 0, id); const pc = {}; for (const p of g.PLACED) pc[p[0] + ':' + p[3][0]] = (pc[p[0] + ':' + p[3][0]] || 0) + 1; let err = ''; g.mapEvent(); try { for (let f = 0; f < 330; f++) { g.tick(); if (f % 30 === 0) g.render(); } } catch (e) { err = e.message + String(e.stack).split('\n')[1]; } out[id] = { placed: pc, n: g.PLACED.length, err }; } catch (e) { out[id] = { fatal: e.message + String(e.stack).split('\n')[1] }; } } return out; },
   smoke(a = 0, b = G().CHARS.length) { const out = []; for (let i = a; i < b; i++) out.push(...smokeHero(i)); for (let f = 0; f < 200; f++) { try { G().tick(); if (f % 10 === 0) G().render(); } catch (e) { out.push('late ' + e.message + String(e.stack).split('\n')[1]); break; } } return out; },
   async shot(name, wW = 90, wH = 70, S = 6, ox = 0, oy = -12) { const g = G(), p = g.pl_; g.render(); const k = g.ST.scale, c = document.createElement('canvas'); c.width = wW * S; c.height = wH * S; const x = c.getContext('2d'); x.imageSmoothingEnabled = false;
     x.drawImage(view(), (p.x + ox - g.ST.CX - wW / 2) * k, (p.y + oy - g.ST.CY - wH / 2) * k, wW * k, wH * k, 0, 0, wW * S, wH * S); return post(name, c.toDataURL('image/png')); },

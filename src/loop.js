@@ -29,6 +29,7 @@ import { updCapShields } from './heroes/cosmic.js';
 import { updRings } from './heroes/wave5.js';
 import { hudTrait, traitTick } from './heroes/traits.js';
 import { updLife } from './world/life.js';
+import { updEvents } from './maps/events.js';
 
 const waveTEl=document.getElementById('waveT'),scoreNEl=document.getElementById('scoreN'),scoreSEl=document.getElementById('scoreS'),waveEl=document.getElementById('wave'),hpEl=document.getElementById('hp'),enEl=document.getElementById('en'),fpsEl=document.getElementById('fps'),modeEl=document.getElementById('mode');
 let last=performance.now(),acc=0,fpsT=0,fpsN=0;
@@ -54,7 +55,7 @@ export function tick(){
   while(ST.blastQ.length){const [bx,by]=ST.blastQ.pop();explode(bx|0,by|0,7,{fire:.6,self:true,col:[255,150,50]});} // WILDFIRE combos
   ST.aoeC=1;ST.pctx=false;
   if(ST.MODE&&ST.MODE.update){ST.MODE.update(ST.MS);ST.MS.t++;}
-  const md=MAPDEFS[mapSel.value];if(md&&md.amb&&world)md.amb();
+  const md=MAPDEFS[mapSel.value];if(md&&md.amb&&world)md.amb();if(world)updEvents(mapSel.value); // the map's timed event (maps/events.js)
   lap('mode+amb');const t0=performance.now();
   if(world){updStasis();const a1=performance.now();step();const a2=performance.now();updBodies();const a3=performance.now();if(ST.frame%4===0)supportCheck(false);const a4=performance.now();
     const pf=ST.prof||(ST.prof={step:0,bodies:0,support:0,max:0,maxAt:''});pf.step=a2-a1;pf.bodies=a3-a2;pf.support=a4-a3;const mx=Math.max(pf.step,pf.bodies,pf.support);if(mx>pf.max){pf.max=mx;pf.maxAt=mx===pf.step?'step':mx===pf.bodies?'bodies':'support';}}

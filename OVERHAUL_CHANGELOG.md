@@ -199,3 +199,84 @@ casting: tick 5.4 ms, of which effects 0.03 ms.
 - Kept the existing style system and the 137 bespoke effects as they were; rewriting them risked the same
   "changed for the worse" outcome as the reverted kit overhaul.
 - Damage numbers are aggregated, not per hit, so beams and rapid fire show one growing number instead of a stream.
+
+## Stage 4: maps
+
+All 16 maps in `src/maps/` are covered (City, New York, NYC 2099, Forest, X-Mansion, Earth-828 NYC, Incursion NYC,
+Savage Land, Weapon X, Wakanda, Asgard, Sakaar, Knowhere, Titan, The Moon, Dark Dimension). The generators
+themselves (184 KB of hand-tuned layout code) are kept; the overhaul is three new layers on top of them.
+
+### 1. Set pieces: terrain you can use (`src/maps/setpieces.js`)
+
+17 physical props built from sim materials, so each does something when it breaks. Placed at generation time on
+open, level ground the scan finds; never within 90 px of the spawn or 14 px of each other.
+
+| Piece | What it does in the sim |
+|---|---|
+| crane | steel mast and jib with a concrete block on a cable: cut it and the load drops |
+| fuel | three oil drums and a propane tank: chain explosion |
+| sandbin | sand behind wooden boards: break a board and it pours out |
+| overpass | a second street on concrete piers |
+| billboard | a lit neon sign on steel legs |
+| tower | timber watchtower with three decks |
+| tank | raised steel tank of water: floods the street when breached |
+| silo | acid silo: the leak eats what it reaches |
+| pond, icelake | water in a hollow (the lake under a crust of ice) |
+| arch, ruins | stone to run under or bring down |
+| vent | a pool of lava in an obsidian cone |
+| drift | deep loose snow |
+| bunker | half-buried concrete room with a blast slit |
+| crystal | glowing shards, coloured per map |
+| logs | stacked timber |
+
+Each map has its own mix (`PLAN`), for example City: crane, fuel, sandbin, overpass, billboard; Weapon X: icelake,
+drift, bunker, fuel; Dark Dimension: vent, crystal, obsidian arch. In the city maps, small pieces may also stand
+on flat roofs; in the wild maps, trees on the footprint are cleared and the ground levelled to its lowest point;
+in Knowhere pieces go on the cave floor where there is 50 px of headroom.
+
+Measured placements per generation (they vary with the seed): City 7-8, New York 6, NYC 2099 9, Forest 7,
+X-Mansion 5, Savage Land 9, Weapon X 10, Earth-828 6, Incursion 4, Wakanda 8, Asgard 4, Sakaar 2, Knowhere 1,
+Titan 7, Moon 6, Dark Dimension 0-2.
+
+### 2. Map events: one thing that happens to each map (`src/maps/events.js`)
+
+A timed event per map, announced with a banner, made of sim materials so it leaves something behind. First one
+25-40 s in, then every 45-75 s. New setting: MAP EVENTS (on by default). `GAME.mapEvent()` triggers one.
+
+| Map | Event | Length | What it leaves |
+|---|---|---|---|
+| City | WATER MAIN BREAK | 5 s | a geyser from the street, then a pond |
+| New York | SUMMER STORM | 10 s | rain that pools and douses fire; lightning on rooftops |
+| NYC 2099 | GRID OVERLOAD | 6 s | neon signs arc; 7 shock damage to enemies near an arc |
+| Forest | DRY LIGHTNING | 16 s | a tree set alight, then rain to put it out |
+| X-Mansion | SPRINKLERS | 8 s | four sprinklers soak the lawn |
+| Savage Land | ERUPTION | 4 s | lava bombs that cool to rock |
+| Weapon X | WHITEOUT | 11 s | drifting snow; chills enemies |
+| Earth-828 NYC | ENGINE FAILURE | 4 s | a flying car comes down |
+| Incursion NYC | UNIVERSES COLLIDE | 5 s | red lightning down the street |
+| Wakanda | VIBRANIUM RESONANCE | 4 s | pulses that lift rubble and stun enemies within 170 px |
+| Asgard | BIFROST SURGE | 2.5 s | a rainbow column that carries loose things up |
+| Sakaar | JUNK FALL | 4 s | scrap from the wormhole |
+| Knowhere | MARROW LEAK | 4 s | acid dripping from the roof |
+| Titan | METEOR SHOWER | 6 s | craters and fire |
+| Moon | MOONQUAKE | 3 s | regolith thrown up in low gravity |
+| Dark Dimension | HELLFIRE GEYSER | 3 s | lava and green fire from the nearest lava |
+
+Events never charge the ultimate and use the neutral effect theme.
+
+### 3. A colour grade per map (`look` in `MAPDEFS`, applied in `render/look.js`)
+
+Light multipliers [r, g, b] on top of the time of day, so no two maps share a cast: City 1/1/1.02, New York
+1.05/1.01/.95 (warm), NYC 2099 .94/1/1.1 (cold neon), Forest .98/1.06/.92, X-Mansion 1.07/1.01/.9 (autumn),
+Earth-828 1.06/1.02/1, Incursion 1.1/.92/.94, Savage Land .96/1.08/.94, Weapon X .92/1/1.12, Wakanda
+1.08/1.02/.9, Asgard 1.1/1.04/.9, Sakaar 1.1/1/.86, Knowhere .9/1.06/1.02, Titan 1.12/.96/.86, Moon .94/.98/1.1,
+Dark Dimension 1.06/.9/1.12.
+
+### Decisions and known issues
+
+- The base layouts were not regenerated from scratch. They are long, hand-tuned and already distinct per map;
+  rewriting sixteen of them blind was more likely to lose something than to gain it. The new terrain is additive.
+- Overpasses rarely find 126 px of open street and usually do not appear. Sakaar, Knowhere and the Dark
+  Dimension have little level ground and get few pieces.
+- Events in sandbox can damage things the player built (lightning, meteors); the MAP EVENTS setting is the
+  off switch.
