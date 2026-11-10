@@ -280,3 +280,75 @@ Dark Dimension 1.06/.9/1.12.
   Dimension have little level ground and get few pieces.
 - Events in sandbox can damage things the player built (lightning, meteors); the MAP EVENTS setting is the
   off switch.
+
+## Stage 5: eight new heroes
+
+Roster 36 -> 44. Each new hero has its own file in `src/heroes/`, art in `src/art/`, 15 powers (14 plus an
+ultimate), a trait with an awakened state, a visual theme, a menu colour and a movement tag. They are written
+with `src/heroes/newkit.js` (projectiles, melee arcs, dashes, zones, terrain painting) and use the declarative
+`cost` / `cd` fields of the ability system, so a power reads as what it does.
+
+No existing hero's kit was touched. The new kits were designed against each other and against the old roster so
+they are not recolours: each one is built on a part of the sim nobody else owns.
+
+| Hero | HP | Armor | Run | Jump | Flies | Identity | Trait |
+|---|---|---|---|---|---|---|---|
+| Daredevil | 340 | .70 | 2.5 | 5.9 | no (wall-clings) | marks targets by sound, single exact blows | Radar Sense: +60% on marked or stunned enemies; auto-marks every 4 s |
+| Hawkeye | 320 | .80 | 2.2 | 5.4 | no | rotating quiver of trick arrows | Trick Quiver: every third arrow is free and +40% |
+| Black Widow | 320 | .75 | 2.5 | 5.8 | no | cloak, smoke, gadgets, one killing blow | Red Room: a hit from the cloak is tripled |
+| Iron Fist | 380 | .65 | 2.4 | 5.8 | no | builds chi, spends it all on one punch | Chi: 0-100, up to +30% on other hits |
+| Namor | 440 | .60 | 2.1 | 5.4 | yes | pours real water; strong against anything wet | Child of the Sea: +50% on wet enemies, heals in water |
+| Sandman | 480 | .60 | 2.0 | 4.9 | no | moves real sand; reshapes terrain | Shifting Sands: sheds a third of damage, heals on sand |
+| Green Goblin | 360 | .70 | 2.1 | 5.0 | yes (glider) | lobbed bombs, gas and oil, then the spark | Goblin Formula: +8% per kill, five stacks |
+| Mysterio | 300 | .80 | 2.0 | 5.0 | yes | copies, decoys, terrain that lies | Smoke and Mirrors: 30% of hits strike an illusion |
+
+### Kits
+
+- **Daredevil**: Billy Club (bounces three times), Radar Sense, Grapple Line, Wall Run, Flip Kick, Pressure Point
+  (45, or 110 on a marked target), Baton Sweep, Ricochet Throw, Echo Clap (shatters glass within 70 px), Dive
+  Strike, Counter Stance, Hell's Kitchen Shadows, Devil's Ladder, World on Fire (hold), ult Man Without Fear.
+- **Hawkeye**: Loose Arrow (fires the nocked trick and turns the quiver: broadhead, explosive, net, shock, freeze,
+  acid), Explosive / Net / Acid / Freeze / Shock Arrow, Grapple Arrow, Boomerang Arrow, Triple Shot, Rain of
+  Arrows, Putty Arrow (sets into a 28 px bar: a step or a bridge), Flare Arrow, Pym Arrow (drills through
+  buildings), Tumble Shot, ult Never Miss (18 homing trick arrows).
+- **Black Widow**: Widow's Bite, Dual Pistols (hold), Cloak, Smoke Bomb (real smoke gas), Grapple Hook, Baton
+  Flurry, Thigh Takedown, Garrote (28, or 95 from the cloak), Tripwire Mine, Flashbang, Taser Disc, Hologram,
+  Slide, Hack (turns a machine for 10 s), ult Widow's Sting.
+- **Iron Fist**: Jab Combo (+8 chi a hit), Focus Chi (hold), THE IRON FIST (30 + 1.7 per chi, a tunnel as long
+  as the bar was full), Rising Dragon, Dragon Kick, Chi Wave (30 chi), Palm Strike, Chi Heal (50 chi for 60 hp),
+  Hundred Fists (hold), Stone Breaker (turns the ground to rubble), Deflect, Mark of Shou-Lao, Meditative Step
+  (20 chi), Dragon Spirit (40 chi), ult Heart of Shou-Lao (chi locked full for 8 s).
+- **Namor**: Trident Thrust, Water Jet (hold; real water), Tidal Wave, Summon Spring, Whirlpool, Imperius Dive
+  (bigger into water), Hydro Blade (cuts 90 px of terrain), Drown, Drink the Sea (heals from nearby water),
+  Deluge, Giganto's Reach, Pressure Crush (48 to everything wet), Bubble Shield, Riptide, ult IMPERIUS REX! (a
+  tsunami: 120 and a flooded street).
+- **Sandman**: Sand Fist, Sand Blast (hold; real sand), Burrow, Reform, Sandstorm, Sand Wall, Quicksand (turns
+  ground to sand), Harden (bakes sand to stone), Sand Hammer, Dust Devil, Hourglass, Sand Clone, Engulf, Erode
+  (hold; grinds terrain into sand), ult Dune Sea.
+- **Green Goblin**: Pumpkin Bomb, Razor Bats, Glider Ram, Gas Pumpkin (real flammable gas), Incendiary Pumpkin
+  (burning oil), Pumpkin Mine, Glider Missiles, Finger Sparks (hold), Carpet Bomb, Pumpkin Rain, Remote Glider,
+  Jack O'Lantern (a fire turret), Oil Slick, Cackle, ult Goblin Frenzy.
+- **Mysterio**: Mist Bolt, Decoy, Mirror Images, Smoke Screen, Swap, False Floor (8 s of glass), Vanishing Act
+  (15 px of terrain gone for 6 s, then back), Nightmare (turns an enemy), Illusory Monster, Holo-Drones, Fishbowl
+  Flash, Gravity Trick, Pyrotechnics, Curtain Call, ult Grand Illusion.
+
+### Engine changes the new heroes needed
+
+- `climb: true` on a roster entry gives Wolverine's wall cling (Daredevil). Only Wolverine's claws gouge the wall.
+- `ambush: true` keeps the cloak through a cast until a hit lands (Black Widow); everyone else still decloaks.
+- Decoys can be holograms (`kind: 'holo'`, own sprite and palette); Iceman's ice decoy is unchanged.
+- `board: true` plus `boardC` draws the Goblin's glider with the Surfer's board code.
+- The HUD's tap / hold / move detection no longer depends on how the code is spaced.
+
+### Balance of the new kits
+
+Measured with the same harness as stage 1 (`docs/overhaul/balance-measured-new-heroes.json`). Against the
+roster median of 2.67 damage per energy the new basic attacks sit at 2.5 to 5.0 and the heavy powers at 1.7 to
+5.1, inside the 3x band, so none of them needed an entry in `balance.js`. One fix: Giganto's Reach did 185 for
+26 energy (7.1); its slam went 26 -> 18 per hit. Flyers (Namor, Goblin, Mysterio) are under-measured: the
+harness leaves them hovering above the dummies.
+
+### Known issues
+
+- The new heroes have themes and default signatures but no bespoke `sigfx.js` entries yet.
+- Hawkeye's bow is only drawn in his signature pose; while aiming he uses the rig's bare arm.

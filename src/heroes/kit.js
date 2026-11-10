@@ -31,8 +31,8 @@ const BY_NAME = new Map();     // 'heroId/Power Name' -> power
 function kindOf(pw) {
   if (pw.ult) return 'ult'; if (pw.tk) return 'hold'; if (pw.kind) return pw.kind;
   const s = String(pw.fn);
-  if (/p\.script=2|scriptMove|p\.slam=true/.test(s)) return 'move';
-  if (pw.cd == null && !/ST\.cd=/.test(s)) return 'hold';
+  if (/p\.script\s*=\s*2|scriptMove|p\.slam\s*=\s*true/.test(s)) return 'move';
+  if (pw.cd == null && !/ST\.cd\s*=[^=]/.test(s)) return 'hold';
   return 'tap';
 }
 export function finalizeKits(CHARS) {
@@ -79,7 +79,8 @@ export let selPowerHook = () => {}; export const setSelHook = f => { selPowerHoo
 export function castUlt() { const i = ST.CH.powers.findIndex(pw => pw.ult); if (i < 0) return; const k = ST.cur; ST.cur = i; ST.cd = 0; cast(); if (!(ST.ultT > 0)) ST.cur = k; else selPowerHook(i); }
 export function cast() {
   const p = pl_; if (ST.cd > 0 || p.script > 0) return; const pw = ST.CH.powers[ST.cur]; if (!pw || pw.tk) return; const a = aim(); if (!p.fly || Math.abs(p.vx) < .5) p.face = a.dx < 0 ? -1 : 1;
-  if (p.stealth > 0 && !pw.quiet && pw.n !== 'Stealth Mode' && pw.n !== 'Energy Shield') { p.stealth = 0; fxWord(p.x, p.y - ST.PH - 6, 'DECLOAK', .7, '#bfe3ff', true); }
+  if (p.stealth > 0 && !pw.quiet && !ST.CH.ambush && pw.n !== 'Stealth Mode' && pw.n !== 'Energy Shield') { // ambush heroes keep the cloak until a hit lands (their trait ends it)
+    p.stealth = 0; fxWord(p.x, p.y - ST.PH - 6, 'DECLOAK', .7, '#bfe3ff', true); }
   let denied = false; const ck = aoeCost() * pw.costK;
   let use = c => { c *= ck; c = traitCost(c, pw, p); if (p.en < c) { denied = true; return false; } p.en -= c; traitPre(pw, p, c); return true; }; // the hero's trait can reprice a power and react before it lands (heroes/traits.js)
   if (pw.ult) { // ultimates cost the meter, not energy (heroes/abilities.js)

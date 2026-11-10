@@ -87,7 +87,11 @@ export function updJets(){for(let n=jets.length-1;n>=0;n--){const j=jets[n];j.t+
   for(let k=0;k<3;k++)spawn(j.x-j.dir*12,j.y+2+(R()-.5)*2,-j.dir*(2+R()*2),(R()-.5)*.4,R()<.5?rgb(255,220,150):rgb(255,140,60),10,0,1,0,1);
   sndLoop('jet'+n,'wind',j.x,j.y,{v:.8});
   if(j.t>400||dx>220)jets.splice(n,1);}}
-export function updDecoy(){if(!ST.decoy)return;const d=ST.decoy;d.life--;if(ST.frame%5===0)spawn(d.x+(R()-.5)*8,d.y-R()*ST.SH,0,-.3,rgb(220,245,255),12,0,1,0,1);
+export function updDecoy(){if(!ST.decoy)return;const d=ST.decoy;d.life--;
+  if(d.kind==='holo'){ // a hologram (Black Widow, Mysterio): it flickers, takes fire, and goes out in a puff
+    const c=d.c||[150,220,255];if(ST.frame%6===0)spawn(d.x+(R()-.5)*8,d.y-R()*ST.SH,0,-.3,rgb(c[0],c[1],c[2]),10,0,1,0,1);
+    if(d.hp<=0||d.life<=0){for(let k=0;k<16;k++){const an=R()*6.283;spawn(d.x,d.y-ST.SH/2,Math.cos(an)*2,Math.sin(an)*2,rgb(c[0],c[1],c[2]),16,0,1,0,1);}fxWord(d.x,d.y-ST.SH-4,'*fzzt*',.8,'#bfe3ff',true);ST.decoy=null;}return;}
+  if(ST.frame%5===0)spawn(d.x+(R()-.5)*8,d.y-R()*ST.SH,0,-.3,rgb(220,245,255),12,0,1,0,1);
   if(d.hp<=0||d.life<=0){const cx=d.x,cy=d.y-ST.SH/2;fxWord(cx,cy-16,'SHATTER!',1.3,'#bfe3ff',true);snd('glass',cx,cy);
     for(let k=0;k<14;k++){const an=k/14*6.283;shots.push({x:cx,y:cy,vx:Math.cos(an)*5,vy:Math.sin(an)*5-1,type:'shard',life:50,col:[200,240,255],grav:.08,onHit:sh=>{for(let q2=0;q2<3;q2++)iceAt(sh.x+(R()-.5)*3,sh.y+(R()-.5)*3);damageEnemies(sh.x,sh.y,5,12,sh.vx*.3,sh.vy*.3);}});}
     damageEnemies(cx,cy,40,35,0,-2,true);for(const e of enemies)if(Math.hypot(e.x-cx,e.y-cy)<40)e.frozen=Math.max(e.frozen||0,120);ST.decoy=null;}}

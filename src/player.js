@@ -137,7 +137,7 @@ export function updPlayer(){
   } else {
     p.ang*=.7;
     if(p.ground)p.coyote=7;else if(p.coyote>0)p.coyote--;
-    const wolf=ST.CH.id==='wolverine',hulk=ST.CH.id==='hulk';
+    const wolf=ST.CH.id==='wolverine'||!!ST.CH.climb,hulk=ST.CH.id==='hulk'; // wolf: clings to walls and climbs (Wolverine's claws, or any hero with climb:true)
     if(jumpP&&!(wolf&&p.cling)){
       if(ST.CH.fly&&!p.ground&&ST.frame-p.lastJump<16){toggleFly(true);}
       else p.buffer=8;
@@ -193,7 +193,7 @@ export function updPlayer(){
       if(p.slam)p.vy=Math.max(p.vy,8);
       p.vy=Math.min(p.slam?10:6.5,p.vy);
       if(p.slam){if(p.slamY0==null)p.slamY0=p.y;if(p.y-p.slamY0>110&&ST.frame%2===0){spawn(p.x+(R()-.5)*6,p.y-ST.PH*.7,(R()-.5),-2-R()*2,R()<.5?rgb(255,220,140):rgb(255,120,40),14,0,1,0,1);if(ST.frame%20===0)fxWord(p.x,p.y-ST.PH-8,'INCOMING!',.8,'#ffc93c',true);}}else p.slamY0=null; // a slam started high up becomes a meteor dive
-      if(p.cling){ // clinging: claws gouge the wall as he climbs
+      if(p.cling&&ST.CH.id==='wolverine'){ // clinging: claws gouge the wall as he climbs
         p.vy=keys.KeyW?-1.8:keys.KeyS?2.4:.35;p.vx=0;p.airF=0;
         if(ST.frame%(keys.KeyW||keys.KeyS?3:8)===0){const X=p.x+p.cling*(ST.PW/2+1)|0;for(let c=-1;c<=1;c++){const Y=p.y-ST.PH*.62+c*2.5|0;if(X<0||X>=W||Y<0||Y>=H)continue;const i=Y*W+X,m=t[i];
           if(m===STEEL||m===OBSID){spawn(X,Y,-p.cling*(R()*2),(R()-.5)*2,rgb(255,220,150),8,0,1,1);}

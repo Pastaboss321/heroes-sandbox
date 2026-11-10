@@ -120,7 +120,7 @@ export function render(){
   if(pl_.tow&&pl_.grip)drawHammer(pl_.grip.x,pl_.grip.y,Math.atan2(-pl_.tow.dy,-pl_.tow.dx));
   for(const b of therm){const c=b.stuck?((ST.frame+(b.x|0))&2?rgb(255,255,230):rgb(255,220,140)):rgb(255,240,200);pix(b.x,b.y,c,rgb(255,190,90));if(b.stuck){gaddS((b.x-ST.CX)|0,(b.y-ST.CY-1)|0,90,50,10);gaddS((b.x-ST.CX+1)|0,(b.y-ST.CY)|0,90,50,10);}}
   for(const j of jets)drawSprite(j.x,j.y+4,0,j.dir,false,JET_SPR,JET_PAL);
-  if(ST.decoy){drawSprite(ST.decoy.x,ST.decoy.y,0,ST.decoy.face,false,ARTS.iceman.spr,DECOY_PAL);if(ST.decoy.hp<ST.decoy.max){const f=Math.max(0,ST.decoy.hp/ST.decoy.max);for(let k=-6;k<=6;k++)pix(ST.decoy.x+k,ST.decoy.y-ST.SH-4,k+6<f*13?rgb(150,220,255):rgb(30,50,70));}}
+  if(ST.decoy){if(ST.decoy.kind!=='holo'||(ST.frame+(ST.frame>>3))%9>0)drawSprite(ST.decoy.x,ST.decoy.y,0,ST.decoy.face,false,ST.decoy.spr||ARTS.iceman.spr,ST.decoy.pal||DECOY_PAL);if(ST.decoy.hp<ST.decoy.max){const f=Math.max(0,ST.decoy.hp/ST.decoy.max);for(let k=-6;k<=6;k++)pix(ST.decoy.x+k,ST.decoy.y-ST.SH-4,k+6<f*13?rgb(150,220,255):rgb(30,50,70));}}
   if(ST.senseT>0)for(const e of enemies){const hw=e.def.w/2+3,hh=e.def.h/2+3,c=(ST.frame>>2)&1?rgb(255,80,60):rgb(255,200,80);for(let k=-hw;k<=hw;k++){pix(e.x+k,e.y-hh,c,c);pix(e.x+k,e.y+hh,c,c);}for(let k=-hh;k<=hh;k++){pix(e.x-hw,e.y+k,c,c);pix(e.x+hw,e.y+k,c,c);}}
   if(pl_.spin>0){for(let k=0;k<3;k++){const an=ST.frame*.7+k*2.09;for(let q2=0;q2<4;q2++){const a2=an-q2*.12;pix(pl_.x+Math.cos(a2)*13,pl_.y-ST.PH/2+Math.sin(a2)*13,q2?rgb(120,170,255):rgb(200,206,216),rgb(90,130,220));}}}
   // gravity well: dark core + accretion ring
@@ -134,7 +134,7 @@ export function render(){
   const p=pl_;
   if(ST.CH.cape&&p.hist.length>3){const yo=ST.PH-5;for(let k=1;k<Math.min(8,p.hist.length);k++){const [hx,hy]=p.hist[k];const wv=Math.sin(ST.frame*.3+k)*1.2;pix(hx-p.face*(2+k*.4),hy-yo+k*.6+wv,k<4?ST.CH.cape[0]:ST.CH.cape[1]);pix(hx-p.face*(2+k*.4),hy-yo+1+k*.6+wv,ST.CH.cape[1]);}}
   if(p.ant>0)drawSprite(p.x,p.y+5,0,p.face,false,(ST.frame>>2)&1?FANT_A:FANT_B,FANT_PAL);
-  if(ST.CH.board&&p.fly){const c=Math.cos(p.ang),s2=Math.sin(p.ang),bx=p.x-s2*1,by=p.y+1;for(let k=-9;k<=9;k++){const X=bx+k*c,Y=by+k*s2,edge=Math.abs(k)>7;pix(X,Y,edge?rgb(150,156,172):rgb(226,232,244),edge?0:rgb(90,160,230));if(Math.abs(k)<8)pix(X,Y+1,rgb(110,116,130));}} // the Surfer's board
+  if(ST.CH.board&&p.fly){const c=Math.cos(p.ang),s2=Math.sin(p.ang),bx=p.x-s2*1,by=p.y+1;for(let k=-9;k<=9;k++){const X=bx+k*c,Y=by+k*s2,edge=Math.abs(k)>7;const bc=ST.CH.boardC;pix(X,Y,bc?(edge?bc[1]:bc[0]):edge?rgb(150,156,172):rgb(226,232,244),edge?0:bc?bc[2]:rgb(90,160,230));if(Math.abs(k)<8)pix(X,Y+1,bc?bc[1]:rgb(110,116,130));}} // the Surfer's board, the Goblin's glider
   if(!p.slip&&!p.blob)drawAuras(p,ST.CH.id); // phoenix wings, binary flame, rage... (render/vfxdraw.js)
   if(p.slip)drawSlip(p.slip);else if(p.blob)drawBlob(p);else drawSprite(p.x,p.y+PP*ST.SZ,p.ang,p.face,false,posePlayer(p),p.metal>0?metalPal():null,p.hurtF,p.stealth>0,ST.SZ);
   const h=hand();
