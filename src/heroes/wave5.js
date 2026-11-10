@@ -1,6 +1,7 @@
 // Wave 5 newcomers (2026-10-21): Thanos (playable: the Infinity Stones), Hela (necroswords that cut,
 // the dead at her call), Moon Knight (crescents and the moon's light), Shang-Chi (the Ten Rings and kung fu).
 // Every kit ends with an ultimate (pw.ult: G or the meter, heroes/abilities.js).
+import { ARTS } from '../art/index.js';
 import { ST } from '../state.js';
 import { EMPTY, GLASS, KIND, OBSID, R, S, SAND, STONE, rgb } from '../world/materials.js';
 import { H, W, col, markDirty, setc, t } from '../world/grid.js';
@@ -30,35 +31,6 @@ const ghostOf=(spr,pal,x,y,face,c)=>{ST.TG=c;drawSprite(x,y,0,face,true,spr,pal)
 const melee=(p,r,dmg,kx,ky)=>{const x=p.x+p.face*(ST.PW/2+5),y=p.y-ST.PH/2;carve(x,y,r*.5,p.face*4,0);damageEnemies(x,y,r,dmg,p.face*kx,ky);p.punchF=8;return [x,y];};
 
 // ================= THANOS =================
-export const SPR_THANOS=[
-"........G........",
-"......GYYYy......",
-".....YYYYYYy.....",
-".....YPePePy.....",
-".....yPPPPPy.....",
-"......PwwwP......",
-".....ppPpPpp.....",
-".GGYYYYpPpYYYYyy.",
-"LBGYYYYbBbYYYYyBb",
-"LBBGYYYLBBYYYyBBb",
-"LBBbLGYLBBBYyBBbb",
-"LBBbLLBGYyBBBbBbb",
-"LBB.bLBBYBBbb.Bbb",
-"LBB.bLLBYBLBb.Bbb",
-"LBB.yYYYGYYYy.Bbb",
-"LBB.bGYbBbYyb.Bbb",
-"bbb.bLBByBBBb.GY*",
-"bbb.LBBB.BBBb.YYy",
-"....LBBB.BBBb....",
-"....LBBb.LBBb....",
-"....LBBb.LBBb....",
-"...LBBb...LBBb...",
-"...LBBb...LBBb...",
-"...bBBb...bBBb...",
-"..bBBBb...bBBBb..",
-"..bbbbb...bbbbb.."];
-export const PAL_THANOS={Y:rgb(232,186,64),y:rgb(160,116,36),G:rgb(255,228,140),P:rgb(156,100,180),p:rgb(104,62,128),e:rgb(255,60,40),w:rgb(240,236,226),L:rgb(92,124,214),B:rgb(54,84,180),b:rgb(30,48,116),'*':rgb(255,90,220)};
-ANIM.thanos={leg:17,mid:8,armC:'LBb',tipC:'GY*',aw:3,al:8,fs:4,sh:[14,8],hide:rect(14,16,8,17),blink:null};
 const STONE_C={power:[170,60,255],space:[60,140,255],reality:[255,40,50],soul:[255,150,30],time:[60,255,110],mind:[255,220,40]};
 const sc=k=>STONE_C[k];
 const lineP=(x0,y0,x1,y1,c,g)=>{const n=Math.max(1,Math.hypot(x1-x0,y1-y0)|0);for(let k=0;k<=n;k++)pix(x0+(x1-x0)*k/n,y0+(y1-y0)*k/n,c,g);};
@@ -112,34 +84,9 @@ const THANOS_POWERS=[
  {n:'The Snap',ult:true,fn:(a,p,use)=>{ST.cd=200;flash(p.x,p.y,600,[255,255,255],30);ST.hitstop=Math.max(ST.hitstop,30);snd('boom',p.x,p.y,{size:2.5});fxWord(p.x,p.y-60,'*SNAP*',2.4,'#ffc93c',true);
    for(const e of enemies){if(Math.abs(e.x-p.x)>300||Math.abs(e.y-p.y)>200)continue;if(e.def.titan){hitEnemy(e,e.def.hp*.15,0,0);continue;}if(R()<.5){for(let k=0;k<12;k++)spawnFlake(e.x+(R()-.5)*e.def.w,e.y+(R()-.5)*e.def.h,.4+R()*.6,-.3,rgb(120,100,80),160,0);e.hp=0;}else hitEnemy(e,60,0,0);}}}
 ];
-export const CHAR_THANOS={id:'thanos',name:'Thanos',spr:SPR_THANOS,pal:PAL_THANOS,pw:9,ph:23,fly:false,fs:2.2,boost:2,run:1.7,jump:5.2,hp:620,armor:.5,glow:[200,100,255],cape:null,thrust:()=>rgb(200,100,255),powers:THANOS_POWERS};
+export const CHAR_THANOS={id:'thanos',name:'Thanos',pw:9,ph:23,fly:false,fs:2.2,boost:2,run:1.7,jump:5.2,hp:620,armor:.5,glow:[200,100,255],cape:null,thrust:()=>rgb(200,100,255),powers:THANOS_POWERS};
 
 // ================= HELA =================
-const SPR_HELA=[
-".k..k...k..k.",
-"..k.kGkGk.k..",
-"...kGkkkGk...",
-"....kfffk....",
-"....kefeF....",
-".....fFf.....",
-"ckGGGkGkGGGk.",
-"cKGkGGkGGkGk.",
-"cKGgkGGGkgGk.",
-"cKG.kGkGk.Gk.",
-"cKG.gGGGg.Gk.",
-"ckk.kGkGk.kk.",
-"ckk.kGGGk.kk.",
-"c...kGGGk....",
-"c...kG.Gk....",
-"c...kG.Gk....",
-"c...kG.Gk....",
-"c..kG...Gk...",
-"c..kG...Gk...",
-"c..kk...kk...",
-"...kk...kk...",
-"..kkk...kkk.."];
-const PAL_HELA={k:rgb(16,20,18),K:rgb(40,46,44),G:rgb(46,152,78),g:rgb(24,92,46),f:rgb(222,224,216),F:rgb(170,172,166),e:rgb(140,255,170),c:rgb(22,64,36)};
-ANIM.hela={leg:14,mid:6,armC:'GGg',tipC:'kkk',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null,cape:'c'};
 const NG=[120,255,160],NGE=[150,255,190];
 function necroShot(x,y,vx,vy){let lx=x,ly=y;const s={x,y,vx,vy,type:'necro',life:70,col:NG,boom:4,ecol:NG};shots.push(s);ACT.push(()=>{if(!shots.includes(s))return false;sliceLine(lx,ly,s.x,s.y,{edge:NGE,quiet:true,push:1.2});lx=s.x;ly=s.y;return true;});}
 function drawWolf(s){const x=s.x,y=s.y,f=s.face,o={},F=rgb(70,74,84),D=rgb(40,42,50);TK.begin();TK.ell(x,y-16,20,9,F,o);TK.ell(x+f*20,y-22,9,7,F,o);TK.cap(x+f*26,y-22,x+f*32,y-19,4,2,D,o);TK.cap(x-f*18,y-18,x-f*30,y-24,3,1,D,o);
@@ -160,7 +107,7 @@ const HELA_POWERS=[
  // the Berserkers of Hel rise and march on the nearest enemies
  {n:'Berserker Legion',fn:(a,p,use)=>{if(!use(30))return;ST.cd=80;fxWord(p.x,p.y-ST.PH-10,'RISE, MY WARRIORS',1,'#8dffb0',true);for(let i=0;i<4;i++){const x=p.x+(i-1.5)*18,y=groundBelow(x|0,p.y-20);summons.push({x,y:y+16,rise:16,life:480,cd:0,face:p.face,
    upd(s){if(s.rise>0){s.rise--;s.y--;if(R()<.5)spawn(s.x,s.y,(R()-.5),-1,rgb(80,200,110),14,0,1,0,1);return;}const e=nearestEnemy(s.x,s.y-8,260);if(!e)return;s.face=e.x>s.x?1:-1;if(Math.abs(e.x-s.x)>10){s.x+=s.face*1.4;s.y=groundBelow(s.x|0,s.y-12);}else if(--s.cd<=0){s.cd=26;hitEnemy(e,14,s.face*3,-2);clawSlice(s.x,s.y-10,s.face,0,16,1,0,{edge:NGE,quiet:true});}},
-   draw(s){ghostOf(SPR_HELA,PAL_HELA,s.x,s.y,s.face,[90,190,120]);}});}}},
+   draw(s){ghostOf(ARTS.hela.spr,ARTS.hela.pal,s.x,s.y,s.face,[90,190,120]);}});}}},
  // Fenris, her wolf, comes running through everything in its way
  {n:'Fenris',fn:(a,p,use)=>{if(summons.some(s=>s.wolf)||!use(32))return;ST.cd=80;const dir=a.dx<0?-1:1;fxWord(p.x,p.y-ST.PH-10,'FENRIS!',1.1,'#8dffb0',true);snd('roar',p.x,p.y,{pitch:.7});
    summons.push({wolf:true,x:p.x-dir*40,y:p.y,face:dir,life:150,upd(s){s.x+=s.face*5;s.y=groundBelow(s.x|0,s.y-20);carve(s.x+s.face*20,s.y-16,12,s.face*5,-1,s.y);damageEnemies(s.x+s.face*16,s.y-16,20,10,s.face*6,-4);if(s.t%10===0)ST.shake=Math.max(ST.shake,4);},draw:drawWolf});}},
@@ -204,34 +151,9 @@ const HELA_POWERS=[
  {n:'Sea of Swords',ult:true,fn:(a,p,use)=>{ST.cd=200;fxWord(p.x,p.y-60,'I AM HELA, GODDESS OF DEATH',1.4,'#8dffb0',true);let k=0;
    ACT.push(()=>{k++;for(let j=0;j<4;j++){const x=ST.camX+R()*480,gy=groundBelow(x|0,ST.camY+200),h=20+R()*40;sliceLine(x,gy+10,x+(R()-.5)*10,gy-h,{edge:NGE,quiet:true,push:1.6});damageEnemies(x,gy-h/2,12,18,0,-6);for(let s=0;s<3;s++)spawn(x,gy-R()*h,(R()-.5),-1,rgb(120,255,160),12,0,1,0,1);}ST.shake=Math.max(ST.shake,6);return k<60;});}}
 ];
-export const CHAR_HELA={id:'hela',name:'Hela',spr:SPR_HELA,pal:PAL_HELA,pw:7,ph:19,fly:false,fs:2.4,boost:2,run:2,jump:5.2,hp:400,armor:.65,glow:NG,cape:null,thrust:()=>rgb(120,255,160),powers:HELA_POWERS};
+export const CHAR_HELA={id:'hela',name:'Hela',pw:7,ph:19,fly:false,fs:2.4,boost:2,run:2,jump:5.2,hp:400,armor:.65,glow:NG,cape:null,thrust:()=>rgb(120,255,160),powers:HELA_POWERS};
 
 // ================= MOON KNIGHT =================
-const SPR_MOON=[
-"....WWWWw....",
-"...WWwwwwd...",
-"...WwkWkwd...",
-"...WwwwwwC...",
-"...CWwwwdC...",
-"c..CWWWdC....",
-"cWWWWWWWWwwd.",
-"cWWWw+wwwWwd.",
-"cWWW+wwwwWwd.",
-"cWW.w+wwd.wd.",
-"cWW.wwwwd.wd.",
-"cww.kk+kk.ww.",
-"cww.Wwwwd.wd.",
-"c...Wwwwd....",
-"c...Ww.wd....",
-"c...Ww.wd....",
-"c...Ww.wd....",
-"c..Ww...wd...",
-"c..Ww...wd...",
-"c..Ww...wd...",
-"...kk...kk...",
-"..kkk...kkk.."];
-const PAL_MOON={W:rgb(240,240,246),w:rgb(200,202,214),d:rgb(150,152,166),k:rgb(22,22,28),'+':rgb(220,232,255),c:rgb(178,180,194),C:rgb(130,132,146)};
-ANIM.moon={leg:14,mid:6,armC:'Wwd',tipC:'wwd',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null,cape:'cC'};
 const ML=[220,232,255];
 function crescent(x,y,vx,vy,back){let k=0;const s={x,y,vx,vy,type:'crescent',life:80,col:ML,boom:4,ecol:ML};shots.push(s);if(back)ACT.push(()=>{if(!shots.includes(s))return false;k++;if(k>22){const dx=pl_.x-s.x,dy=pl_.y-8-s.y,d=Math.hypot(dx,dy)||1;s.vx+=dx/d*.7;s.vy+=dy/d*.7;if(d<8){shots.splice(shots.indexOf(s),1);return false;}}return true;});}
 function drawKhonshu(s){const x=s.x,y=s.y,o={},Wc=rgb(230,232,240),G=rgb(150,156,170);TK.begin();TK.cap(x-14,y-40,x-16,y,8,6,G,o);TK.cap(x+14,y-40,x+16,y,8,6,G,o);TK.ell(x,y-80,30,44,Wc,o);
@@ -275,34 +197,9 @@ const MOON_POWERS=[
  {n:'Avatar of Khonshu',ult:true,fn:(a,p,use)=>{ST.cd=200;fxWord(p.x,p.y-80,'I AM THE FIST OF KHONSHU',1.3,'#dce6ff',true);const gy=groundBelow(p.x|0,p.y-10);
    summons.push({x:p.x-p.face*30,y:gy,life:200,upd(s){if(s.t%50===25){const x=s.x+(R()-.5)*160,g=groundBelow(x|0,s.y-40);quake(x,g,{r:30,col:ML});ST.shake=22;}},draw:drawKhonshu});}}
 ];
-export const CHAR_MOON={id:'moon',name:'Moon Knight',spr:SPR_MOON,pal:PAL_MOON,pw:7,ph:19,fly:false,fs:2.4,boost:2,run:2.2,jump:5.4,hp:380,armor:.7,glow:ML,cape:[rgb(236,236,240),rgb(170,172,182)],thrust:()=>rgb(220,232,255),powers:MOON_POWERS};
+export const CHAR_MOON={id:'moon',name:'Moon Knight',pw:7,ph:19,fly:false,fs:2.4,boost:2,run:2.2,jump:5.4,hp:380,armor:.7,glow:ML,cape:[rgb(236,236,240),rgb(170,172,182)],thrust:()=>rgb(220,232,255),powers:MOON_POWERS};
 
 // ================= SHANG-CHI =================
-const SPR_SHANG=[
-"....hhhhh....",
-"...hhhhhhh...",
-"...hfofoF....",
-"....ffffF....",
-".....fFF.....",
-"...rLYfYRr...",
-".LRRRRYRRRRr.",
-".LRRYRRRYRRr.",
-".LRRRYRYRRrr.",
-".++.LRYRr.++.",
-".LR.LRRRr.Rr.",
-".ff.kkYkk.fF.",
-".fF.KkkkK.fF.",
-"....Kkkkk....",
-"....Kk.kk....",
-"....Kk.kk....",
-"....Kk.kk....",
-"...Kk...kk...",
-"...Kk...kk...",
-"...Kk...kk...",
-"...kk...kk...",
-"..kkk...kkk.."];
-const PAL_SHANG={h:rgb(24,22,26),f:rgb(232,192,152),F:rgb(190,146,110),o:rgb(30,24,24),R:rgb(196,40,40),r:rgb(130,24,26),L:rgb(236,92,80),Y:rgb(236,196,80),'+':rgb(120,220,255),k:rgb(20,18,22),K:rgb(48,46,54)};
-ANIM.shang={leg:14,mid:6,armC:'LRr',tipC:'ffF',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null};
 const RC=[120,220,255];
 function ringShot(x,y,vx,vy,bounces){const s={x,y,vx,vy,type:'ring',life:120,col:RC,bounces,hit:new Set(),draw:drawRing};shots.push(s);return s;}
 function drawRing(s,pix){const c=rgb(140,230,255),g=rgb(60,170,255);for(let k=0;k<10;k++){const an=k/10*6.283;pix(s.x+Math.cos(an)*2.6,s.y+Math.sin(an)*2.6,c,g);}}
@@ -360,6 +257,6 @@ const SHANG_POWERS=[
  {n:'Ten Rings Unleashed',ult:true,fn:(a,p,use)=>{ST.cd=200;fxWord(p.x,p.y-70,'THE TEN RINGS!',1.5,'#bfe8ff',true);const list=nearestN(p.x,p.y,320,10);let k=0;
    ACT.push(()=>{k++;if(k%6===0){const e=list[(k/6|0)-1];if(e&&e.hp>0){beamCore({h:{x:e.x,y:ST.camY-10},dx:0,dy:1,d:1},{pow:200,rad:3,len:Math.max(10,e.y-ST.camY+30),w:4,c:[220,250,255],g:[60,170,255],spark:()=>rgb(160,230,255),dmg:30});hitEnemy(e,50,0,-4);explode(e.x|0,e.y|0,9,{self:true,col:RC});}}return k<66;});}}
 ];
-export const CHAR_SHANG={id:'shang',name:'Shang-Chi',spr:SPR_SHANG,pal:PAL_SHANG,pw:7,ph:19,fly:false,fs:2.4,boost:2,run:2.4,jump:5.8,hp:360,armor:.7,glow:RC,cape:null,thrust:()=>rgb(120,220,255),powers:SHANG_POWERS};
+export const CHAR_SHANG={id:'shang',name:'Shang-Chi',pw:7,ph:19,fly:false,fs:2.4,boost:2,run:2.4,jump:5.8,hp:360,armor:.7,glow:RC,cape:null,thrust:()=>rgb(120,220,255),powers:SHANG_POWERS};
 export { EMPTY, markDirty };
 export { necroShot, crescent, ringShot, NG, NGE, ML, RC, STONE_C };

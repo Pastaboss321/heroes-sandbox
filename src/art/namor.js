@@ -1,0 +1,56 @@
+import { art } from './kit.js';
+// Namor: the widow's peak and pointed ears, bare chested, green scale trunks on a gold belt, gold bracers, and the
+// little wings at his ankles. Signature pose: the trident thrust to the sky. IMPERIUS REX.
+export default art({
+  id: 'namor',
+  pal: { h: '#14141c', f: '#e8c4a4', F: '#b88c6c', q: '#2a1c1a', G: '#2a9a6a', g: '#145a3c', U: '#5ac89a', Y: '#e8c040', y: '#a8801c', w: '#f4f6fc' },
+  base: `
+......hhhh......
+....hhhhhhhh....
+....hhhffhhh....
+...fhffffffh....
+....hffqfqfF....
+.....ffffffF....
+.....fffFFf.....
+......fFF.......
+..ffffffffffFF..
+..fF.ffFfFF.fF..
+..fF.fFfFfF.fF..
+..fF.ffFfFF.fF..
+..YY.fFfFfF.Yy..
+..YY.ffFfFF.Yy..
+..fF.YYYYYy.fF..
+..fF.GUGGGg.fF..
+.....GGUGGg.....
+....ffF..ffF....
+....ffF..ffF....
+....ffF..ffF....
+....ffF..ffF....
+....ffF..ffF....
+...wffF.wffF....
+..wwffFwwffF....
+....fffF.fffF...
+....FFFF.FFFF...`,
+  sig: `
+.............Y.Y
+.............YYY
+..............Y.
+......hhhh....Y.
+....hhhhhhhh..Y.
+....hhhffhhh..Y.
+...fhffffffh.fYF
+....hffqfqfF.fYF
+.....ffffffFfFY.
+.....fffFFf.fFY.
+......fFF..fF.Y.
+..ffffffffffF.Y.
+..fF.ffFfFF...Y.
+..fF.fFfFfF...Y.
+..fF.ffFfFF...Y.
+..YY.fFfFfF...Y.
+..YY.ffFfFF...Y.
+..fF.YYYYYy...Y.
+..fF.GUGGGg...Y.`,
+  legs: ['f', 'F', 'f', 'F', 'G', 'g'],
+  rig: { leg: 16, mid: 8, arm: 'ffF', tip: 'ffF', aw: 2, al: 7, fs: 2, sh: [12, 9], hide: [12, 13, 9, 15], blink: 'q', lid: 'F' },
+});

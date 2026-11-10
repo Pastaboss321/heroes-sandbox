@@ -17,33 +17,7 @@ import { damageCone, damageLine, enemies, enemyAt, hitEnemy } from '../enemies/c
 import { atCursor, nearestN, noTarget } from './kitlib.js';
 import { applyStatus } from './abilities.js';
 
-const SPR_CYC=[
-"....hHHhh....",
-"...hHHhhhh...",
-"...hfffFFh...",
-"...vVVVVVv...",
-"...NffFFFN...",
-"....NfFFN....",
-"..MNNnNNNnN..",
-".MNMYNNNyNNn.",
-".MNMNYNyNnNn.",
-".MNMNNYNNnNn.",
-".MNkNyNYnkNn.",
-".MNkYYyYykNn.",
-".Yy.NNnNn.Yy.",
-".Yy.NN.Nn.Yy.",
-"....MN.Nn....",
-"....MN.Nn....",
-"...MN...Nn...",
-"...YY...Yy...",
-"...MN...Nn...",
-"..MNN...NNn..",
-"..MNN...NNn..",
-"..nnn...nnn.."];
-const PAL_CYC={h:rgb(80,50,28),H:rgb(132,92,56),N:rgb(30,46,110),n:rgb(14,22,60),M:rgb(62,86,162),Y:rgb(236,196,48),y:rgb(168,128,24),V:rgb(255,60,40),v:rgb(110,20,20),f:rgb(222,174,136),F:rgb(168,122,90),k:rgb(10,14,36)};
 
-// animation rig entry (see render/rig.js)
-ANIM.cyclops={leg:14,mid:6,armC:'MNn',tipC:'YYy',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null};
 function bankShot(h,dx,dy,len,bounces,o){let x=h.x,y=h.y,b=0,sx=x,sy=y;const segs=[];
   for(let s=0;s<len;s++){const nx=x+dx,ny=y+dy,X=nx|0,Y=ny|0;if(nx<0||nx>=W||ny>=H){break;}
     const solid=(X,Y)=>Y>=0&&Y<H&&KIND[t[Y*W+X]]===S;
@@ -108,4 +82,4 @@ export function opticThrust(p,on,ax){
 
 
 // roster entry (CHARS in heroes/index.js)
-export const CHAR_CYCLOPS={id:'cyclops',name:'Cyclops',spr:SPR_CYC,pal:PAL_CYC,pw:7,ph:19,fly:false,fs:2.6,boost:1,run:1.9,jump:4.7,hp:320,armor:.8,glow:[255,60,50],cape:null,thrust:()=>pickC([255,80,60]),powers:CYC_POWERS};
+export const CHAR_CYCLOPS={id:'cyclops',name:'Cyclops',pw:7,ph:19,fly:false,fs:2.6,boost:1,run:1.9,jump:4.7,hp:320,armor:.8,glow:[255,60,50],cape:null,thrust:()=>pickC([255,80,60]),powers:CYC_POWERS};

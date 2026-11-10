@@ -3,6 +3,7 @@
 // His kit is built on time itself (a stasis bubble, a loop, a rewind, clones pulled out of other
 // timelines, an aging ray) and on the raw power he is known for (a lance of chronal energy, force
 // fields that throw enemy fire back, a personal aegis and a ground-shattering entropy nova).
+import { ARTS } from '../art/index.js';
 import { ST } from '../state.js';
 import { EMPTY, KIND, L, OBSID, P, R, RUBBLE, S, STEEL, rgb } from '../world/materials.js';
 import { H, W, col, setc, t } from '../world/grid.js';
@@ -24,39 +25,13 @@ import { fxCone, fxDome, fxGlitch, fxPillar, fxSigil, screenFlash, zoomPunch } f
 // ---- hero sprite: 3/4 front view, heroic proportions (small head, broad shoulders, V-taper, long legs),
 //      light from the upper left, three tones per material plus spot blacks; ink outline added by the renderer
 //      Kang: green armour plates over a purple tabard, gold belt, blue visored helmet, ragged purple cape
-export const SPR_KANG=[
-"....hhhhh....",
-"...hHPPHHh...",
-"...hLeMeLh...",
-"...hLMMnLh...",
-"...hLnnnLh...",
-"..chhMnMhhc..",
-".cCGhAAAhGCc.",
-"CGAuTTTTTtGaC",
-"CAauTTtTTtAaC",
-"CAakuTtTtkAaC",
-"CAakuTtTtkAaC",
-"CAakBBbBBkAaC",
-"CGa.TTTTt.GaC",
-"cGG.TTtTt.GGc",
-"c...tt.tt...c",
-"c...Aa.Aa...c",
-"c..Aa...Aa..c",
-"c..Aa...Aa..c",
-"...Aa...Aa...",
-"..GAa...GAa..",
-"..GAa...GAa..",
-"..PPP...PPP.."];
-export const PAL_KANG={h:rgb(22,74,40),H:rgb(56,138,78),P:rgb(104,48,150),p:rgb(62,26,96),L:rgb(186,224,255),M:rgb(112,172,236),n:rgb(62,104,180),e:rgb(150,245,255),k:rgb(16,14,20),A:rgb(104,158,96),a:rgb(56,96,54),G:rgb(146,198,132),T:rgb(116,56,158),t:rgb(72,32,104),u:rgb(158,96,210),B:rgb(226,186,96),b:rgb(152,112,44),C:rgb(44,20,64),c:rgb(86,42,124)};
 
-// animation rig entry (see render/rig.js)
-ANIM.kang={leg:14,mid:6,armC:'GAa',tipC:'PPp',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:'e',lid:'M',cape:'Cc'};
 
 const TC=[168,120,255], GOLD=[255,214,110]; // chrono violet, Damocles gold
 
 // ---- a temporal clone wears the same armour lit flat by chrono light (unpack a palette colour, tint it violet)
 const tint=(c)=>rgb(Math.min(255,(c&255)*.45+70)|0,Math.min(255,((c>>8)&255)*.42+34)|0,Math.min(255,((c>>16)&255)*.5+132)|0);
-const PAL_GHOST={};for(const k in PAL_KANG)PAL_GHOST[k]=tint(PAL_KANG[k]);
+const PAL_GHOST={};for(const k in ARTS.kang.pal)PAL_GHOST[k]=tint(ARTS.kang.pal[k]);
 // more Kangs, out of other timelines: they hold their ground, pick targets and fire chrono bolts on their own
 function timeClone(p,off,life,delay){
   summons.push({kclone:true,x:p.x+off,y:p.y,face:p.face,vy:0,cd:delay,life,
@@ -67,7 +42,7 @@ function timeClone(p,off,life,delay){
         if(--s.cd<=0){s.cd=30+R()*22|0;shots.push({x:s.x+s.face*5,y:s.y-12,vx:s.face*8.5,vy:(e.y-(s.y-12))*.012,type:'bolt',life:110,boom:10,col:TC,ecol:[130,70,230]});flash(s.x+s.face*5,s.y-12,8,TC,3);}}
       else s.x+=(pl_.x-pl_.face*26-s.x)*.05;
       if(ST.frame%6===0)spawn(s.x,s.y-10,(R()-.5)*.6,-.3,rgb(170,120,255),14,0,1,0,1);},
-    draw(s){drawSprite(s.x,s.y,0,s.face,false,SPR_KANG,PAL_GHOST);}});
+    draw(s){drawSprite(s.x,s.y,0,s.face,false,ARTS.kang.spr,PAL_GHOST);}});
 }
 
 const KANG_POWERS=[
@@ -176,4 +151,4 @@ const KANG_POWERS=[
 ];
 
 // roster entry (CHARS in heroes/index.js)
-export const CHAR_KANG={id:'kang',name:'Kang',spr:SPR_KANG,pal:PAL_KANG,pw:7,ph:19,fly:true,fs:2.9,boost:2.2,run:1.9,jump:4.4,hp:340,armor:.85,glow:[170,120,255],cape:null,thrust:()=>R()<.6?rgb(170,120,255):rgb(255,214,110),powers:KANG_POWERS};
+export const CHAR_KANG={id:'kang',name:'Kang',pw:7,ph:19,fly:true,fs:2.9,boost:2.2,run:1.9,jump:4.4,hp:340,armor:.85,glow:[170,120,255],cape:null,thrust:()=>R()<.6?rgb(170,120,255):rgb(255,214,110),powers:KANG_POWERS};

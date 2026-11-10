@@ -19,35 +19,7 @@ import { fig8 } from './kitlib.js';
 import { groundBelow } from '../ui/spawn.js';
 import { spawn } from '../world/particles.js';
 
-export const SPR_JUGG=[
-".....hhhhh.....",
-"...hhHHjjHhh...",
-"..hHHHjjjHHHh..",
-".hHHHHjHHHHHHh.",
-".hHHHHHHHHHHHh.",
-"hHHHHkkkkkHHHHh",
-"hHHHkekkkekHHHh",
-"hHHHHkkfkkHHHHh",
-"hhHHHHkkkHHHHhh",
-"FffhHHHHHHHhffF",
-"fffFhRRRRRhFfff",
-"fRRFrRRjRRrFRRf",
-"fRRfrRRRRRrfRRf",
-"FffFrRrRrRrFffF",
-"FfFrRRrRrRRrFfF",
-"RRRrRRRRRRRrRRR",
-"fffrRRRRRRRrfff",
-"...rRRR.RRRr...",
-"...rRRR.RRRr...",
-"..rRRRr.rRRRr..",
-"..hRRRh.hRRRh..",
-"..rRRRr.rRRRr..",
-".rRRRRr.rRRRRr.",
-".hhhhhh.hhhhhh."];
-export const PAL_JUGG={h:rgb(70,8,14),H:rgb(196,26,32),j:rgb(250,120,104),k:rgb(20,10,10),e:rgb(255,236,200),f:rgb(214,152,110),F:rgb(150,96,66),r:rgb(110,12,20),R:rgb(200,30,38)};
 
-// animation rig entry (see render/rig.js)
-ANIM.juggernaut={leg:17,mid:7,armC:'fRF',tipC:'fFf',aw:3,al:8,fs:4,sh:[12,10],hide:rect(11,14,10,16),blink:null};
 const JUGG_POWERS=[
  {n:'Haymaker',fn:(a,p,use)=>{if(!use(5))return;ST.cd=16;p.punchF=10;const x=a.h.x+a.dx*8,y=a.h.y+a.dy*8;explode(x|0,y|0,11,{self:true,col:[214,184,130],word:'HAYMAKER!'});damageEnemies(x,y,18,40,a.dx*9,a.dy*9-3);
    for(const b of bodies){if(Math.hypot(b.x-x,b.y-y)<b.rmax+18){b.vx+=a.dx*9;b.vy+=a.dy*9-2;b.thrown=true;}}ST.shake+=6;}},
@@ -95,4 +67,4 @@ const JUGG_POWERS=[
 ];
 
 // roster entry (CHARS in heroes/index.js)
-export const CHAR_JUGGERNAUT={id:'juggernaut',name:'Juggernaut',spr:SPR_JUGG,pal:PAL_JUGG,pw:9,ph:22,fly:false,fs:2.4,boost:1,run:2.0,jump:4.6,hp:600,armor:.35,glow:[255,60,40],cape:null,thrust:()=>pickC([255,80,50]),powers:JUGG_POWERS};
+export const CHAR_JUGGERNAUT={id:'juggernaut',name:'Juggernaut',pw:9,ph:22,fly:false,fs:2.4,boost:1,run:2.0,jump:4.6,hp:600,armor:.35,glow:[255,60,40],cape:null,thrust:()=>pickC([255,80,50]),powers:JUGG_POWERS};

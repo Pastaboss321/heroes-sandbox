@@ -20,33 +20,7 @@ import { TK } from '../render/titan.js';
 import { summons } from './abilities.js';
 import { atCursor, drawPix, noTarget, tagged } from './kitlib.js';
 
-const SPR_ANT=[
-"..a......a...",
-"...aSSSSSa...",
-"...SsSSSss...",
-"...SeeSeeS...",
-"...SsSSSsS...",
-"....sSkSs....",
-"..rRRkkkRRr..",
-".kRRkRRRkRRk.",
-".kRrkRRRkrRk.",
-".kRrRkkkRrRk.",
-".kRkRRRRRkRk.",
-".kRkSSSSSkRk.",
-".kk.kkRkk.kk.",
-"....kR.Rk....",
-"....RR.Rr....",
-"...kR...Rk...",
-"...RR...Rr...",
-"...RR...Rr...",
-"...kk...kk...",
-"..kkk...kkk..",
-"..kkk...kkk..",
-"..kkk...kkk.."];
-const PAL_ANT={a:rgb(60,60,70),S:rgb(200,206,214),s:rgb(130,136,148),e:rgb(255,60,50),R:rgb(190,30,30),r:rgb(120,18,20),k:rgb(24,22,26)};
 
-// animation rig entry (see render/rig.js)
-ANIM.antman={leg:13,mid:6,armC:'RRr',tipC:'kkk',aw:2,al:5,fs:2,sh:[10,7],hide:rect(10,11,7,12),blink:null};
 function drawTrain(s){const k=s.sz,x=s.x,y=s.y,f=s.face,o={},B=rgb(40,90,200),Rd=rgb(200,40,40),Kc=rgb(30,30,36);TK.begin();TK.cap(x-f*18*k,y-12*k,x+f*14*k,y-12*k,8*k,8*k,B,o);TK.cap(x-f*16*k,y-24*k,x-f*8*k,y-24*k,6*k,6*k,B,o);TK.cap(x+f*10*k,y-20*k,x+f*10*k,y-28*k,2.5*k,3*k,Kc,o);for(const w of [-12,-2,8])TK.ell(x+f*w*k,y-4*k,4*k,4*k,Rd,o);TK.ell(x+f*20*k,y-12*k,5*k,6*k,rgb(205,205,200),o);TK.end();}
 const ANT_POWERS=[
  // a punch scaled to his current size: tiny = a bullet, giant = a wrecking ball
@@ -103,4 +77,4 @@ const ANT_POWERS=[
 ];
 
 // roster entry (CHARS in heroes/index.js)
-export const CHAR_ANTMAN={id:'antman',name:'Ant-Man',spr:SPR_ANT,pal:PAL_ANT,pw:7,ph:19,fly:false,fs:2.6,boost:1,run:2.2,jump:5,hp:330,armor:.75,glow:[255,80,60],cape:null,thrust:()=>pickC([255,90,70]),powers:ANT_POWERS};
+export const CHAR_ANTMAN={id:'antman',name:'Ant-Man',pw:7,ph:19,fly:false,fs:2.6,boost:1,run:2.2,jump:5,hp:330,armor:.75,glow:[255,80,60],cape:null,thrust:()=>pickC([255,90,70]),powers:ANT_POWERS};

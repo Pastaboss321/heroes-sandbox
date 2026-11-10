@@ -6,27 +6,40 @@ import { VH, VW } from '../world/grid.js';
 import { SET, mix3 } from './look.js';
 import { GLOWCH, PP } from './rig.js';
 import { buf, gaddS, gbuf, pix } from './canvas.js';
+import { GLOW, inkOf, lit, shade } from '../art/kit.js';
+
+let OCC=new Uint8Array(0); // which screen cells of the sprite being drawn are filled (for the outline and the lighting)
 
 export function drawSprite(x,y,ang,face,tintG,spr,pal,hurtF,ghost,scl=1){
   // rotate a sprite around its centre (nearest-neighbour inverse mapping)
   spr=spr||ST.SPR;pal=pal||ST.SPC;const sw=spr[0].length,sh=spr.length;
   const ca=Math.cos(ang),sa=Math.sin(ang),cx=x,cy=y-sh*scl/2,RR=Math.ceil(Math.hypot(sw,sh)*scl/2)+1;
-  const gc=ST.TG||ST.CH.glow;
+  const gc=ST.TG||ST.CH.glow,D=2*RR+3;
+  if(!tintG){if(OCC.length<D*D)OCC=new Uint8Array(D*D);else OCC.fill(0,0,D*D);}
   for(let yy=-RR;yy<=RR;yy++)for(let xx=-RR;xx<=RR;xx++){
     const u=(xx*ca+yy*sa)/scl, v=(-xx*sa+yy*ca)/scl;
     const sx=Math.round(u+sw/2-.5), sy=Math.round(v+sh/2-.5);
     if(sx<0||sx>=sw||sy<0||sy>=sh)continue;
     const ch=spr[sy][face>0?sx:sw-1-sx];if(ch==='.')continue;
     if(tintG){const X=(cx+xx-ST.CX)|0,Y=(cy+yy-ST.CY)|0;gaddS(X,Y,gc[0]*.15,gc[1]*.35,gc[2]*.15);continue;}
-    SPX.push(cx+xx,cy+yy,ch);
+    const o=(yy+RR+1)*D+xx+RR+1;OCC[o]=1;SPX.push(cx+xx,cy+yy,ch,o);
   }
   if(tintG)return;
   if(ghost){ // optical camouflage: a faint refractive shimmer of the silhouette
-    for(let k=0;k<SPX.length;k+=3){const X=(SPX[k]-ST.CX)|0,Y=(SPX[k+1]-ST.CY)|0;if(X<0||X>=VW||Y<0||Y>=VH)continue;const o=Y*VW+X,c=buf[o],edge=((X+Y+(ST.frame>>1))%5)===0;
+    for(let k=0;k<SPX.length;k+=4){const X=(SPX[k]-ST.CX)|0,Y=(SPX[k+1]-ST.CY)|0;if(X<0||X>=VW||Y<0||Y>=VH)continue;const o=Y*VW+X,c=buf[o],edge=((X+Y+(ST.frame>>1))%5)===0;
       buf[o]=edge?rgb(170,230,255):rgb(((c&255)*.8+40)|0,(((c>>8)&255)*.8+46)|0,(((c>>16)&255)*.8+56)|0);if(edge)gbuf[o]=rgb(40,90,120);}
     SPX.length=0;return;}
-  if(SET.ink){const k0=rgb(20,17,15);for(let k=0;k<SPX.length;k+=3){const X=SPX[k],Y=SPX[k+1];pix(X-1,Y,k0);pix(X+1,Y,k0);pix(X,Y-1,k0);pix(X,Y+1,k0);pix(X+1,Y+1,k0);}}
-  for(let k=0;k<SPX.length;k+=3){const ch=SPX[k+2];pix(SPX[k],SPX[k+1],hurtF&&(hurtF&2)?rgb(255,120,110):pal[ch],GLOWCH[ch]?pal[ch]:0);}
+  // the outline takes a dark tint of the colour it wraps; then every pixel is lit from the upper left of the screen
+  // (worked out here, after flipping and rotating, so the light never moves with the hero): open to the top or left
+  // catches a rim light, open to the bottom or right falls into shade
+  const gl=GLOW.get(pal);
+  if(SET.ink)for(let k=0;k<SPX.length;k+=4){const X=SPX[k],Y=SPX[k+1],o=SPX[k+3],lf=!OCC[o-1],rt=!OCC[o+1],up=!OCC[o-D],dn=!OCC[o+D];
+    if(lf||rt||up||dn||!OCC[o+D+1]){const c=inkOf(pal[SPX[k+2]]);if(lf)pix(X-1,Y,c);if(rt)pix(X+1,Y,c);if(up)pix(X,Y-1,c);if(dn)pix(X,Y+1,c);if(!OCC[o+D+1])pix(X+1,Y+1,c);}}
+  const hurt=hurtF&&(hurtF&2);
+  for(let k=0;k<SPX.length;k+=4){const ch=SPX[k+2],o=SPX[k+3];let c=pal[ch];const g=GLOWCH[ch]||(gl&&gl.has(ch));
+    if(hurt)c=rgb(255,120,110);
+    else if(!g){const up=!OCC[o-D],lf=!OCC[o-1];if(up||lf)c=lit(c,(up?.16:0)+(lf?.1:0));else if(!OCC[o+D]||!OCC[o+1])c=shade(c,.8);}
+    pix(SPX[k],SPX[k+1],c,g?pal[ch]:0);}
   SPX.length=0;
 }
 // Timeslip render: every pixel of the posed sprite becomes a thread. t=0 is the whole body; as t rises each row

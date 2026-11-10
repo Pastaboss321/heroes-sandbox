@@ -23,31 +23,6 @@ import { TK } from '../render/titan.js';
 const HF=[255,130,30],HFE=[255,170,60];
 const burnAt=(x,y)=>{const X=x|0,Y=y|0;if(X<0||X>=W||Y<0||Y>=H-6)return;const i=Y*W+X;if(t[i]===0){if(R()<.4)setc(i,FIRE);}else if(FLAM[t[i]]>0)ignite(i);};
 // ================= GHOST RIDER =================
-const SPR_RIDER=[
-"...@.*@*.@...",
-"...@*@*@*@...",
-"....w@w@g....",
-"....wwwgg....",
-".....kwk.....",
-"...sLKKKKs...",
-".sLKKsKKKKKs.",
-".LKLKKsKKKKk.",
-".LKLKKKsKKKk.",
-".LK.LKKKs.Kk.",
-".LK.LKKKK.Kk.",
-".kk.nnsnn.kk.",
-".kk.DDDDd.kk.",
-"....DDDDd....",
-"....DD.Dd....",
-"....DD.Dd....",
-"....DD.Dd....",
-"...DD...Dd...",
-"...KK...Kk...",
-"...KK...Kk...",
-"...KK...Kk...",
-"..sKK...Kks.."];
-const PAL_RIDER={'*':rgb(255,236,120),'@':rgb(255,140,30),w:rgb(240,234,214),g:rgb(170,160,140),k:rgb(18,16,18),K:rgb(52,46,48),L:rgb(96,88,90),s:rgb(200,200,210),n:rgb(100,70,40),D:rgb(42,46,62),d:rgb(26,28,40)};
-ANIM.rider={leg:14,mid:6,armC:'LKk',tipC:'kkk',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null};
 // the chain: a whip of segments from the hand that bends toward the cursor; every segment is a cut
 function chainLash(a,p,len,o={}){const segs=12,ang0=Math.atan2(a.dy,a.dx),sw=(o.swing??.6)*(p.face||1);let x=a.h.x,y=a.h.y;const pts=[[x,y]];
   for(let k=1;k<=segs;k++){const u=k/segs,an=ang0+sw*(1-u)*Math.sin(ST.frame*.3)+(o.curl||0)*u,L=len/segs;const nx=x+Math.cos(an)*L,ny=y+Math.sin(an)*L;
@@ -106,34 +81,9 @@ const RIDER_POWERS=[
  {n:'Judgement',ult:true,fn:(a,p,use)=>{if(!use(65))return;ST.cd=200;fxWord(p.x,p.y-50,'YOUR SOUL IS STAINED WITH INNOCENT BLOOD',1.1,'#ff9a3c',true);ST.hitstop=Math.max(ST.hitstop,8);flash(p.x,p.y,240,HF,16);
    for(const e of enemies){if(Math.abs(e.x-p.x)>260||Math.abs(e.y-p.y)>170)continue;hitEnemy(e,e.def.titan?140:120,0,-2);if(!e.def.titan)e.frozen=Math.max(e.frozen||0,90);for(let k=0;k<20;k++)spawn(e.x+(R()-.5)*e.def.w,e.y+(R()-.5)*e.def.h,(R()-.5)*2,-1-R()*2,rgb(255,140+R()*100|0,40),30,0,1,0,1);}}}
 ];
-export const CHAR_RIDER={id:'rider',name:'Ghost Rider',spr:SPR_RIDER,pal:PAL_RIDER,pw:7,ph:19,fly:false,fs:2.4,boost:2,run:2.3,jump:5,hp:420,armor:.6,glow:HF,cape:null,thrust:()=>rgb(255,140,40),powers:RIDER_POWERS};
+export const CHAR_RIDER={id:'rider',name:'Ghost Rider',pw:7,ph:19,fly:false,fs:2.4,boost:2,run:2.3,jump:5,hp:420,armor:.6,glow:HF,cape:null,thrust:()=>rgb(255,140,40),powers:RIDER_POWERS};
 
 // ================= DEADPOOL =================
-const SPR_POOL=[
-"..g.LRRRr.g..",
-"..g.LRRRr.g..",
-"...gkwRwkg...",
-"....kkRkk....",
-".....RRr.....",
-"...kLRRRrk...",
-".LRRkRRRkRRr.",
-".LRkkRRRkkRr.",
-".LRkLRRRrkRr.",
-".LR.kRRRk.Rr.",
-".LR.kRRrk.Rr.",
-".kk.nnOnn.kk.",
-".kk.kRRrk.kk.",
-"....kRRrk....",
-"....kR.rk....",
-"....nR.rn....",
-"....kR.rk....",
-"...kR...rk...",
-"...kk...kk...",
-"...kk...kk...",
-"...kk...kk...",
-"..kkk...kkk.."];
-const PAL_POOL={R:rgb(200,32,42),r:rgb(124,18,26),L:rgb(236,84,84),k:rgb(22,20,22),w:rgb(250,250,250),n:rgb(90,70,50),O:rgb(220,180,60),g:rgb(96,90,84)};
-ANIM.pool={leg:14,mid:6,armC:'LRr',tipC:'kkk',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null};
 const STEELC=[230,232,240];
 const QUIPS=['MAXIMUM EFFORT!','CHIMICHANGAS!','HI, MOM!','THAT WAS AWESOME','*FOURTH WALL*','SAY MY NAME!','PEW PEW!','I FEEL A CRITICAL HIT COMING'];
 const quip=(p,s)=>fxWord(p.x,p.y-ST.PH-10,s||QUIPS[R()*QUIPS.length|0],.85,'#ff6b5c',true);
@@ -191,7 +141,7 @@ const POOL_POWERS=[
        ACT.push(()=>{j++;const nx=x+dir*14;sliceLine(x,y,nx,y+(R()-.5)*4,{edge:STEELC,quiet:j%5!==0,push:1.2});damageLine(x,y,nx,y,8,10);afters.push({x:nx,y:y+ST.PH/2,ang:0,face:dir,life:8,col:[255,60,70]});x=nx;return j<40;});}return k<60;});}}
 ];
 const VW0=480;
-export const CHAR_POOL={id:'pool',name:'Deadpool',spr:SPR_POOL,pal:PAL_POOL,pw:7,ph:19,fly:false,fs:2.4,boost:2,run:2.3,jump:5.4,hp:360,armor:.75,glow:[255,80,90],cape:null,thrust:()=>rgb(255,80,90),powers:POOL_POWERS};
+export const CHAR_POOL={id:'pool',name:'Deadpool',pw:7,ph:19,fly:false,fs:2.4,boost:2,run:2.3,jump:5.4,hp:360,armor:.75,glow:[255,80,90],cape:null,thrust:()=>rgb(255,80,90),powers:POOL_POWERS};
 // Ghost Rider's chain is drawn from these points for a few frames (render.js)
 export function drawChain(pix){const c=ST.chain;if(!c||c.life<=0)return;c.life--;for(let k=1;k<c.pts.length;k++){const [x0,y0]=c.pts[k-1],[x1,y1]=c.pts[k],n=Math.max(1,Math.hypot(x1-x0,y1-y0)|0);
   for(let s=0;s<=n;s++){const u=s/n,X=x0+(x1-x0)*u,Y=y0+(y1-y0)*u;pix(X,Y,(s>>1)&1?rgb(200,200,210):rgb(120,120,130),rgb(255,120,30));}}}

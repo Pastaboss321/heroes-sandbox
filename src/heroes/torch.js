@@ -19,33 +19,7 @@ import { groundBelow } from '../ui/spawn.js';
 import { applyStatus, summons } from './abilities.js';
 import { echo, tagged } from './kitlib.js';
 
-const SPR_TORCH=[
-".....*.o.....",
-"...o.**O.o...",
-"...O*YY*Oo...",
-"...OYeYeYo...",
-"...OYYYYYo...",
-"....OYYYO....",
-"..oOO*Y*OOo..",
-".oOYO*Y*OYOo.",
-".oOYO*Y*OYOo.",
-".oOYOO*OOYOo.",
-".oOYOOYOOYOo.",
-".oOYOOOOOYOo.",
-".**.OOOOO.**.",
-".oo.OYYYO.oo.",
-"....OY.YO....",
-"....OY.YO....",
-"...OY...YO...",
-"...OY...YO...",
-"...oO...Oo...",
-"..oOO...OOo..",
-"...o*...*o...",
-"....o...o...."];
-const PAL_TORCH={'*':rgb(255,250,220),e:rgb(255,255,255),Y:rgb(255,214,90),O:rgb(255,140,40),o:rgb(214,70,20)};
 
-// animation rig entry (see render/rig.js)
-ANIM.torch={leg:14,mid:6,armC:'YOo',tipC:'**O',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null};
 const TORCH_POWERS=[
  {n:'Fireball',fn:(a,p,use)=>{if(!use(5))return;ST.cd=8;shots.push({x:a.h.x,y:a.h.y,vx:a.dx*7,vy:a.dy*7,type:'fire',life:100,boom:8,fire:.5,col:FC,ecol:[255,140,40]});flash(a.h.x,a.h.y,8,FC,3);}},
  // hold: a jet of flame that cuts through walls and sets the block alight
@@ -106,4 +80,4 @@ const TORCH_POWERS=[
 ];
 
 // roster entry (CHARS in heroes/index.js)
-export const CHAR_TORCH={id:'torch',name:'Human Torch',spr:SPR_TORCH,pal:PAL_TORCH,pw:7,ph:19,fly:true,fs:3.4,boost:2.4,run:1.9,jump:4.6,hp:300,armor:.8,glow:FC,cape:null,thrust:()=>R()<.6?rgb(255,150+R()*90|0,40):rgb(255,240,180),powers:TORCH_POWERS};
+export const CHAR_TORCH={id:'torch',name:'Human Torch',pw:7,ph:19,fly:true,fs:3.4,boost:2.4,run:1.9,jump:4.6,hp:300,armor:.8,glow:FC,cape:null,thrust:()=>R()<.6?rgb(255,150+R()*90|0,40):rgb(255,240,180),powers:TORCH_POWERS};

@@ -16,37 +16,7 @@ import { carve, keys, mouse, pressed, toggleFly } from '../player.js';
 import { damageEnemies, enemies, hitEnemy, nearestEnemy } from '../enemies/core.js';
 import { sliceLine } from '../world/slice.js';
 
-const SPR_HULK=[
-"......hhhhh......",
-".....hhhhhhh.....",
-".....hkGGGgh.....",
-"....kGKKgKKgg....",
-"...kGGeKGKegGg...",
-"..kGGGgKwKgGGGg..",
-".kGGGGGgKgGGGGGg.",
-"kGGkGGGGGGGGGgGGg",
-"kGGkkGGGgGGGGgGgg",
-"kGGgkGGGgGGGgGggg",
-"kGg.kGGgKgGGg.Ggg",
-"kGg.GkGKGKGgg.Ggg",
-"kGg.kGGKGKgGg.Ggg",
-"kGg..kGgGgGg..Ggg",
-"kGg..ppPppqq..Ggg",
-"kGg.PpppqppPq.Ggg",
-"kGG.Pppq.Pppq.GGg",
-"gGg.Pppq.Pppq.Ggg",
-"ggg.Pppq.Pppq.ggg",
-"....Ppqq.Ppqq....",
-"....pqpq.pqpq....",
-"....kGGg.kGGg....",
-"...kGGg...kGGg...",
-"...GGgg...GGgg...",
-"..kGGgg...GGGgg..",
-"..ggggg...ggggg.."];
-const PAL_HULK={h:rgb(18,20,16),G:rgb(84,150,58),g:rgb(44,96,34),k:rgb(140,200,96),K:rgb(26,58,22),e:rgb(220,255,190),w:rgb(232,228,204),p:rgb(98,50,130),q:rgb(56,26,80),P:rgb(140,84,172)};
 
-// animation rig entry (see render/rig.js)
-ANIM.hulk={leg:19,mid:8,armC:'kGg',tipC:'kGg',aw:3,al:9,fs:4,sh:[14,7],hide:rect(14,16,8,18),blink:'e',lid:'K'};
 const HULK_POWERS=[
  {n:'Smash',fn:(a,p,use)=>{if(!use(4))return;p.punchF=10;const x=a.h.x+a.dx*7,y=a.h.y+a.dy*7;explode(x,y,p.rage>0?16:10,{self:true,col:[210,200,170],word:'SMASH!'});damageEnemies(x,y,16,35,a.dx*6,a.dy*6-2);
    for(const b of bodies){const dx=b.x-x,dy=b.y-y,d=Math.hypot(dx,dy)||1;if(d<b.rmax+16){b.vx+=a.dx*7;b.vy+=a.dy*7-2;b.va+=(R()-.5)*.08;b.thrown=true;}}
@@ -141,4 +111,4 @@ const HULK_POWERS=[
 
 
 // roster entry (CHARS in heroes/index.js)
-export const CHAR_HULK={id:'hulk',name:'Hulk',spr:SPR_HULK,pal:PAL_HULK,pw:9,ph:23,fly:false,fs:2.6,boost:1,run:2.3,jump:6.2,hp:500,armor:.45,glow:GAMMA,cape:null,thrust:()=>pickC(GAMMA),powers:HULK_POWERS};
+export const CHAR_HULK={id:'hulk',name:'Hulk',pw:9,ph:23,fly:false,fs:2.6,boost:1,run:2.3,jump:6.2,hp:500,armor:.45,glow:GAMMA,cape:null,thrust:()=>pickC(GAMMA),powers:HULK_POWERS};

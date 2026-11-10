@@ -15,7 +15,7 @@ import { damageCone, enemies, hitEnemy } from '../enemies/core.js';
 // ================= X-Men =================
 // ACT: per-tick updaters for timed powers (return false when done)
 export const ACT=[];
-export const eyes=()=>({x:pl_.x+pl_.face*1.5*ST.SZ,y:pl_.y-(ST.SH-3.5)*ST.SZ});
+export const eyes=()=>({x:pl_.x+pl_.face*2.5*ST.SZ,y:pl_.y-(ST.SH-4.5)*ST.SZ});
 export function aimFrom(o){const dx=mouse.wx-o.x,dy=mouse.wy-o.y,d=Math.hypot(dx,dy)||1;return{h:o,dx:dx/d,dy:dy/d,d};}
 export function iceAt(x,y){x|=0;y|=0;if(x<0||x>=W||y<0||y>=H)return;const i=y*W+x,m=t[i];if(m===0||KIND[m]===G||KIND[m]===F||m===WATER||m===ACID)setc(i,ICE);else if(m===LAVA)setc(i,OBSID);}
 export function freezeArea(cx,cy,r,dur,dmg){

@@ -20,33 +20,7 @@ import { groundBelow } from '../ui/spawn.js';
 import { sliceLine } from '../world/slice.js';
 import { atCursor, noTarget } from './kitlib.js';
 
-const SPR_SUE=[
-"....YYYYY....",
-"...YYYYYYY...",
-"..YYffffFYy..",
-"..YffkfkFFy..",
-"..YfffFFFFy..",
-"..yYffFFFYy..",
-"..yBBNNNBBy..",
-".bBBBNWNBBBb.",
-".bBBNWNWNBBb.",
-".bBBBNWNBBBb.",
-".bBBBBNBBBBb.",
-".fBBBNNNBBBf.",
-".F..BBBBB..F.",
-"....BBBBB....",
-"....Bb.Bb....",
-"....Bb.Bb....",
-"...Bb...Bb...",
-"...Bb...Bb...",
-"...Bb...Bb...",
-"...Bb...Bb...",
-"..NNN...NNN..",
-"..NNN...NNN.."];
-const PAL_SUE={Y:rgb(238,208,124),y:rgb(196,160,82),f:rgb(236,196,166),F:rgb(190,146,118),k:rgb(30,26,34),B:rgb(118,168,206),b:rgb(72,112,156),N:rgb(34,48,82),W:rgb(240,242,248)};
 
-// animation rig entry (see render/rig.js)
-ANIM.sue={leg:14,mid:6,armC:'BBb',tipC:'fFF',aw:2,al:5,fs:2,sh:[10,7],hide:rect(10,11,7,12),blink:null};
 const SUE_POWERS=[
  {n:'Force Blast',fn:(a,p,use)=>{if(!use(6))return;ST.cd=10;shots.push({x:a.h.x,y:a.h.y,vx:a.dx*7,vy:a.dy*7,type:'force',life:100,boom:10,col:SUEC,ecol:SUEC});flash(a.h.x,a.h.y,10,SUEC,3);}},
  // an invisible wall shoves forward, bulldozing everything in its path
@@ -96,4 +70,4 @@ const SUE_POWERS=[
 ];
 
 // roster entry (CHARS in heroes/index.js)
-export const CHAR_SUE={id:'sue',name:'Invisible Woman',spr:SPR_SUE,pal:PAL_SUE,pw:7,ph:19,fly:false,fs:2.6,boost:1,run:2.0,jump:5.0,hp:310,armor:.75,glow:SUEC,cape:null,thrust:()=>pickC(SUEC),powers:SUE_POWERS};
+export const CHAR_SUE={id:'sue',name:'Invisible Woman',pw:7,ph:19,fly:false,fs:2.6,boost:1,run:2.0,jump:5.0,hp:310,armor:.75,glow:SUEC,cape:null,thrust:()=>pickC(SUEC),powers:SUE_POWERS};

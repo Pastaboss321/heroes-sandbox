@@ -17,33 +17,7 @@ import { boxHit, mouse, pl_, toggleFly } from '../player.js';
 import { damageEnemies, damageLine, enemies, hitEnemy, nearestEnemy } from '../enemies/core.js';
 import { applyStatus } from './abilities.js';
 
-const SPR_STORM=[
-"...wWWWWw....",
-"..wWWOOOWWw..",
-"..wWsssSWww..",
-"..wWesesWww..",
-"..wWsSsSWww..",
-"..wWWsSWWww..",
-".CwWKsSKWwwC.",
-"CGKWGKKKkwKkC",
-"CGKWGKKKkwKkC",
-"CGKWGKKkkwKkC",
-"CGKwGKkKkwKkC",
-"CGKkOOOOokKkC",
-"Css.GKKKk.sSC",
-"c...GK.Kk...c",
-"c...GK.Kk...c",
-"c..GK...Kk..c",
-"c..GK...Kk..c",
-"c..GK...Kk..c",
-"...GK...Kk...",
-"..GKK...KKk..",
-"..GKK...KKk..",
-"..kkk...kkk.."];
-const PAL_STORM={W:rgb(240,242,250),w:rgb(168,176,196),O:rgb(232,186,60),s:rgb(108,70,44),S:rgb(74,46,28),e:rgb(255,255,255),K:rgb(30,30,38),k:rgb(14,14,20),G:rgb(72,74,94),C:rgb(24,24,32),c:rgb(50,50,64),o:rgb(160,118,30)};
 
-// animation rig entry (see render/rig.js)
-ANIM.storm={leg:13,mid:6,armC:'GKk',tipC:'ssS',aw:2,al:5,fs:2,sh:[10,7],hide:rect(10,11,7,12),blink:'e',lid:'s',cape:'Cc'};
 const STORM_POWERS=[
  {n:'Chain Lightning',fn:(a,p,use)=>{if(!use(.8))return;lightning(a,{c:[245,248,255],g:[160,190,255],f:[205,220,255],spark:()=>pickC([200,220,255])});
    let e=nearestEnemy(a.h.x+a.dx*Math.min(a.d,200),a.h.y+a.dy*Math.min(a.d,200),60);const hitL=new Set();let lx=a.h.x+a.dx*Math.min(a.d,200),ly=a.h.y+a.dy*Math.min(a.d,200);
@@ -146,4 +120,4 @@ const STORM_POWERS=[
 
 
 // roster entry (CHARS in heroes/index.js)
-export const CHAR_STORM={id:'storm',name:'Storm',spr:SPR_STORM,pal:PAL_STORM,pw:7,ph:19,fly:true,fs:3.2,boost:2.2,run:1.9,jump:4.6,hp:330,armor:.75,glow:[210,230,255],cape:null,thrust:()=>R()<.6?rgb(225,235,255):rgb(160,190,255),powers:STORM_POWERS};
+export const CHAR_STORM={id:'storm',name:'Storm',pw:7,ph:19,fly:true,fs:3.2,boost:2.2,run:1.9,jump:4.6,hp:330,armor:.75,glow:[210,230,255],cape:null,thrust:()=>R()<.6?rgb(225,235,255):rgb(160,190,255),powers:STORM_POWERS};

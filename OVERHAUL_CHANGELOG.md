@@ -97,3 +97,64 @@ power got: `docs/overhaul/balance-table.md`.
 ### Cut
 
 - Nothing playable was cut. Only the 18 unreachable definitions above and the patch-layer plumbing.
+
+## Stage 2: sprites and animation
+
+### What changed
+
+- **Every hero redrawn by hand**, larger: 16x26 for standard bodies (was 13x22), 22x30 for the five big bodies
+  (Hulk, Thing, Juggernaut, Venom, Thanos; was 17x26 / 15x24). Art for the eight new heroes is drawn in the same
+  pass (they join the roster in stage 5). Contact sheet of all 44: `docs/overhaul/hero-art.png`.
+- **Art lives in `src/art/<hero>.js`**, one file per hero: palette, idle frame, signature pose, optional back
+  layer, leg colours and rig numbers. `src/art/kit.js` documents the format and validates every grid on load
+  (row widths, palette chars). The old `SPR_*` / `PAL_*` / `ANIM.*` blocks are deleted from the hero files (72
+  constants) and the roster takes its look from the art in one loop in `heroes/index.js`.
+- **Hand-drawn frames.** Each hero has: idle, a signature pose, and the stance frames run (6-frame cycle), jump,
+  fall, crouch / land and flight. The stance legs are drawn once per body type (standard and big) and coloured per
+  hero from the `legs` entry (thigh, boot, hip; the far leg is dimmed 26%). The upper body and signature pose are
+  unique to each hero.
+- **The procedural rig keeps the secondary motion** (`render/rig.js`): posed arms that track the cursor, the
+  breathing bob (1px for 16 of every 110 idle frames), the step bob, blinks, and a new **back layer** for capes,
+  coats, Jean's and Sue's hair and Nightcrawler's tail. The back layer ripples on its own and trails when the
+  hero runs, flies or falls. 14 heroes have one. The old per-pixel leg swing code is gone.
+- **Signature pose trigger**: the ultimate holds the pose for 30 frames; a showpiece power (one with a signature
+  effect, tap, cooldown 40+) holds it for 16.
+- **Lighting and outlines** (`render/sprites.js`, shared with the tools through `art/kit.js`): after the sprite is
+  flipped and rotated, pixels open to the top or left of the screen get a rim light (+16% / +10% toward white),
+  pixels open to the bottom or right are shaded x0.8, and the outline is a dark tint of the colour it wraps
+  instead of flat black. The light therefore stays put when the hero turns around.
+- **Bosses reuse hero art**: boss Juggernaut, Ultron Prime and Magneto, and the Thanos titan, now draw the new
+  sprites (scales changed 1.6 -> 1.25, 1.44 -> 1.2, 1.28 -> 1.08, titan 1.35 -> 1.17 so their size on screen is
+  the same as before).
+
+### Numbers
+
+| | before | after |
+|---|---|---|
+| Standard sprite | 13x22 | 16x26 |
+| Big sprite | 17x26 (Juggernaut 15x24) | 22x30 |
+| Standard hit box (w x h) | 7x19 | 8x22 |
+| Big hit box | 9x23 (Juggernaut 9x22) | 10x27 (Juggernaut 10x26) |
+| Wolverine hit box | 7x17 | 8x20 |
+| Sprite padding for posed limbs | 8 | 10 |
+
+The hit box grew 16%, the same as the art, so heroes do not look larger than they collide.
+
+### Decisions
+
+- Shared leg frames per body type rather than six unique leg frames per hero: 44 heroes x 10 stance frames by hand
+  was not going to be consistent. Every hero still has unique idle legs, upper body and signature pose.
+- Dark eyes (one pixel) for unmasked human faces instead of the old glowing eye pixel; glow is kept for heroes
+  whose eyes really glow (Doom, Storm, Iceman, Hela, Kurt, Panther, Kang, robots).
+- Capes are a darker shade than the suit where they shared a colour (Doom, Magneto), and Storm's is silver-white,
+  so the body reads against the cape.
+
+### Tools added
+
+- `scripts/artsheet.mjs`: renders any hero's frames to a PNG without running the game.
+- `src/dev.js` (dev server only): `DEV.smoke()` casts every power, `DEV.strip()` photographs every stance.
+
+### Known issues
+
+- The Thing's rock texture is lost on his legs while he runs (the shared big-body leg frames are flat colour).
+- Posed arms are still procedural limbs; on heroes with detailed sleeves (Thor's bracers) they are plain.

@@ -10,7 +10,6 @@ import { ANIM, aimLocal, armLen, armMode } from './render/rig.js';
 import { snd } from './sfx.js';
 import { GAMMA, SPAWN, pickC, quake, shockFx } from './heroes/powers.js';
 import { aimFrom, slashFx } from './heroes/xmen.js';
-import { PAL_DOOM, SPR_DOOM } from './heroes/doom.js';
 import { opticThrust } from './heroes/cyclops.js';
 import { iceSlideStep } from './heroes/iceman.js';
 import { ray, solidCells } from './heroes/wave2.js';
@@ -19,7 +18,7 @@ import { bodies, q } from './world/support.js';
 import { makeBody } from './world/bodies.js';
 import { damageEnemies, hitEnemy, nearestEnemy } from './enemies/core.js';
 
-ST.SPR=SPR_DOOM;ST.SPC=PAL_DOOM; // SZ: Ant-Man's current size (1 = normal)
+// ST.SPR / ST.SPC / ST.SW / ST.SH: the current hero's frame and palette (set in heroes/index.js). SZ: Ant-Man's current size (1 = normal)
 export const pl_={x:60,y:100,vx:0,vy:0,face:1,hp:100,en:100,ground:false,slam:false,fly:false,coyote:0,buffer:0,lastJump:-99,jumpHeldF:0,boost:0,boostCd:0,bob:0,hist:[],airF:0,ang:0,charge:0,chargeCd:0,leap:false,slamOpt:null,hurtF:0};
 export function boxHit(x,y){for(let yy=Math.ceil(y-ST.PH);yy<=Math.floor(y-1);yy++)for(let xx=Math.floor(x-ST.PW/2);xx<=Math.floor(x+ST.PW/2);xx++)if(solidAt(xx,yy))return true;return false;}
 // SPAWNX: shared state (ST in state.js)
@@ -96,7 +95,7 @@ export function updPlayer(){
     if(ST.SZ>1.5&&p.ground&&Math.abs(p.vx)>.4&&ST.frame%3===0){carve(p.x+p.face*(ST.PW/2+3),p.y-ST.PH*.5,ST.PH*.32,p.vx,0,Math.floor(p.y));damageEnemies(p.x+p.face*ST.PW,p.y-ST.PH/2,ST.PH*.4,6,p.face*3,-2);if(ST.frame%18===0){ST.shake=Math.max(ST.shake,4);snd('stomp',p.x,p.y);}}}
   if(p.grit>0){p.grit--;if(ST.frame%3===0)spawn(p.x+(R()-.5)*10,p.y-R()*ST.PH,(R()-.5)*.5,-.8,rgb(255,40+R()*80|0,30),14,0,1,0,1);
     if(p.grit===0&&ST.CH.id==='wolverine'){const h=p.gritD*.6;p.hp=Math.min(ST.CH.hp,p.hp+h);fxWord(p.x,p.y-ST.PH-8,'+'+(h|0)+' HP',1,'#ffc93c',true);}}
-  if(p.castF>0)p.castF--; if(p.recoilF>0)p.recoilF--; if(p.landF>0)p.landF--; if(p.punchF>0)p.punchF--; if(p.throwF>0)p.throwF--;
+  if(p.castF>0)p.castF--; if(p.sigF>0)p.sigF--; if(p.recoilF>0)p.recoilF--; if(p.landF>0)p.landF--; if(p.punchF>0)p.punchF--; if(p.throwF>0)p.throwF--;
   if(ST.CH.id==='wolverine'&&p.hp<ST.CH.hp)p.hp=Math.min(ST.CH.hp,p.hp+.12); // healing factor never stops
   if(p.rage>0){p.rage--;if(ST.CH.id==='wolverine'&&ST.frame%8===0){const e=nearestEnemy(p.x,p.y-ST.PH/2,22);if(e){hitEnemy(e,14,p.face*2,-1);slashFx(e.x,e.y,Math.atan2(e.y-p.y,e.x-p.x));}}if(ST.frame%2===0)spawn(p.x+(R()-.5)*12,p.y-R()*ST.PH,(R()-.5)*.5,-.6,ST.CH.id==='hulk'?pickC(GAMMA):rgb(255,60+R()*60,40),12,0,1,0);}
   if(p.script>0){p.script--;p.ground=false;p.hist.unshift([p.x,p.y]);if(p.hist.length>12)p.hist.pop();return;} // a power is steering the hero (Meteor Drop, Wrecking Ball, Puny God...)

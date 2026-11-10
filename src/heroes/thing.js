@@ -20,37 +20,7 @@ import { groundBelow } from '../ui/spawn.js';
 import { spawn } from '../world/particles.js';
 import { fig8 } from './kitlib.js';
 
-const SPR_THING=[
-"......kkkkk......",
-"....kkLLlLLkk....",
-"...kLlRRdRRlRk...",
-"...kRRdRRRdRrk...",
-"..kddddddddddrk..",
-"..kRkcckRkcckRk..",
-"..kRRRRdRdRRRrk..",
-"..krRdkkkkkdRrk..",
-"...krRRdRRRRrk...",
-".kkkRRdRRRdRRkkk.",
-"kLlRdRRlRRdRRlLRk",
-"kRRrdRRRdRRRdRRrk",
-"klRddRlRRdRlRddRk",
-"kRrdRRRdRRRRdRrrk",
-"klRdkRRRdRRRkdRrk",
-"kRrk.BBBBBBB.kRrk",
-"klRk.NNNWNNN.kRrk",
-"kRRk.BBBBBBB.kRRk",
-"LlRRkBBBbBBBkRRlL",
-"lRRrkBBB.BBBkrRRl",
-"kddk.bBB.BBb.kddk",
-"...kRlRk.kRlRk...",
-"...kRRdk.kdRRk...",
-"...klRrk.kRlrk...",
-"..kRRdRk.kRdRRk..",
-"..kkkkkk.kkkkkk.."];
-const PAL_THING={k:rgb(48,20,10),d:rgb(128,56,22),r:rgb(172,82,34),R:rgb(218,118,50),l:rgb(244,162,88),L:rgb(255,204,136),c:rgb(130,205,255),B:rgb(62,108,172),b:rgb(38,68,122),N:rgb(24,36,66),W:rgb(240,244,250)};
 
-// animation rig entry (see render/rig.js)
-ANIM.thing={leg:21,mid:8,armC:'lRr',tipC:'lRd',aw:3,al:9,fs:4,sh:[14,10],hide:rect(13,16,10,20),blink:null};
 const THING_POWERS=[
  {n:'Clobber Punch',fn:(a,p,use)=>{if(!use(5))return;ST.cd=16;p.punchF=10;const x=a.h.x+a.dx*8,y=a.h.y+a.dy*8;explode(x|0,y|0,11,{self:true,col:TC,word:'KLOBBER!'});damageEnemies(x,y,18,40,a.dx*9,a.dy*9-3);
    for(const b of bodies)if(Math.hypot(b.x-x,b.y-y)<b.rmax+18){b.vx+=a.dx*9;b.vy+=a.dy*9-2;b.thrown=true;}ST.shake+=6;}},
@@ -96,4 +66,4 @@ const THING_POWERS=[
 ];
 
 // roster entry (CHARS in heroes/index.js)
-export const CHAR_THING={id:'thing',name:'The Thing',spr:SPR_THING,pal:PAL_THING,pw:9,ph:23,fly:false,fs:2.4,boost:1,run:2.0,jump:4.8,hp:620,armor:.35,glow:TC,cape:null,thrust:()=>pickC(TC),powers:THING_POWERS};
+export const CHAR_THING={id:'thing',name:'The Thing',pw:9,ph:23,fly:false,fs:2.4,boost:1,run:2.0,jump:4.8,hp:620,armor:.35,glow:TC,cape:null,thrust:()=>pickC(TC),powers:THING_POWERS};

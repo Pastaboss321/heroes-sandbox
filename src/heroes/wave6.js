@@ -25,31 +25,6 @@ import { TK } from '../render/titan.js';
 const melee=(p,r,dmg,kx,ky)=>{const x=p.x+p.face*(ST.PW/2+5),y=p.y-ST.PH/2;carve(x,y,r*.5,p.face*4,0);damageEnemies(x,y,r,dmg,p.face*kx,ky);p.punchF=8;return [x,y];};
 
 // ================= GAMBIT =================
-const SPR_GAMBIT=[
-"...nnMMMn....",
-"..nnMkkkM....",
-"..n.MeFeM....",
-"....MfffM....",
-".....fFf.....",
-"...cMMMMmc...",
-".ccMMMMMMmcC.",
-".cckMMMMmkcC.",
-".cckkMMmkkcC.",
-".cc.KkkkK.cC.",
-".cc.Kkkkk.cC.",
-".cc.bbbbb.c*.",
-".kk.Kkkkk.kk.",
-".T..Kkkkk..T.",
-".T..Kk.kk..T.",
-".T..Kk.kk..T.",
-".T..Kk.kk..T.",
-".T.Kk...kk.T.",
-"...bb...bb...",
-"...bb...bb...",
-"...bb...bb...",
-"..bbb...bbb.."];
-const PAL_GAMBIT={n:rgb(120,64,40),M:rgb(208,72,148),m:rgb(140,40,100),k:rgb(30,30,40),K:rgb(54,54,70),f:rgb(232,188,156),F:rgb(190,146,116),e:rgb(255,40,40),c:rgb(134,88,52),C:rgb(88,56,32),T:rgb(110,72,42),'*':rgb(255,90,200),b:rgb(90,60,36)};
-ANIM.gambit={leg:14,mid:6,armC:'ccC',tipC:'ff*',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null,cape:'T'};
 const KC=[255,90,200];
 const card=(x,y,vx,vy,boom=7)=>shots.push({x,y,vx,vy,type:'card',life:90,boom,col:KC,ecol:KC,fire:.1});
 // a charged thing glows, then goes off: cells or a chunk
@@ -92,38 +67,13 @@ const GAMBIT_POWERS=[
  {n:'Full House',ult:true,fn:(a,p,use)=>{ST.cd=200;fxWord(p.x,p.y-60,'FULL HOUSE, MON AMI',1.4,'#ff9ad8',true);let n=0;for(const b of bodies){if(Math.abs(b.x-p.x)>260)continue;charge(b.x,b.y,b.rmax,40+n*4,Math.min(16,6+b.rmax/2|0));n++;}
    for(let k=0;k<10;k++){const x=p.x+(R()-.5)*420,y=groundBelow(x|0,p.y-120)-R()*60;charge(x,y,14,30+k*6,12);}for(const e of enemies)if(Math.abs(e.x-p.x)<260)charge(e.x,e.y,8,50,10);}}
 ];
-export const CHAR_GAMBIT={id:'gambit',name:'Gambit',spr:SPR_GAMBIT,pal:PAL_GAMBIT,pw:7,ph:19,fly:false,fs:2.4,boost:2,run:2.2,jump:5.4,hp:360,armor:.7,glow:KC,cape:null,thrust:()=>rgb(255,90,200),powers:GAMBIT_POWERS};
+export const CHAR_GAMBIT={id:'gambit',name:'Gambit',pw:7,ph:19,fly:false,fs:2.4,boost:2,run:2.2,jump:5.4,hp:360,armor:.7,glow:KC,cape:null,thrust:()=>rgb(255,90,200),powers:GAMBIT_POWERS};
 import { pix } from '../render/canvas.js';
 import { atCursor, bodyImpact, boxE, chunkAt, noTarget, segD } from './kitlib.js';
 import { DRAG, K, fxGlitch, pk, vp } from '../render/vfxcore.js';
 const pixC=(x,y,c)=>pix(x,y,c,c);
 
 // ================= NIGHTCRAWLER =================
-const SPR_KURT=[
-"....hhhhh....",
-"...bhhhhhb...",
-"....BeBeb....",
-"....BBBBb....",
-".....BbB.....",
-"...kRBBbRk...",
-".KkRRkkkRRkk.",
-".KkkRRkRRkkk.",
-".KkkkRRRkkkk.",
-".Kk.KkRkk.kk.",
-".Kk.Kkkkk.kk.",
-".BB.RRRRr.Bb.",
-".Bb.Kkkkk.Bb.",
-"..t.Kkkkk....",
-".t..Kk.kk....",
-"t...Kk.kk....",
-"t...Kk.kk....",
-".t.Kk...kk...",
-"TT.KR...Rk...",
-"T..Kk...kk...",
-"...kk...kk...",
-"..kkk...kkk.."];
-const PAL_KURT={h:rgb(22,24,50),b:rgb(32,42,104),B:rgb(54,74,164),e:rgb(255,230,90),k:rgb(20,20,26),K:rgb(50,50,62),R:rgb(182,32,42),r:rgb(116,20,28),t:rgb(40,56,130),T:rgb(54,74,164)};
-ANIM.kurt={leg:14,mid:6,armC:'Kkk',tipC:'BBb',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null,cape:'tT'};
 const puff=(x,y)=>{for(let k=0;k<18;k++){const an=R()*6.283,sp=R()*2;spawn(x,y,Math.cos(an)*sp,Math.sin(an)*sp-.4,R()<.5?rgb(70,40,90):rgb(40,30,50),30+R()*20,0,0,0,1);}snd('pop',x,y,{pitch:.6,v:.6});};
 function bamf(p,x,y){puff(p.x,p.y-ST.PH/2);x=Math.max(6,Math.min(W-6,x));y=Math.max(-800,Math.min(H-8,y));if(boxHit(x,y))carve(x,y-ST.PH/2,ST.PH*.6,0,0);p.x=x;p.y=y;p.vx=p.vy=0;puff(x,y-ST.PH/2);fxWord(x,y-ST.PH-6,'BAMF!',.8,'#c8a0ff',true);}
 const KP=[200,160,255];
@@ -163,34 +113,9 @@ const KURT_POWERS=[
  // a dozen teleports in a blink, a cut and a burst of brimstone at every one
  {n:'BAMF Barrage',ult:true,fn:(a,p,use)=>{ST.cd=200;fxWord(p.x,p.y-60,'BAMF BAMF BAMF!',1.4,'#c8a0ff',true);const list=nearestN(p.x,p.y,300,12);let k=0;ACT.push(()=>{if(k%5===0){const e=list[(k/5|0)%Math.max(1,list.length)];if(e&&e.hp>0){bamf(p,e.x+(R()<.5?-10:10),e.y+e.def.h/2);hitEnemy(e,30,0,-2);explode(e.x|0,e.y|0,6,{self:true,quiet:true,col:[170,110,220]});}}p.script=2;return++k<60;});}}
 ];
-export const CHAR_KURT={id:'kurt',name:'Nightcrawler',spr:SPR_KURT,pal:PAL_KURT,pw:7,ph:19,fly:false,fs:2.4,boost:2,run:2.3,jump:5.8,hp:320,armor:.75,glow:[170,110,220],cape:null,thrust:()=>rgb(120,80,160),powers:KURT_POWERS};
+export const CHAR_KURT={id:'kurt',name:'Nightcrawler',pw:7,ph:19,fly:false,fs:2.4,boost:2,run:2.3,jump:5.8,hp:320,armor:.75,glow:[170,110,220],cape:null,thrust:()=>rgb(120,80,160),powers:KURT_POWERS};
 
 // ================= STAR-LORD =================
-const SPR_QUILL=[
-"....sssss....",
-"...SsssssS...",
-"....eeSee....",
-"....SsSsS....",
-".....gSg.....",
-"...cLDDDcC...",
-".LccLDDDccCC.",
-".LcLcDDDcCcC.",
-".LcLcDDDcCcC.",
-".Lc.cDDDc.cC.",
-".Lc.cDDDc.cC.",
-".kk.nnYnn.GG.",
-".kk.KkkkK.GK.",
-".T..Kkkkk..T.",
-".T..Kk.kk..T.",
-".T..Kk.kk..T.",
-"....Kk.kk....",
-"...Kk...kk...",
-"...bb...bb...",
-"...bb...bb...",
-"...ss...sS...",
-"..sss...sSS.."];
-const PAL_QUILL={s:rgb(192,192,202),S:rgb(130,130,142),e:rgb(255,60,50),g:rgb(80,80,90),c:rgb(150,56,42),C:rgb(96,34,26),L:rgb(192,88,66),D:rgb(62,42,42),k:rgb(28,28,32),K:rgb(54,54,62),n:rgb(110,74,40),Y:rgb(222,190,80),G:rgb(152,152,162),b:rgb(100,66,40),T:rgb(122,44,34)};
-ANIM.quill={leg:14,mid:6,armC:'LcC',tipC:'GGK',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null,cape:'T'};
 const egun=(a,c,el)=>{for(const o of pl_.mix>0?[0,.13,-.13]:[0]) // Awesome Mix (heroes/kits3a.js): three-way spread while the tape plays
   shots.push({x:a.h.x,y:a.h.y,vx:(a.dx-a.dy*o)*8,vy:(a.dy+a.dx*o)*8,type:'egun',life:70,col:c,ecol:c,boom:3,onHit:s=>{explode(s.x|0,s.y|0,4,{self:true,quiet:true,col:c,fire:el==='fire'?.4:0});tagged(el,()=>damageEnemies(s.x,s.y,10,12,0,0));}});};
 function drawMilano(s){const x=s.x,y=s.y,f=s.face,o={},B=rgb(60,90,170),O=rgb(240,140,40),G=rgb(180,190,200);TK.begin();TK.ell(x,y,26,6,B,o);TK.poly([[x-f*20,y-4],[x-f*34,y-14],[x-f*10,y-4]],O,o);TK.poly([[x-f*20,y+4],[x-f*34,y+12],[x-f*10,y+4]],O,o);TK.ell(x+f*12,y-3,8,4,G,o);TK.end();for(let k=0;k<3;k++)spawn(x-f*28,y+(R()-.5)*4,-f*3,0,R()<.5?rgb(150,200,255):rgb(255,255,255),8,0,1,0,1);}
@@ -232,34 +157,9 @@ const QUILL_POWERS=[
  // a Celestial's light pours out of his hands: a beam and pillars of light along the ground
  {n:'Celestial Light',ult:true,kind:'hold',fn:(a,p,use)=>{beamCore(a,{pow:400,rad:4,len:520,w:5+(ST.frame&1),c:[255,255,240],g:[150,220,255],spark:()=>rgb(220,240,255),dmg:10,noAsh:true});if(ST.frame%8===0){const x=a.h.x+a.dx*(40+R()*200),gy=groundBelow(x|0,a.h.y);beamCore({h:{x,y:gy},dx:0,dy:-1,d:1},{pow:60,rad:2,len:120,w:2,c:[255,255,240],g:[150,220,255],spark:()=>rgb(220,240,255),dmg:6,noAsh:true});}}}
 ];
-export const CHAR_QUILL={id:'quill',name:'Star-Lord',spr:SPR_QUILL,pal:PAL_QUILL,pw:7,ph:19,fly:true,fs:3.2,boost:2.4,run:2.1,jump:5,hp:340,armor:.75,glow:[255,140,80],cape:null,thrust:()=>R()<.5?rgb(150,200,255):rgb(255,255,255),powers:QUILL_POWERS};
+export const CHAR_QUILL={id:'quill',name:'Star-Lord',pw:7,ph:19,fly:true,fs:3.2,boost:2.4,run:2.1,jump:5,hp:340,armor:.75,glow:[255,140,80],cape:null,thrust:()=>R()<.5?rgb(150,200,255):rgb(255,255,255),powers:QUILL_POWERS};
 
 // ================= MILES MORALES =================
-const SPR_MILES=[
-"....KkrkK....",
-"....kkrkk....",
-"....wwkww....",
-"....kkrkk....",
-".....krk.....",
-"...KkkrkkK...",
-".KkKkkrkkKkk.",
-".KkkrkrkrkKk.",
-".Kkkkrrrkkkk.",
-".Kk.rkrkr.kk.",
-".Kk.Kkkkk.kk.",
-".Kk.Kkkkk.kk.",
-".rr.Kkkkk.rr.",
-"....Kkkkk....",
-"....Kk.kk....",
-"....Kk.kk....",
-"....Kk.kk....",
-"...Kk...kk...",
-"...Kk...kk...",
-"...Kk...kk...",
-"...Kk...kk...",
-"..rrr...rrr.."];
-const PAL_MILES={k:rgb(18,18,24),K:rgb(50,50,64),r:rgb(216,32,46),R:rgb(150,20,32),w:rgb(244,244,252)};
-ANIM.miles={leg:14,mid:6,armC:'Kkk',tipC:'rrR',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null};
 const VC=[255,230,120];
 const venomZap=(x0,y0,x1,y1)=>zap(x0,y0,x1,y1,[255,250,200],[255,210,60]);
 function drawBox(s){const x=s.x,y=s.y,o={},B=rgb(40,40,48),pu=s.t%30<4?1.5:0;TK.begin();TK.cap(x-9,y-6,x+9,y-6,5+pu,5+pu,B,o);TK.ell(x-5,y-6,3+pu*.5,3+pu*.5,rgb(200,30,40),o);TK.ell(x+5,y-6,3+pu*.5,3+pu*.5,rgb(200,30,40),o);TK.cap(x-6,y-13,x+6,y-13,1,1,rgb(120,120,130),o);TK.end();}
@@ -302,5 +202,5 @@ const MILES_POWERS=[
  {n:'Mega Venom Blast',ult:true,fn:(a,p,use)=>{ST.cd=200;const cx=p.x,cy=p.y-ST.PH/2;fxWord(cx,cy-60,'MEGA VENOM BLAST!',1.5,'#ffd36a',true);explode(cx|0,cy|0,26,{self:true,col:VC});shockFx(cx,cy,1.6);
    for(let k=0;k<30;k++){const an=R()*6.283,r=40+R()*120;venomZap(cx,cy,cx+Math.cos(an)*r,cy+Math.sin(an)*r);}tagged('shock',()=>{for(const e of enemies)if(Math.hypot(e.x-cx,e.y-cy)<160){hitEnemy(e,60,0,-3);applyStatus(e,'stun',90);}});}}
 ];
-export const CHAR_MILES={id:'miles',name:'Miles Morales',spr:SPR_MILES,pal:PAL_MILES,pw:7,ph:19,fly:false,fs:2.4,boost:2,run:2.3,jump:5.6,hp:330,armor:.75,glow:VC,cape:null,thrust:()=>rgb(255,230,120),powers:MILES_POWERS,webs:true};
+export const CHAR_MILES={id:'miles',name:'Miles Morales',pw:7,ph:19,fly:false,fs:2.4,boost:2,run:2.3,jump:5.6,hp:330,armor:.75,glow:VC,cape:null,thrust:()=>rgb(255,230,120),powers:MILES_POWERS,webs:true};
 export { card, charge, bamf, puff as kpuff, venomZap, KC, VC };

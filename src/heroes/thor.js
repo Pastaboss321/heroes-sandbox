@@ -18,33 +18,7 @@ import { groundBelow } from '../ui/spawn.js';
 import { drawHammer } from '../render/sprites.js';
 import { summons } from './abilities.js';
 
-const SPR_THOR=[
-"....zyYYy....",
-"...zyYYYyz...",
-"...yYfffFz...",
-"...yfefeFz...",
-"...yffFfFz...",
-"...yzfFFzyz..",
-"..CyzDFDzyC..",
-"CfFDDDdDDdfFC",
-"CfFOoDdOodfFC",
-"CfFOoDdOodfFC",
-"CfFkDDdDdkfFC",
-"CsSkbBbBbkSsC",
-"CsS.dDddd.sSC",
-"cfF.DDdDd.fFc",
-"c...DD.Dd...c",
-"c...DD.Dd...c",
-"c..DD...Dd..c",
-"c..bB...bB..c",
-"...bB...bB...",
-"...bB...bB...",
-"..bbB...bbB..",
-"..BBB...BBB.."];
-const PAL_THOR={z:rgb(150,108,40),y:rgb(214,170,70),Y:rgb(246,218,128),f:rgb(226,178,140),F:rgb(168,118,88),e:rgb(150,206,255),d:rgb(26,30,46),D:rgb(54,62,90),o:rgb(146,154,170),O:rgb(214,222,234),C:rgb(158,22,28),c:rgb(98,12,18),b:rgb(110,80,46),B:rgb(60,42,26),s:rgb(204,210,222),S:rgb(116,122,138),k:rgb(14,16,24)};
 
-// animation rig entry (see render/rig.js)
-ANIM.thor={leg:14,mid:6,armC:'ffF',tipC:'fFF',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:'e',lid:'f',cape:'Cc'};
 const THOR_POWERS=[
  {n:'Hammer Throw',fn:(a,p,use)=>{if(shots.some(s=>s.type==='hammer')||!use(8))return;shots.push({x:a.h.x,y:a.h.y,vx:a.dx*7,vy:a.dy*7,type:'hammer',life:400,out:Math.min(55,a.d/7+8),hitSet:new Set(),spin:0});ST.cd=10;ST.shake+=1.5;flash(a.h.x,a.h.y,12,BLUE,4);}},
  {n:'Lightning Call',fn:(a,p,use)=>{if(!use(16))return;lightningStrike(mouse.wx,mouse.wy,13);ST.cd=22;}},
@@ -107,4 +81,4 @@ const THOR_POWERS=[
 
 
 // roster entry (CHARS in heroes/index.js)
-export const CHAR_THOR={id:'thor',name:'Thor',spr:SPR_THOR,pal:PAL_THOR,pw:7,ph:19,fly:true,fs:3.2,boost:2.2,run:1.9,jump:4.6,hp:350,armor:.7,glow:BLUE,cape:null,thrust:()=>R()<.6?pickC(BLUE):rgb(255,255,255),powers:THOR_POWERS};
+export const CHAR_THOR={id:'thor',name:'Thor',pw:7,ph:19,fly:true,fs:3.2,boost:2.2,run:1.9,jump:4.6,hp:350,armor:.7,glow:BLUE,cape:null,thrust:()=>R()<.6?pickC(BLUE):rgb(255,255,255),powers:THOR_POWERS};

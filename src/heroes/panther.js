@@ -18,31 +18,6 @@ import { summons } from './abilities.js';
 import { groundBelow } from '../ui/spawn.js';
 import { echo, tagged } from './kitlib.js';
 
-const SPR_PANTHER=[
-"....k...k....",
-"....KKKKK....",
-"....LeKeK....",
-"....LKKKk....",
-".....KKk.....",
-"...KsSsSsk...",
-".LKKKKsKKKKk.",
-".LKLKVKVKKKk.",
-".LKLKKVKKKKk.",
-".LK.LKVKk.Kk.",
-".LK.LKVKk.Kk.",
-".ss.SsSsS.sS.",
-".SS.LKKKk.SS.",
-"....LKKKk....",
-"....LK.Kk....",
-"....LK.KV....",
-"....LK.Kk....",
-"...LK...Kk...",
-"...LK...KV...",
-"...LK...Kk...",
-"...KK...Kk...",
-"..KKK...KKk.."];
-const PAL_PANTHER={k:rgb(14,14,20),K:rgb(38,38,52),L:rgb(78,80,102),s:rgb(204,208,224),S:rgb(132,136,154),V:rgb(170,100,255),e:rgb(232,232,255)};
-ANIM.panther={leg:14,mid:6,armC:'LKk',tipC:'sSS',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null};
 const VIB=[180,120,255],EDGE=[200,170,255];
 const kin=(p,v)=>{p.kin=Math.min(100,(p.kin||0)+v);};
 const slashFx=(x,y,ux,uy,len)=>{for(let k=0;k<8;k++){const u=R()*len;spawn(x+ux*u,y+uy*u,(R()-.5)*1.5,(R()-.5)*1.5,R()<.5?rgb(230,220,255):rgb(170,120,255),10,0,1,0,1);}};
@@ -105,4 +80,4 @@ const PANTHER_POWERS=[
      if(k%3===0){const an=(R()-.5)*1.2+(dir>0?.6:Math.PI-.6);sliceLine(x,hy-50,x+Math.cos(an)*110,hy-50+Math.sin(an)*110,{edge:EDGE,push:1.6,quiet:k%6!==0});}
      damageEnemies(x,hy,46,12,dir*4,-3);flash(x,hy,60,VIB,2);ST.shake=Math.max(ST.shake,6);return k<60;});}}
 ];
-export const CHAR_PANTHER={id:'panther',name:'Black Panther',spr:SPR_PANTHER,pal:PAL_PANTHER,pw:7,ph:19,fly:false,fs:2.4,boost:2,run:2.4,jump:5.6,hp:340,armor:.7,glow:VIB,cape:null,thrust:()=>rgb(170,120,255),powers:PANTHER_POWERS};
+export const CHAR_PANTHER={id:'panther',name:'Black Panther',pw:7,ph:19,fly:false,fs:2.4,boost:2,run:2.4,jump:5.6,hp:340,armor:.7,glow:VIB,cape:null,thrust:()=>rgb(170,120,255),powers:PANTHER_POWERS};

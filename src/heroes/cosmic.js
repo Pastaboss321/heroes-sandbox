@@ -22,31 +22,6 @@ import { solidCells } from './wave2.js';
 import { makeBody } from '../world/bodies.js';
 
 // ================= CAPTAIN MARVEL =================
-const SPR_MARVEL=[
-"....hhhhH....",
-"...hhhhhHH...",
-"...hfeFeFH...",
-"...HffffFH...",
-"...Hh.fF.H...",
-"...hBYYYBH...",
-".BBBRRYRRBBb.",
-".BBRRYYYRRBb.",
-".BBRRRYRRrBb.",
-".BB.RRYRr.Bb.",
-".BB.BRRrb.Bb.",
-".RR.YYYYy.Rr.",
-".Rr.BRRrb.Rr.",
-"....BRRrb....",
-"....BR.rb....",
-"....BR.rb....",
-"....BR.rb....",
-"...RR...Rr...",
-"...RR...Rr...",
-"...RR...Rr...",
-"...RR...Rr...",
-"..RRr...Rrr.."];
-const PAL_MARVEL={h:rgb(248,216,124),H:rgb(200,160,72),f:rgb(236,190,160),F:rgb(196,150,120),e:rgb(255,240,200),R:rgb(208,40,50),r:rgb(132,22,30),B:rgb(40,62,150),b:rgb(24,36,96),Y:rgb(250,210,80),y:rgb(190,150,40)};
-ANIM.marvel={leg:14,mid:6,armC:'BBb',tipC:'RRr',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null};
 const PH=[255,210,110],PHC=[255,245,200];
 const binary=p=>p.binary>0;
 function drawGoose(s){const x=s.x,y=s.y,f=s.face,o={},O=rgb(230,150,60);TK.begin();TK.ell(x,y-4,6,3.5,O,o);TK.ell(x+f*6,y-7,3.5,3,O,o);TK.cap(x+f*5,y-10,x+f*5,y-12,1,.4,O,o);TK.cap(x+f*8,y-10,x+f*8,y-12,1,.4,O,o);TK.cap(x-f*6,y-5,x-f*10,y-10,1,1,O,o);TK.end();}
@@ -101,34 +76,9 @@ const MARVEL_POWERS=[
    ACT.push(()=>{k++;if(k<30){flash(cx,cy,k*3,PH,2);return true;}const r=(k-29)*10;for(let j=0;j<8;j++){const an=R()*6.283;explode(cx+Math.cos(an)*r|0,cy+Math.sin(an)*r|0,10,{self:true,quiet:true,col:PH});}
      if(k===30){explode(cx|0,cy|0,30,{self:true,col:PH,word:'KRA-KA-BOOOM!'});shockFx(cx,cy,1.8);ST.hitstop=Math.max(ST.hitstop,8);}damageEnemies(cx,cy,r+14,10,0,0,true);ST.shake=Math.max(ST.shake,14);return k<46;});}}
 ];
-export const CHAR_MARVEL={id:'marvel',name:'Captain Marvel',spr:SPR_MARVEL,pal:PAL_MARVEL,pw:7,ph:19,fly:true,fs:3.8,boost:2.6,run:2,jump:4.8,hp:380,armor:.65,glow:PH,cape:null,thrust:()=>R()<.6?rgb(255,210,110):rgb(255,250,220),powers:MARVEL_POWERS};
+export const CHAR_MARVEL={id:'marvel',name:'Captain Marvel',pw:7,ph:19,fly:true,fs:3.8,boost:2.6,run:2,jump:4.8,hp:380,armor:.65,glow:PH,cape:null,thrust:()=>R()<.6?rgb(255,210,110):rgb(255,250,220),powers:MARVEL_POWERS};
 
 // ================= SILVER SURFER =================
-const SPR_SURFER=[
-".....wSs.....",
-"....wSSSs....",
-"....SeSes....",
-"....wSSSs....",
-".....SSs.....",
-"...sSSSSSd...",
-".wSSwSSwSSsd.",
-".wSwwSdwwSsd.",
-".wSSSSdSSSsd.",
-".wS.wSdSs.sd.",
-".wS.SwdSs.sd.",
-".SS.sSSSd.ss.",
-".Ss.SSdSs.sd.",
-"....wSSSs....",
-"....wS.Ss....",
-"....wS.Ss....",
-"....SS.sd....",
-"...wS...Ss...",
-"...wS...Ss...",
-"...SS...sd...",
-"...SS...sd...",
-"..sSS...Ssd.."];
-const PAL_SURFER={w:rgb(250,252,255),S:rgb(206,212,228),s:rgb(146,152,170),d:rgb(90,96,114),e:rgb(220,240,255)};
-ANIM.surfer={leg:14,mid:6,armC:'wSs',tipC:'Sss',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null};
 const CO=[150,220,255],COW=[230,250,255];
 function drawHand(s){const x=s.x,y=s.y,P=rgb(118,44,150),B=rgb(44,66,160),o={};TK.begin();TK.cap(x,y-200,x,y-40,26,22,B,o);TK.ell(x,y-24,30,26,P,o);
   const cl=s.closed?1:0;for(let k=-2;k<=2;k++)TK.cap(x+k*12,y-14,x+k*(cl?6:16),y+(cl?6:22),6,5,P,o);TK.end();}
@@ -183,34 +133,9 @@ const SURFER_POWERS=[
    for(const e of enemies){if(Math.abs(e.x-p.x)>260||Math.abs(e.y-p.y)>160)continue;beamCore({h:{x:p.x,y:p.y-ST.PH/2},dx:(e.x-p.x)/(Math.hypot(e.x-p.x,e.y-p.y+8)||1),dy:(e.y-p.y+8)/(Math.hypot(e.x-p.x,e.y-p.y+8)||1),d:1},{pow:200,rad:2,len:Math.hypot(e.x-p.x,e.y-p.y)+20,w:3,c:COW,g:[90,180,255],spark:()=>rgb(220,245,255),dmg:2});hitEnemy(e,90,0,-2);explode(e.x|0,e.y|0,9,{self:true,col:CO});}
    shockFx(p.x,p.y-8,1.6);flash(p.x,p.y,200,CO,14);}}
 ];
-export const CHAR_SURFER={id:'surfer',name:'Silver Surfer',spr:SPR_SURFER,pal:PAL_SURFER,pw:7,ph:19,fly:true,fs:4.4,boost:2.6,run:2,jump:4.6,hp:360,armor:.6,glow:CO,cape:null,thrust:()=>R()<.5?rgb(200,240,255):rgb(120,200,255),powers:SURFER_POWERS,board:true};
+export const CHAR_SURFER={id:'surfer',name:'Silver Surfer',pw:7,ph:19,fly:true,fs:4.4,boost:2.6,run:2,jump:4.6,hp:360,armor:.6,glow:CO,cape:null,thrust:()=>R()<.5?rgb(200,240,255):rgb(120,200,255),powers:SURFER_POWERS,board:true};
 
 // ================= CAPTAIN AMERICA =================
-const SPR_CAP=[
-"....VBBBb....",
-"...wVBwBb....",
-"...wBwBwb....",
-"....ffffF....",
-".....fFF.....",
-"...bVBBBBb...",
-".VVBBBwBBBBb.",
-".VBBBwwwBBBb.",
-".VBBBwBwBBbb.",
-".VB.RWRWr.Bb.",
-".VB.RWRWr.Bb.",
-".RR.nnnnn.Rr.",
-".Rr.VBBBb.Rr.",
-"....VBBBb....",
-"....VB.Bb....",
-"....VB.Bb....",
-"....VB.Bb....",
-"...RR...Rr...",
-"...RR...Rr...",
-"...RR...Rr...",
-"...RR...Rr...",
-"..RRr...Rrr.."];
-const PAL_CAP={V:rgb(86,126,216),B:rgb(44,74,160),b:rgb(24,40,100),w:rgb(246,246,252),W:rgb(226,226,234),R:rgb(202,36,46),r:rgb(140,24,32),f:rgb(232,188,156),F:rgb(190,140,112),n:rgb(112,76,42)};
-ANIM.cap={leg:14,mid:6,armC:'VBb',tipC:'RRr',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null};
 const SH_R=[200,40,48];
 export function drawShield(s,pix){const R0=4;for(let y=-R0;y<=R0;y++)for(let x=-R0;x<=R0;x++){const d=Math.hypot(x,y);if(d>R0+.3)continue;const c=d<1.3?rgb(236,236,244):d<2.2?rgb(44,74,160):d<3.2?rgb(196,40,48):d<3.9?rgb(236,236,244):rgb(196,40,48);pix(s.x+x,s.y+y,c);}}
 function throwShield(p,a,bounces,cut){shots.push({x:a.h.x,y:a.h.y,vx:a.dx*8,vy:a.dy*8,type:'shield',life:200,boom:0,bounces,cut,hit:new Set(),
@@ -255,7 +180,7 @@ const CAP_POWERS=[
      return k<160;});}}
 ];
 export const drawSpin=[];
-export const CHAR_CAP={id:'cap',name:'Captain America',spr:SPR_CAP,pal:PAL_CAP,pw:7,ph:19,fly:false,fs:2.4,boost:2,run:2.2,jump:5.4,hp:400,armor:.7,glow:[230,230,245],cape:null,thrust:()=>rgb(230,230,245),powers:CAP_POWERS};
+export const CHAR_CAP={id:'cap',name:'Captain America',pw:7,ph:19,fly:false,fs:2.4,boost:2,run:2.2,jump:5.4,hp:400,armor:.7,glow:[230,230,245],cape:null,thrust:()=>rgb(230,230,245),powers:CAP_POWERS};
 // per tick: shields ricochet toward the next enemy and come home; edge throws slice as they fly
 export function updCapShields(){
   for(let n=shots.length-1;n>=0;n--){const s=shots[n];if(s.type!=='shield')continue;const lx=s.x,ly=s.y;

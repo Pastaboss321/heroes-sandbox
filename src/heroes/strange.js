@@ -22,33 +22,7 @@ import { summons } from './abilities.js';
 import { atCursor, fig8, ghost, noTarget } from './kitlib.js';
 import { fxSigil } from '../render/vfxcore.js';
 
-const SPR_STRANGE=[
-"....hhhhh....",
-"...hhhhhgg...",
-"...hfffFgg...",
-"...hfkfkFg...",
-"...hffFFFh...",
-"...C.fFF.C...",
-"..CCBBfBBCC..",
-"CBbbBBeBBbBbC",
-"CBbbBBBBBbBbC",
-"CBbbBBBBBbBbC",
-"CBb.yyyyy.BbC",
-"Ckk.BBBBb.kkC",
-"C...BBBBb...C",
-"C...BB.Bb...C",
-"C...bb.bb...C",
-"C..bb...bb..C",
-"c..bb...bb..c",
-"c..bb...bb..c",
-"c..bb...bb..c",
-"c.kkk...kkk.c",
-"..kkk...kkk..",
-"..kkk...kkk.."];
-const PAL_STRANGE={h:rgb(40,30,30),g:rgb(184,184,190),f:rgb(226,180,146),F:rgb(172,128,98),k:rgb(30,28,34),B:rgb(42,82,152),b:rgb(26,50,100),e:rgb(150,255,140),y:rgb(212,172,62),C:rgb(172,30,36),c:rgb(110,18,24)};
 
-// animation rig entry (see render/rig.js)
-ANIM.strange={leg:13,mid:6,armC:'BBb',tipC:'kkk',aw:2,al:5,fs:2,sh:[10,7],hide:rect(10,11,7,11),blink:null,cape:'Cc'};
 function drawCloak(s){const x=s.x,y=s.y,o={},wv=Math.sin(s.t*.3)*3;TK.begin();TK.poly([[x-5,y-8],[x+5,y-8],[x+9+wv,y+8],[x+3,y+5],[x-3,y+9],[x-9-wv,y+6]],rgb(196,30,40),o);TK.cap(x-6,y-9,x+6,y-9,2,2,rgb(230,190,60),o);TK.poly([[x-4,y-7],[x+4,y-7],[x,y+4]],rgb(120,16,24),o);TK.end();}
 const STRANGE_POWERS=[
  {n:'Bolts of Balthakk',fn:(a,p,use)=>{if(!use(7))return;ST.cd=12;for(let k=0;k<3;k++)shots.push({x:a.h.x,y:a.h.y,vx:a.dx*4.5+(R()-.5)*2.5,vy:a.dy*4.5+(R()-.5)*2.5,type:'mbolt',life:150,col:[255,190,70],ecol:[255,190,70],boom:5,home:true,delay:k*3});}},
@@ -118,4 +92,4 @@ const STRANGE_POWERS=[
 ];
 
 // roster entry (CHARS in heroes/index.js)
-export const CHAR_STRANGE={id:'strange',name:'Doctor Strange',spr:SPR_STRANGE,pal:PAL_STRANGE,pw:7,ph:19,fly:true,fs:3.0,boost:2.1,run:1.9,jump:4.6,hp:310,armor:.8,glow:[255,190,70],cape:null,thrust:()=>R()<.5?rgb(255,190,80):rgb(255,120,40),powers:STRANGE_POWERS};
+export const CHAR_STRANGE={id:'strange',name:'Doctor Strange',pw:7,ph:19,fly:true,fs:3.0,boost:2.1,run:1.9,jump:4.6,hp:310,armor:.8,glow:[255,190,70],cape:null,thrust:()=>R()<.5?rgb(255,190,80):rgb(255,120,40),powers:STRANGE_POWERS};

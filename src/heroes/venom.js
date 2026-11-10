@@ -21,37 +21,7 @@ import { drawPix } from './kitlib.js';
 import { sliceLine } from '../world/slice.js';
 
 // ---- Venom: hulking black symbiote, white eyes and spider, a mouthful of fangs
-const SPR_VENOM=[ // hunched brute: small head, huge shoulders, long clawed arms
-"......kkkkk......",
-".....kwwKwwk.....",
-"....kKwwKwwKk....",
-"....ktrtrtrtk....",
-"....kKtttttKk....",
-"..kkkKKKKKKKkkk..",
-".kKLKKKKKKKKKLKk.",
-"kKLKKKwKKKwKKKLKk",
-"kKKKKKKwwwKKKKKKk",
-"kKLKKwKwwwKwKKLKk",
-"kKKk.KKKwKKK.kKKk",
-"kKLk.KwKKKwK.kLKk",
-"kKKk.KKKKKKK.kKKk",
-"kKLk..KKKKK..kLKk",
-"kKKk..KKKKK..kKKk",
-"kKKKk.KKKKK.kKKKk",
-"KLKKk.KK.KK.kKKLK",
-"kkwkk.KK.KK.kkwkk",
-"......KK.KK......",
-".....kKK.KKk.....",
-".....kKL.LKk.....",
-"....kKKK.KKKk....",
-"....kKLK.KLKk....",
-"...kKKKK.KKKKk...",
-"...kKKKk.kKKKk...",
-"..kkkkk...kkkkk.."];
-const PAL_VENOM={k:rgb(10,10,16),K:rgb(30,30,44),L:rgb(78,82,110),w:rgb(244,244,255),t:rgb(232,230,220),r:rgb(196,40,70),m:rgb(60,10,22)};
 
-// animation rig entry (see render/rig.js)
-ANIM.venom={leg:18,mid:8,armC:'LKk',tipC:'KKk',aw:3,al:9,fs:4,sh:[14,7],hide:rect(13,16,6,17),blink:null};
 // ================= Venom: the symbiote hunts like the creature from Carrion =================
 // tendrils: wavering black ropes from the body to a point
 // Venom's size: blob form is small enough to squeeze through gaps; each devoured victim adds bulk
@@ -160,4 +130,4 @@ const VENOM_POWERS=[
 ];
 
 // roster entry (CHARS in heroes/index.js)
-export const CHAR_VENOM={id:'venom',name:'Venom',spr:SPR_VENOM,pal:PAL_VENOM,pw:9,ph:23,fly:false,fs:2.4,boost:1,run:2.3,jump:5.6,hp:520,armor:.5,glow:VC,cape:null,thrust:()=>pickC([60,60,90]),tetherC:[44,44,64],tetherG:[80,80,130],powers:VENOM_POWERS};
+export const CHAR_VENOM={id:'venom',name:'Venom',pw:9,ph:23,fly:false,fs:2.4,boost:1,run:2.3,jump:5.6,hp:520,armor:.5,glow:VC,cape:null,thrust:()=>pickC([60,60,90]),tetherC:[44,44,64],tetherG:[80,80,130],powers:VENOM_POWERS};

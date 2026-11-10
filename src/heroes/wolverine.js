@@ -18,31 +18,7 @@ import { q } from '../world/support.js';
 import { makeBody } from '../world/bodies.js';
 import { fxSlash } from '../render/vfxcore.js';
 
-const SPR_WOLV=[
-"..kk.....kk..",
-"...kkYYYkk...",
-"...kYLYYyk...",
-"...kwkYkwk...",
-"...hkkYkkh...",
-"...hfFfFFh...",
-"..BbhfFFhbB..",
-"VBbBLYYYyBVBb",
-"VBbkLYYYykVBb",
-"VBbBkLYykBVBb",
-"LYybkLYykbLYy",
-"LYybrRrRrbLYy",
-"VBb.BBbBb.VBb",
-"Bbb.BB.Bb.Bbb",
-"....LY.Yy....",
-"...LY...Yy...",
-"...VBb..VBb..",
-"..VBb...VBb..",
-"..BBb...BBb..",
-"..bbbb..bbbb."];
-const PAL_WOLV={k:rgb(18,18,24),Y:rgb(232,186,36),y:rgb(168,118,20),L:rgb(255,228,112),B:rgb(34,56,140),b:rgb(18,28,80),V:rgb(72,106,204),w:rgb(250,250,250),f:rgb(214,162,124),F:rgb(148,98,70),h:rgb(40,30,24),c:rgb(222,228,238),r:rgb(150,24,24),R:rgb(214,56,46)};
 
-// animation rig entry (see render/rig.js)
-ANIM.wolverine={leg:14,mid:6,armC:'LYy',tipC:'VBb',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,12,7,13),blink:'w',lid:'k',claws:'c'};
 const WOLV_POWERS=[
  {n:'Claw Fury',fn:(a,p,use)=>{if(!use(3))return;if(!p.clawT||ST.frame-p.clawT>30)fxWord(a.h.x,a.h.y-14,'SNIKT!',1.1,'#f3e9d2',true);else if(R()<.3)fxWord(a.h.x+a.dx*14,a.h.y-8,R()<.5?'SHKK!':'SKRITCH!',.75,'#f3e9d2');p.clawT=ST.frame;clawSlash(a,p);ST.cd=7;}},
  {n:'Berserker Rage',fn:(a,p,use)=>{if(p.rage>0||!use(30))return;p.rage=300;ST.cd=30;fxWord(p.x,p.y-ST.PH-10,'RRAAAGH!',1.5,'#e23b2e',true);fxBurst(p.x,p.y-ST.PH/2,40,'#e23b2e');ST.shake+=8;flash(p.x,p.y-ST.PH/2,40,[255,60,40],10);}},
@@ -94,4 +70,4 @@ const WOLV_POWERS=[
 
 
 // roster entry (CHARS in heroes/index.js)
-export const CHAR_WOLVERINE={id:'wolverine',name:'Wolverine',spr:SPR_WOLV,pal:PAL_WOLV,pw:7,ph:17,fly:false,fs:2.6,boost:1,run:2.4,jump:5.4,hp:420,armor:.6,glow:[255,220,80],cape:null,thrust:()=>pickC([255,220,80]),powers:WOLV_POWERS};
+export const CHAR_WOLVERINE={id:'wolverine',name:'Wolverine',pw:7,ph:17,fly:false,fs:2.6,boost:1,run:2.4,jump:5.4,hp:420,armor:.6,glow:[255,220,80],cape:null,thrust:()=>pickC([255,220,80]),powers:WOLV_POWERS};

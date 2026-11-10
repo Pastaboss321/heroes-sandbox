@@ -89,6 +89,7 @@ export function cast() {
     use = () => true;
   }
   const c0 = ST.cd, e0 = p.en, u0 = ST.ultT; const fired = firePower(pw, a, p, use); p.castF = 12; if (ST.cd > c0) p.recoilF = 6;
+  if (fired && (pw.ult ? u0 === 200 : pw.sig && pw.kindC === 'tap' && ST.cd - c0 >= 40)) p.sigF = pw.ult ? 30 : 16; // the hand-drawn signature pose (src/art)
   if (fired) vfxCast(pw, a, p, hand); // the hand flares in the hero's style (render/vfxcore.js)
   if (pw.ult && u0 === 200) traitUlt(pw, p, a); else if (ST.cd > c0 || p.en < e0 - .01) traitCast(pw, p, a); // the ultimate awakens the trait for ten seconds
   if (pw.ult && ST.cd > c0) ST.ultT = 0; // a one-shot ultimate is spent; a held one keeps going for a few seconds

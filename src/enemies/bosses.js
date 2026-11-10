@@ -11,9 +11,7 @@ import { snd } from '../sfx.js';
 import { hurtTarget, quake, shots, smashOverlap, zap } from '../heroes/powers.js';
 import { solidCells } from '../heroes/wave2.js';
 import { crushAhead, hurlBody, wallChunk } from '../heroes/villains.js';
-import { PAL_JUGG, SPR_JUGG } from '../heroes/juggernaut.js';
-import { PAL_ULTRON, SPR_ULTRON } from '../heroes/ultron.js';
-import { PAL_MAGNETO, SPR_MAGNETO } from '../heroes/magneto.js';
+import { ARTS } from '../art/index.js'; // the boss versions wear the heroes' own art, scaled up
 import { pl_ } from '../player.js';
 import { defineEnemy, enemies, enemyBeam, enemyShoot, player, seek, spawnEnemy } from './core.js';
 import { smashAhead } from './sentinels.js';
@@ -53,7 +51,7 @@ defineEnemy('magneto',{hp:2200,w:9,h:16,fly:true,score:0,boom:16,metal:false,tit
 // ---- the big three, rebuilt from their playable versions: same sprites (scaled up), same moves aimed at you
 function bossDist(e){return Math.hypot(pl_.x-e.x,pl_.y-ST.PH/2-e.y);}
 function bossQuake(e,x,y,r,dmg){quake(x,y,{col:[214,184,130],r});if(Math.abs(pl_.x-x)<r*2.4&&Math.abs(pl_.y-y)<30){hurtTarget(e,dmg);pl_.vy=-5;pl_.vx+=Math.sign(pl_.x-x)*4;}}
-defineEnemy('juggernaut',{hp:3200,w:22,h:37,fly:false,score:0,boom:20,metal:false,title:'JUGGERNAUT',glow:'',scale:1.6,sprite:SPR_JUGG,pal:PAL_JUGG,spd:.8,
+defineEnemy('juggernaut',{hp:3200,w:22,h:37,fly:false,score:0,boom:20,metal:false,title:'JUGGERNAUT',glow:'',scale:1.25,sprite:ARTS.juggernaut.spr,pal:ARTS.juggernaut.pal,spd:.8,
   think(e){const p=player(),dx=p.x-e.x,dist=Math.abs(dx),enr=e.hp<e.def.hp*.5,hw=e.def.w/2,hh=e.def.h/2;if(e.frozen>0)e.frozen=Math.max(0,e.frozen-4);
     if(e.mem.surge>0){e.mem.surge--;e.mem.shield=Math.max(e.mem.shield||0,1);if(e.t%2===0)spawn(e.x+(R()-.5)*hw*2,e.y+(R()-.5)*hh*2,0,-.8,rgb(255,40,30),14,0,1,0,1);}
     if(e.mem.charge>0){e.mem.charge--;e.vx=e.mem.dir*(enr?5.4:4.6);crushAhead(e.x+e.mem.dir*hw,e.y,e.mem.dir,e.def.h,7);if(e.t%4===0){ST.shake=Math.max(ST.shake,5);afters.length<40&&spawn(e.x-e.mem.dir*hw,e.y+hh,(R()-.5)*3,-R()*2,rgb(150,140,125),20,0,0,1);}
@@ -73,7 +71,7 @@ defineEnemy('juggernaut',{hp:3200,w:22,h:37,fly:false,score:0,boom:20,metal:fals
 function bossAlt(e,p,wob){const hh=e.def.h*(e.def.scale||1)/2;return Math.max(hh+24,Math.min(H-60,p.y-ST.PH/2-18+wob));}
 // extra vertical spring pulls them back after knockback; the top of the map is a hard ceiling
 function bossFly(e,x,y,sp,acc){seek(e,x,y,sp,acc);e.vy+=(y-e.y)*.004;e.vy*=.97;const top=e.def.h*(e.def.scale||1)/2+6;if(e.y<top){e.y=top;if(e.vy<0)e.vy=0;}}
-defineEnemy('ultron_prime',{hp:2000,w:18,h:30,fly:true,score:0,boom:18,glow:'*@',title:'ULTRON PRIME',scale:1.44,sprite:SPR_ULTRON,pal:PAL_ULTRON,
+defineEnemy('ultron_prime',{hp:2000,w:18,h:30,fly:true,score:0,boom:18,glow:'*@',title:'ULTRON PRIME',scale:1.2,sprite:ARTS.ultron.spr,pal:ARTS.ultron.pal,
   think(e){const p=player(),enr=e.hp<e.def.hp*.5,hh=e.def.h/2;
     bossFly(e,p.x+Math.sin(e.t*.01)*110,bossAlt(e,p,Math.sin(e.t*.023)*34),enr?2.2:1.6,.04);e.face=p.x>e.x?1:-1;
     if(e.mem.shell>0){e.mem.shell--;e.mem.shield=Math.max(e.mem.shield||0,1);if(e.t%3===0)spawn(e.x+(R()-.5)*20,e.y+(R()-.5)*30,0,0,rgb(220,230,255),8,0,1,0,1);}
@@ -86,7 +84,7 @@ defineEnemy('ultron_prime',{hp:2000,w:18,h:30,fly:true,score:0,boom:18,glow:'*@'
     else if(a%6===4){e.mem.shell=200;fxWord(e.x,e.y-hh-6,'ADAMANTIUM.',1,'#d8e4ff',true);snd('clang',e.x,e.y);e.cd=50;} // Adamantium Shell
     else if(a%6===5&&bossDist(e)<140){for(let k=0;k<6;k++){const an=k/6*6.283;zap(e.x,e.y,e.x+Math.cos(an)*60,e.y+Math.sin(an)*60,[255,200,190],[255,40,40]);}if(bossDist(e)<110)hurtTarget(e,18);explode(e.x|0,e.y|0,8,{self:true,enemy:true,dmg:0,col:[255,60,40]});fxWord(e.x,e.y-hh-6,'OVERLOAD!',1.2,'#ff6b5c',true);e.cd=70;} // Overload Pulse
     else{const host=enemies.find(o=>o.def.name==='swarmbot'&&Math.hypot(o.x-e.x,o.y-e.y)<150);if(host&&e.hp<e.def.hp*.9){zap(e.x,e.y,host.x,host.y,[255,200,190],[255,40,40]);host.mem.noScore=true;host.hp=0;e.hp=Math.min(e.def.hp,e.hp+e.def.hp*.06);fxWord(e.x,e.y-hh-6,'UPLOADED.',1,'#ff6b5c',true);}e.cd=40;}}}); // Upload: eats a drone to repair
-defineEnemy('magneto',{hp:2400,w:16,h:27,fly:true,score:0,boom:16,metal:false,title:'MAGNETO',glow:'',scale:1.28,sprite:SPR_MAGNETO,pal:PAL_MAGNETO,
+defineEnemy('magneto',{hp:2400,w:16,h:27,fly:true,score:0,boom:16,metal:false,title:'MAGNETO',glow:'',scale:1.08,sprite:ARTS.magneto.spr,pal:ARTS.magneto.pal,
   think(e){const p=player(),enr=e.hp<e.def.hp*.5,hh=e.def.h/2;
     bossFly(e,p.x+Math.sin(e.t*.008)*130,bossAlt(e,p,Math.sin(e.t*.02)*30),enr?2:1.5,.04);e.face=p.x>e.x?1:-1;
     if(e.mem.shieldT>0){e.mem.shieldT--;e.mem.shield=1;if(e.t%2===0)for(let k=0;k<3;k++){const a=R()*6.283;spawn(e.x+Math.cos(a)*20,e.y+Math.sin(a)*24,0,0,rgb(200,120,255),6,0,1,0,1);}}else e.mem.shield=0;

@@ -10,7 +10,8 @@ import { rgb as C } from '../world/materials.js';
 import { buf, gbuf } from '../render/canvas.js';
 import { TK } from '../render/titan.js';
 import { drawSprite } from '../render/sprites.js';
-import { PAL_THANOS, SPR_THANOS } from '../heroes/wave5.js';
+import { ARTS } from '../art/index.js';
+const SPR_THANOS=ARTS.thanos.spr,PAL_THANOS=ARTS.thanos.pal;
 
 const H01=(x,y)=>{let h=(x*374761393+y*668265263)|0;h=(h^(h>>>13))*1274126177|0;return((h^(h>>>16))>>>0)/4294967296;};
 const mixc=(a,b,k)=>C((a&255)+((b&255)-(a&255))*k,((a>>8)&255)+(((b>>8)&255)-((a>>8)&255))*k,((a>>16)&255)+(((b>>16)&255)-((a>>16)&255))*k);
@@ -91,9 +92,9 @@ export function drawGalactus(e){const f=e.face,x=e.x,y=e.y,m=e.mem,o={flash:e.fl
 // ================= THANOS =================
 // hero-sized (the user wants "big hero size, not god size"): his playable sprite (heroes/wave5.js) drawn 1.35x,
 // cosmic fire on both fists, the stones blazing when he calls on one. S = titans.js TS (feet at e.y+46*S).
-export function drawThanos(e,STONES,S=1){const f=e.face,x=e.x,m=e.mem,raise=m.act?1:0,sc=1.35,by=e.y+46*S,c=m.act&&STONES[m.act]||[90,170,255];
+export function drawThanos(e,STONES,S=1){const f=e.face,x=e.x,m=e.mem,raise=m.act?1:0,sc=1.17,by=e.y+46*S,c=m.act&&STONES[m.act]||[90,170,255];
   const sw=SPR_THANOS[0].length,sh=SPR_THANOS.length,at=(col,row)=>[x+f*(col+.5-sw/2)*sc,by-(sh-row)*sc];
-  const fh=at(15,16.5),bh=at(1,16.5);
+  const fh=at(18.5,16.5),bh=at(2.5,16.5);
   TK.aura(fh[0],fh[1],raise?26:16,C(c[0],c[1],c[2]),raise?.6:.4);TK.aura(bh[0],bh[1],14,C(90,170,255),.35);
   drawSprite(x,by,0,f,false,SPR_THANOS,PAL_THANOS,e.flash>0?2:0,false,sc);
   for(const [h,k0,big] of [[fh,0,raise],[bh,20,0]])for(let k=0;k<5;k++)TK.flame(h[0]+(k-2)*1.4,h[1]-1,-Math.PI/2+(k-2)*.28,(big?9:5)+H01(k,k0+(ST.frame>>3))*4,big?2.6:1.8,k+k0,big?[C(c[0]*.5,c[1]*.5,c[2]*.5),C(c[0],c[1],c[2]),C(255,255,255)]:BLUEFIRE,{ink:false});

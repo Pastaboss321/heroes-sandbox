@@ -1,4 +1,5 @@
 // Iceman: sprite, palette, rig entry, powers and roster entry.
+import { ARTS } from '../art/index.js';
 import './cyclops.js'; // evaluation order: runs after heroes/cyclops.js
 import { ST } from '../state.js';
 import { ACID, EMPTY, F, G, ICE, KIND, LAVA, NEON, OBSID, R, S, WATER, rgb } from '../world/materials.js';
@@ -16,33 +17,7 @@ import { damageEnemies, enemies, enemyAt, hitEnemy, nearestEnemy } from '../enem
 import { tagged } from './kitlib.js';
 import { applyStatus } from './abilities.js';
 
-export const SPR_ICE=[
-"....iIIIi....",
-"...iI+IIiJ...",
-"...iIIIiJJ...",
-"...iIeIeJJ...",
-"...iIIiJJJ...",
-"....iIJJJ....",
-"..iIIiJJJJJ..",
-".IiI+IIiJJiJ.",
-".IiIIiIJJKiJ.",
-".IiIiIIJJKiJ.",
-".IiKIiIJKKiJ.",
-".IiKiIJJKKiJ.",
-".I+.IIJJK.+J.",
-".++.IJ.JK.++.",
-"....IJ.JK....",
-"....Ii.JK....",
-"...I+...JK...",
-"...Ii...JK...",
-"...Ii...JK...",
-"..IIi...JJK..",
-"..IIi...JJK..",
-"..iiJ...JKK.."];
-const PAL_ICE={i:rgb(128,188,234),I:rgb(200,236,255),J:rgb(68,128,194),K:rgb(38,80,146),'+':rgb(240,255,255),e:rgb(255,255,255)};
 
-// animation rig entry (see render/rig.js)
-ANIM.iceman={leg:14,mid:6,armC:'IiJ',tipC:'+Ii',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:'e',lid:'I'};
 const ICE_POWERS=[
  {n:'Ice Beam',fn:(a,p,use)=>{if(!use(.6))return;let x=a.h.x,y=a.h.y;
    for(let s2=0;s2<300;s2++){x+=a.dx;y+=a.dy;const X=x|0,Y=y|0;if(X<0||X>=W||Y>=H||Y<-SKY)break;const i=Y*W+X,m=t[i];
@@ -148,8 +123,8 @@ export function updSlide(){
 }
 
 
-export const DECOY_PAL=Object.assign({},PAL_ICE,{e:rgb(120,170,220),'+':rgb(200,240,255),J:rgb(120,170,220)});
+export const DECOY_PAL=Object.assign({},ARTS.iceman.pal,{e:rgb(120,170,220),'+':rgb(200,240,255),J:rgb(120,170,220)});
 
 
 // roster entry (CHARS in heroes/index.js)
-export const CHAR_ICEMAN={id:'iceman',name:'Iceman',spr:SPR_ICE,pal:PAL_ICE,pw:7,ph:19,fly:true,fs:3.0,boost:2.0,run:1.9,jump:4.6,hp:330,armor:.75,glow:[150,220,255],cape:null,thrust:()=>R()<.6?rgb(220,245,255):rgb(140,200,250),powers:ICE_POWERS};
+export const CHAR_ICEMAN={id:'iceman',name:'Iceman',pw:7,ph:19,fly:true,fs:3.0,boost:2.0,run:1.9,jump:4.6,hp:330,armor:.75,glow:[150,220,255],cape:null,thrust:()=>R()<.6?rgb(220,245,255):rgb(140,200,250),powers:ICE_POWERS};

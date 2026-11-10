@@ -21,33 +21,7 @@ import { OBJS, placeStruct } from '../ui/spawn.js';
 import { fxDome } from '../render/vfxcore.js';
 import { fig8, nearestN, noTarget } from './kitlib.js';
 
-const SPR_WANDA=[
-"...M..M..M...",
-"...MMMMMMM...",
-"..HMfffFMHh..",
-"..HHefeFHHh..",
-"..HHfFFFHHh..",
-"..HhHfFHhhh..",
-"..ChDDfDDhC..",
-"CPDHDDMDDhDdC",
-"CPDHDMMMDhDdC",
-"CPDhDDMDDhDdC",
-"CPD.DDDDd.DdC",
-"CMm.MMMMm.MmC",
-"CPD.DDDDd.DdC",
-"C...DD.Dd...C",
-"C...DD.Dd...C",
-"C..DD...Dd..C",
-"c..DD...Dd..c",
-"c..DD...Dd..c",
-"c..MM...Mm..c",
-"c.MMM...MMm.c",
-"..MMM...MMm..",
-"..mmm...mmm.."];
-const PAL_WANDA={M:rgb(222,40,110),m:rgb(140,20,70),H:rgb(150,52,40),h:rgb(90,28,24),f:rgb(236,190,160),F:rgb(190,140,112),e:rgb(255,80,130),D:rgb(190,30,50),d:rgb(110,16,30),P:rgb(236,82,92),C:rgb(150,20,40),c:rgb(90,12,26)};
 
-// animation rig entry (see render/rig.js)
-ANIM.wanda={leg:13,mid:6,armC:'PDd',tipC:'MMm',aw:2,al:5,fs:2,sh:[10,7],hide:rect(10,11,7,12),blink:'e',lid:'f',cape:'Cc'};
 const WANDA_POWERS=[
  // a chaos bolt: what it does when it lands is anyone's guess
  {n:'Hex Bolt',fn:(a,p,use)=>{if(!use(6))return;ST.cd=10;shots.push({x:a.h.x,y:a.h.y,vx:a.dx*6,vy:a.dy*6,type:'hex',life:120,col:[255,60,130],home:false,
@@ -113,4 +87,4 @@ const WANDA_POWERS=[
 ];
 
 // roster entry (CHARS in heroes/index.js)
-export const CHAR_WANDA={id:'wanda',name:'Scarlet Witch',spr:SPR_WANDA,pal:PAL_WANDA,pw:7,ph:19,fly:true,fs:3.0,boost:2.0,run:1.9,jump:4.6,hp:300,armor:.8,glow:[255,60,130],cape:null,thrust:()=>pickC([255,70,140]),powers:WANDA_POWERS};
+export const CHAR_WANDA={id:'wanda',name:'Scarlet Witch',pw:7,ph:19,fly:true,fs:3.0,boost:2.0,run:1.9,jump:4.6,hp:300,armor:.8,glow:[255,60,130],cape:null,thrust:()=>pickC([255,70,140]),powers:WANDA_POWERS};

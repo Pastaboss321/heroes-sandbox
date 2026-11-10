@@ -19,33 +19,7 @@ import { damageEnemies, damageLine, enemies, hitEnemy, nearestEnemy } from '../e
 import { applyStatus } from './abilities.js';
 
 // ---- Fantastic Four (Earth-828): pale-blue retro suits with the white 4; Johnny is all flame; Ben is orange rock in blue trunks
-const SPR_REED=[
-"....hhhhh....",
-"...hhhhhhh...",
-"...gffffFg...",
-"...ffkfkFF...",
-"...fffFFFF...",
-"....ffFFF....",
-"..bBBNNNBBb..",
-".bBBBNWNBBBb.",
-".bBBNWNWNBBb.",
-".bBBBNWNBBBb.",
-".bBBBBNBBBBb.",
-".bBBBBBBBBBb.",
-".ffNNNNNNNff.",
-".FF.BBBBB.FF.",
-"....Bb.Bb....",
-"....Bb.Bb....",
-"...Bb...Bb...",
-"...Bb...Bb...",
-"...Bb...Bb...",
-"..NNN...NNN..",
-"..NNN...NNN..",
-"..NNN...NNN.."];
-const PAL_REED={h:rgb(84,58,40),g:rgb(176,176,182),f:rgb(232,190,156),F:rgb(186,140,110),k:rgb(30,26,30),B:rgb(118,168,206),b:rgb(72,112,156),N:rgb(34,48,82),W:rgb(240,242,248)};
 
-// animation rig entry (see render/rig.js)
-ANIM.reed={leg:14,mid:6,armC:'BBb',tipC:'fFF',aw:2,al:7,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null};
 const REED_POWERS=[
  // a fist on a forty-foot arm: everything along the reach is punched out and the end explodes
  {n:'Long Arm Punch',fn:(a,p,use)=>{if(!use(8))return;ST.cd=18;p.punchF=10;const L=Math.min(150,Math.max(40,a.d)),x=a.h.x+a.dx*L,y=a.h.y+a.dy*L;
@@ -106,4 +80,4 @@ const REED_POWERS=[
 ];
 
 // roster entry (CHARS in heroes/index.js)
-export const CHAR_REED={id:'reed',name:'Mr. Fantastic',spr:SPR_REED,pal:PAL_REED,pw:7,ph:19,fly:false,fs:2.6,boost:1,run:2.1,jump:5.2,hp:320,armor:.75,glow:F4C,cape:null,thrust:()=>pickC(F4C),powers:REED_POWERS};
+export const CHAR_REED={id:'reed',name:'Mr. Fantastic',pw:7,ph:19,fly:false,fs:2.6,boost:1,run:2.1,jump:5.2,hp:320,armor:.75,glow:F4C,cape:null,thrust:()=>pickC(F4C),powers:REED_POWERS};

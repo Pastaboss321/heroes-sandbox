@@ -19,33 +19,7 @@ import { damageLine, enemies, hitEnemy, nearestEnemy } from '../enemies/core.js'
 import { groundBelow } from '../ui/spawn.js';
 import { fig8, nearestN, noTarget } from './kitlib.js';
 
-export const SPR_MAGNETO=[
-"....RRRRR....",
-"...RRrRRRR...",
-"..RRfffFRRr..",
-"..RRfkfkFRr..",
-"..rRffFFRRp..",
-"..pRRRRRRRp..",
-".pPRRRRRRRPp.",
-"PRrRRRMRRRrRP",
-"PRrRRMMMRRrRP",
-"PRrRRRMRRRrRP",
-"PRr.RRRRR.rRP",
-"PMm.MMMMM.mMP",
-"PRr.RRRRR.rRP",
-"P...RR.RR...P",
-"P...RR.RR...P",
-"P..RR...RR..P",
-"p..RR...RR..p",
-"p..RR...RR..p",
-"p..MM...MM..p",
-"p.MMM...MMm.p",
-"..MMM...MMm..",
-"..mmm...mmm.."];
-export const PAL_MAGNETO={R:rgb(186,30,42),r:rgb(110,16,24),f:rgb(226,184,150),F:rgb(170,128,100),k:rgb(30,20,24),M:rgb(122,52,152),m:rgb(76,28,98),P:rgb(102,42,126),p:rgb(64,22,82)};
 
-// animation rig entry (see render/rig.js)
-ANIM.magneto={leg:13,mid:6,armC:'RRr',tipC:'MMm',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,12),blink:null,cape:'Pp'};
 const MAG_POWERS=[
  {n:'Magnetic Bolts',fn:(a,p,use)=>{if(!use(6))return;ST.cd=10;for(let k=-1;k<=1;k++){const an=Math.atan2(a.dy,a.dx)+k*.12;shots.push({x:a.h.x,y:a.h.y,vx:Math.cos(an)*6,vy:Math.sin(an)*6,type:'mbolt',life:110,col:[210,130,255],ecol:[210,130,255],boom:5});}}},
  // tear a chunk out of the nearest building (steel first) and hurl it at the cursor
@@ -104,4 +78,4 @@ const MAG_POWERS=[
 ];
 
 // roster entry (CHARS in heroes/index.js)
-export const CHAR_MAGNETO={id:'magneto',name:'Magneto',spr:SPR_MAGNETO,pal:PAL_MAGNETO,pw:7,ph:19,fly:true,fs:3.0,boost:2.0,run:1.8,jump:4.4,hp:330,armor:.75,glow:[200,120,255],cape:null,thrust:()=>pickC([210,140,255]),powers:MAG_POWERS};
+export const CHAR_MAGNETO={id:'magneto',name:'Magneto',pw:7,ph:19,fly:true,fs:3.0,boost:2.0,run:1.8,jump:4.4,hp:330,armor:.75,glow:[200,120,255],cape:null,thrust:()=>pickC([210,140,255]),powers:MAG_POWERS};

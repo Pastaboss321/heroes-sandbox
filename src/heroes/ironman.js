@@ -19,33 +19,7 @@ import { explode } from '../world/destruction.js';
 import { sliceLine } from '../world/slice.js';
 import { drawPix, nearestN, noTarget } from './kitlib.js';
 
-const SPR_IRON=[
-"....rQRRr....",
-"...rQRRRRr...",
-"...QGGGGgr...",
-"...Q**G**r...",
-"...QGGkGgr...",
-"....rGGgr....",
-"..QRrRRRrRr..",
-".QRQRRRRRrRr.",
-".QRQR*@*RrRr.",
-".QrQRRRRRrRr.",
-".GYkYGgGgkYg.",
-".GYkrRrRrkYg.",
-".Gg.RRrRr.Gg.",
-".**.RR.Rr.**.",
-"....QR.Rr....",
-"....QR.Rr....",
-"...GY...Gg...",
-"...QR...Rr...",
-"...QR...Rr...",
-"..QRR...RRr..",
-"..QRR...RRr..",
-"..rrr...rrr.."];
-const PAL_IRON={R:rgb(176,28,28),r:rgb(100,12,16),Q:rgb(232,72,58),G:rgb(214,164,50),Y:rgb(252,216,112),g:rgb(146,104,26),k:rgb(36,12,12),'*':rgb(205,242,255),'@':rgb(225,252,255)};
 
-// animation rig entry (see render/rig.js)
-ANIM.iron={leg:14,mid:6,armC:'QRr',tipC:'**G',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null};
 function drawBuster(s){const x=s.x,y=s.y,f=s.face||1,RED=rgb(176,32,32),GLD=rgb(222,172,64),o={flash:s.fl>0};TK.begin();
   TK.cap(x-6,y-14,x-7,y,5,4,RED,o);TK.cap(x+6,y-14,x+7,y,5,4,RED,o);TK.ell(x,y-22,12,11,RED,o);TK.ell(x,y-22,5,4,GLD,{...o,glow:rgb(150,220,255)});
   const pa=s.punch>0?16:7;TK.cap(x+f*10,y-26,x+f*(10+pa),y-18,5,6,GLD,o);TK.cap(x-f*10,y-26,x-f*12,y-13,5,6,GLD,o);TK.ell(x,y-36,6,5,RED,o);TK.end();TK.glowDot(x+f*2,y-37,0,rgb(210,240,255));}
@@ -107,4 +81,4 @@ const IRON_POWERS=[
 
 
 // roster entry (CHARS in heroes/index.js)
-export const CHAR_IRON={id:'iron',name:'Iron Man',spr:SPR_IRON,pal:PAL_IRON,pw:7,ph:19,fly:true,fs:3.4,boost:2.3,run:1.8,jump:4.3,hp:300,armor:.8,glow:CYAN,cape:null,thrust:()=>R()<.5?rgb(255,200,120):rgb(255,255,230),powers:IRON_POWERS};
+export const CHAR_IRON={id:'iron',name:'Iron Man',pw:7,ph:19,fly:true,fs:3.4,boost:2.3,run:1.8,jump:4.3,hp:300,armor:.8,glow:CYAN,cape:null,thrust:()=>R()<.5?rgb(255,200,120):rgb(255,255,230),powers:IRON_POWERS};

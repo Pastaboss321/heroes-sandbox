@@ -18,33 +18,7 @@ import { damageEnemies, damageLine, enemies, enemyAt, hitEnemy, nearestEnemy } f
 import { groundBelow } from '../ui/spawn.js';
 import { atCursor, fig8, nearestN, noTarget } from './kitlib.js';
 
-const SPR_SPIDEY=[
-"....rRRRr....",
-"...rlRRRRr...",
-"...rwwRwwr...",
-"...rwwRwwr...",
-"...rRkRkRr...",
-"....rRRRr....",
-"..rRRkRkRRr..",
-".lRRbRkRbRRr.",
-".lRrbRkRbrRr.",
-".lRrbkkkbrRr.",
-".lRbbRkRbbRr.",
-".lRbbbRbbbRr.",
-".RRbbbbbbbRR.",
-".rr.bbbbb.rr.",
-"....Bb.Bb....",
-"....Bb.Bb....",
-"...Bb...Bb...",
-"...Bb...Bb...",
-"...Bb...Bb...",
-"..rRR...RRr..",
-"..rRR...RRr..",
-"..rrr...rrr.."];
-const PAL_SPIDEY={R:rgb(200,30,40),r:rgb(120,16,24),l:rgb(240,96,96),B:rgb(44,74,176),b:rgb(28,44,120),w:rgb(240,244,250),k:rgb(20,20,26)};
 
-// animation rig entry (see render/rig.js)
-ANIM.spidey={leg:14,mid:6,armC:'lRr',tipC:'RRr',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null};
 const SPIDEY_POWERS=[
  // sticky web pellets: a hit enemy is wrapped up, a wall gets a splat of web
  {n:'Web Shot',fn:(a,p,use)=>{if(!use(4))return;ST.cd=9;shots.push({x:a.h.x,y:a.h.y,vx:a.dx*7,vy:a.dy*7,type:'web',life:90,grav:.03,col:[236,236,242],
@@ -116,4 +90,4 @@ const SPIDEY_POWERS=[
 ];
 
 // roster entry (CHARS in heroes/index.js)
-export const CHAR_SPIDEY={id:'spidey',name:'Spider-Man',spr:SPR_SPIDEY,pal:PAL_SPIDEY,pw:7,ph:19,fly:false,fs:2.6,boost:1,run:2.5,jump:5.6,hp:300,armor:.75,glow:[240,244,250],cape:null,thrust:()=>R()<.5?rgb(240,240,250):rgb(200,40,50),powers:SPIDEY_POWERS};
+export const CHAR_SPIDEY={id:'spidey',name:'Spider-Man',pw:7,ph:19,fly:false,fs:2.6,boost:1,run:2.5,jump:5.6,hp:300,armor:.75,glow:[240,244,250],cape:null,thrust:()=>R()<.5?rgb(240,240,250):rgb(200,40,50),powers:SPIDEY_POWERS};

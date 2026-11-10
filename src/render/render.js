@@ -14,7 +14,8 @@ import { shade } from '../world/destruction.js';
 import { PP, posePlayer } from './rig.js';
 import { JET_PAL, JET_SPR, SPAWN, drones, jets, pins, shots, strikes, therm, waves } from '../heroes/powers.js';
 import { metalPal } from '../heroes/xmen.js';
-import { DECOY_PAL, SPR_ICE } from '../heroes/iceman.js';
+import { DECOY_PAL } from '../heroes/iceman.js';
+import { ARTS } from '../art/index.js';
 import { FANT_A, FANT_B, FANT_PAL, drawWave2 } from '../heroes/wave2.js';
 import { drawBlob } from '../heroes/venom.js';
 import { glowRGB, hand, mouse, pl_ } from '../player.js';
@@ -119,7 +120,7 @@ export function render(){
   if(pl_.tow&&pl_.grip)drawHammer(pl_.grip.x,pl_.grip.y,Math.atan2(-pl_.tow.dy,-pl_.tow.dx));
   for(const b of therm){const c=b.stuck?((ST.frame+(b.x|0))&2?rgb(255,255,230):rgb(255,220,140)):rgb(255,240,200);pix(b.x,b.y,c,rgb(255,190,90));if(b.stuck){gaddS((b.x-ST.CX)|0,(b.y-ST.CY-1)|0,90,50,10);gaddS((b.x-ST.CX+1)|0,(b.y-ST.CY)|0,90,50,10);}}
   for(const j of jets)drawSprite(j.x,j.y+4,0,j.dir,false,JET_SPR,JET_PAL);
-  if(ST.decoy){drawSprite(ST.decoy.x,ST.decoy.y,0,ST.decoy.face,false,SPR_ICE,DECOY_PAL);if(ST.decoy.hp<ST.decoy.max){const f=Math.max(0,ST.decoy.hp/ST.decoy.max);for(let k=-6;k<=6;k++)pix(ST.decoy.x+k,ST.decoy.y-ST.SH-4,k+6<f*13?rgb(150,220,255):rgb(30,50,70));}}
+  if(ST.decoy){drawSprite(ST.decoy.x,ST.decoy.y,0,ST.decoy.face,false,ARTS.iceman.spr,DECOY_PAL);if(ST.decoy.hp<ST.decoy.max){const f=Math.max(0,ST.decoy.hp/ST.decoy.max);for(let k=-6;k<=6;k++)pix(ST.decoy.x+k,ST.decoy.y-ST.SH-4,k+6<f*13?rgb(150,220,255):rgb(30,50,70));}}
   if(ST.senseT>0)for(const e of enemies){const hw=e.def.w/2+3,hh=e.def.h/2+3,c=(ST.frame>>2)&1?rgb(255,80,60):rgb(255,200,80);for(let k=-hw;k<=hw;k++){pix(e.x+k,e.y-hh,c,c);pix(e.x+k,e.y+hh,c,c);}for(let k=-hh;k<=hh;k++){pix(e.x-hw,e.y+k,c,c);pix(e.x+hw,e.y+k,c,c);}}
   if(pl_.spin>0){for(let k=0;k<3;k++){const an=ST.frame*.7+k*2.09;for(let q2=0;q2<4;q2++){const a2=an-q2*.12;pix(pl_.x+Math.cos(a2)*13,pl_.y-ST.PH/2+Math.sin(a2)*13,q2?rgb(120,170,255):rgb(200,206,216),rgb(90,130,220));}}}
   // gravity well: dark core + accretion ring

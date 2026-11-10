@@ -19,33 +19,7 @@ import { makeBody } from '../world/bodies.js';
 import { bodies, q } from '../world/support.js';
 import { spawn } from '../world/particles.js';
 
-export const SPR_ULTRON=[
-"....sSSSs....",
-"...sSWSSSs...",
-"..sSWSSSSSs..",
-"..SW**S**Ss..",
-"..SSSkSkSSs..",
-"...SS***SS...",
-"....sSSSs....",
-".WSSsSSSsSSs.",
-".WSSs*@*sSSs.",
-".WSkSs*sSkSs.",
-".WSkSSSSSkSs.",
-".WSksSSSskSs.",
-".SS.sSkSs.Ss.",
-".**.sS.Ss.**.",
-"....WS.Ss....",
-"....WS.Ss....",
-"...WS...Ss...",
-"...Wk...ks...",
-"...WS...Ss...",
-"..WSS...SSs..",
-"..WSS...SSs..",
-"..sss...sss.."];
-export const PAL_ULTRON={S:rgb(188,194,208),s:rgb(108,114,130),W:rgb(240,244,250),k:rgb(40,40,52),'*':rgb(255,40,40),'@':rgb(255,130,90)};
 
-// animation rig entry (see render/rig.js)
-ANIM.ultron={leg:14,mid:6,armC:'WSs',tipC:'SSs',aw:2,al:6,fs:2,sh:[10,7],hide:rect(10,11,7,13),blink:null};
 const ULTRON_POWERS=[
  {n:'Encephalo Beam',fn:(a,p,use)=>{if(!use(.9))return;const b=aimFrom(eyes());beamCore(b,{pow:110,rad:1,len:460,w:2+((ST.frame>>1)&1),c:[255,200,190],g:[255,30,30],spark:()=>rgb(255,60+R()*100,50),dmg:5,noAsh:true});}},
  {n:'Concussion Blast',fn:(a,p,use)=>{if(!use(6))return;ST.cd=10;shots.push({x:a.h.x,y:a.h.y,vx:a.dx*7,vy:a.dy*7,type:'repulsor',life:100,boom:9,fire:.1,col:[255,80,60],ecol:[255,80,60]});flash(a.h.x,a.h.y,10,[255,60,40],3);}},
@@ -94,4 +68,4 @@ const ULTRON_POWERS=[
 ];
 
 // roster entry (CHARS in heroes/index.js)
-export const CHAR_ULTRON={id:'ultron',name:'Ultron',spr:SPR_ULTRON,pal:PAL_ULTRON,pw:7,ph:19,fly:true,fs:3.1,boost:2.2,run:1.9,jump:4.4,hp:360,armor:.6,glow:[255,50,40],cape:null,thrust:()=>R()<.6?rgb(255,80,60):rgb(255,200,180),powers:ULTRON_POWERS};
+export const CHAR_ULTRON={id:'ultron',name:'Ultron',pw:7,ph:19,fly:true,fs:3.1,boost:2.2,run:1.9,jump:4.4,hp:360,armor:.6,glow:[255,50,40],cape:null,thrust:()=>R()<.6?rgb(255,80,60):rgb(255,200,180),powers:ULTRON_POWERS};

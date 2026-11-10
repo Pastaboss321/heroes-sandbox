@@ -17,33 +17,7 @@ import { damageCone, damageEnemies, damageLine, enemies, hitEnemy, nearestEnemy 
 import { applyStatus } from './abilities.js';
 import { nearestN, noTarget } from './kitlib.js';
 
-const SPR_JEAN=[
-"....LHHHh....",
-"...LHHHHHh...",
-"..LHfffFHhh..",
-"..HHefeFHhh..",
-"..HHfFFFHhh..",
-"..HhHfFHhhh..",
-"..HhOOfOOhh..",
-".PDHPDODdhDd.",
-".PDHPOOOdhDd.",
-".PDHPDODdhDd.",
-".PDhPDDddkDd.",
-".OokPOOodkOo.",
-".Oo.PDDDd.Oo.",
-"....PD.Dd....",
-"....PD.Dd....",
-"...PD...Dd...",
-"...PD...Dd...",
-"...OO...Oo...",
-"...OO...Oo...",
-"..OOO...OOo..",
-"..OOO...OOo..",
-"..ooo...ooo.."];
-const PAL_JEAN={L:rgb(242,98,54),H:rgb(198,44,28),h:rgb(126,24,16),f:rgb(236,190,158),F:rgb(188,138,110),e:rgb(255,190,110),D:rgb(178,26,36),d:rgb(106,12,20),P:rgb(232,66,66),O:rgb(240,186,58),o:rgb(166,116,28),k:rgb(56,6,12)};
 
-// animation rig entry (see render/rig.js)
-ANIM.jean={leg:13,mid:6,armC:'PDd',tipC:'OOo',aw:2,al:5,fs:2,sh:[10,7],hide:rect(10,11,7,12),blink:'e',lid:'f',cape:'Hh'};
 const JEAN_POWERS=[
  {n:'Telekinesis',tk:{r:12,range:0,tether:true,throwMul:1.7}},
  {n:'Psi Bolts',fn:(a,p,use)=>{if(!use(9))return;ST.cd=14;fxWord(a.h.x,a.h.y-12,'VREEE!',.8,'#ff9ad8',true);for(let k=0;k<3;k++)shots.push({x:a.h.x,y:a.h.y,vx:a.dx*4+(R()-.5)*3,vy:a.dy*4+(R()-.5)*3,type:'psi',life:160,col:[255,120,210],ecol:[255,120,210],boom:6,home:true,delay:k*3});}},
@@ -110,4 +84,4 @@ const JEAN_POWERS=[
 
 
 // roster entry (CHARS in heroes/index.js)
-export const CHAR_JEAN={id:'jean',name:'Jean Grey',spr:SPR_JEAN,pal:PAL_JEAN,pw:7,ph:19,fly:true,fs:3.0,boost:2.1,run:1.9,jump:4.6,hp:320,armor:.8,glow:[255,120,200],cape:null,thrust:()=>R()<.5?rgb(255,150,60):rgb(255,120,210),powers:JEAN_POWERS};
+export const CHAR_JEAN={id:'jean',name:'Jean Grey',pw:7,ph:19,fly:true,fs:3.0,boost:2.1,run:1.9,jump:4.6,hp:320,armor:.8,glow:[255,120,200],cape:null,thrust:()=>R()<.5?rgb(255,150,60):rgb(255,120,210),powers:JEAN_POWERS};

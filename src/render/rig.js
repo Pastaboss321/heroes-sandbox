@@ -1,12 +1,12 @@
-// Procedural animation rig: arm modes, posePlayer. Hero entries of ANIM are added by src/heroes/<hero>.js.
+// Animation rig: arm modes, posePlayer. Hero entries of ANIM come from the hero's art (src/art/<hero>.js, set in heroes/index.js).
 import '../world/destruction.js'; // evaluation order: runs after world/destruction.js
 import { ST } from '../state.js';
 import { mouse } from '../player.js';
 
 export const GLOWCH={e:1,'*':1,'@':1,V:1,'+':1};
-// ---- procedural animation rig. The hero sprite is re-posed every frame before drawing:
-//   leg   first leg row (rows below swing for walking / tuck for jumps / trail in flight)
-//   mid   columns left of this belong to the back leg
+// ---- animation rig. The hero's frame is rebuilt every tick before drawing:
+//   leg   first leg row (rows from here down come from the hand-drawn stance frames)
+//   mid   columns left of this belong to the far leg
 //   armC, tipC  [light, mid, dark] chars for a posed arm and its glove / fist / palm
 //   aw, al, fs  arm thickness, arm length and fist size in pixels (Hulk: thick arms, big fists)
 //   sh    front shoulder [x,y] in sprite space (the sprite faces right)
@@ -15,7 +15,7 @@ export const GLOWCH={e:1,'*':1,'@':1,V:1,'+':1};
 //   cape  chars that hang from the shoulders and never move with the legs
 export const rect=(x0,x1,y0,y1)=>{const r=[];for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)r.push([x,y]);return r;};
 export const ANIM={}; // per-hero rig entries: ANIM.<id> is set in src/heroes/<hero>.js
-export const PP=8; // padding around the posed sprite for limbs that reach out
+export const PP=10; // padding around the posed sprite for limbs that reach out and poses that rise above the head
 const ARM_UP=new Set(['Fire Rain','Comet Strike','Pile Driver','Force Geyser','Lift & Slam','Conjure Chaos','Chaos Unleashed','Gravity Hex','Ward of Vishanti','No More','Giant-Man','Downburst','Heat Wave','Icicle Drop','Mjolnir Pin','Ice Golem','Telekinetic Rip','Blizzard','Phoenix Wings','Storm Call','Lightning Call','Thunderbolt','Tornado','Hailstorm','Phoenix Force','Ice Wall','Ball Lightning','Conductor Strike','Flash Flood','Eye of the Storm','Bifrost','God Blast','Damocles Base']);
 const ARM_BOTH=new Set(['Roar','Thrash','We Are Venom','Force Burst','Force Nova','Crushing Bubble','Hammer Fist','Rock Slam','Supernova','Negative Zone Rift','Thunder Clap','Hex Sphere','Crimson Crush','Mirror Shatter','Magnetic Implosion','Hex Storm','Transmute','Elemental Inversion','Reweave','Crimson Bands','Mirror Fold','Banish','Pym Burst','Chaos Field','EMP Burst','Not Today','Stealth Mode','Adamantium Skeleton','Mystic Shield','Thunderclap','Gale Force','Psychic Wave','Frost Nova','Mind Shield','Levitate Crowd','Debris Storm','Gamma Roar','Energy Shield','Avalanche','Force Cascade','Chronal Aegis','Kang Dynasty']);
 const ARM_VISOR=new Set(['Annihilation Sweep','Bad Luck','Time Loop','Spider-Sense','Tactical Focus','Blackbird Strafe','Puppet Master','Optic Cage','Uncontrolled Blast','Optic Blast','Concussive Burst','Ricochet Shot','Full Power','Optic Sweep','Optic Barrage','Leg Sweep','Visor Overload']);
@@ -51,13 +51,25 @@ export function aimLocal(p,tx=mouse.wx,ty=mouse.wy){
 export function armLen(p,mode){const L=ANIM[ST.CH.id].al;return mode==='punch'?(p.punchF>6?L-1+(10-p.punchF)*1.5:L-1+p.punchF*.6):L-(p.recoilF>3?1.5:0);}
 const POSE={g:[],rows:[]};
 const LGX=-.7071,LGY=-.7071; // key light from the upper left, in sprite space
+// Builds the hero's frame for this tick. Hand-drawn art does the big shapes: the idle body, the signature pose and
+// the leg frames for each stance (src/art). The rig adds what moves on its own: posed arms that track the cursor,
+// the breathing bob, blinks, and the swaying back layer.
 export function posePlayer(p){
-  const A=ANIM[ST.CH.id],spr=ST.SPR,sw=ST.SW,sh=ST.SH,w=sw+PP*2,h=sh+PP*2,G=POSE.g;
+  const HC=ST.CH,A=ANIM[HC.id],art=HC.art,spr=ST.SPR,sw=ST.SW,sh=ST.SH,w=sw+PP*2,h=sh+PP*2,G=POSE.g;
   G.length=w*h;G.fill('.');
   const put=(x,y,ch)=>{x=Math.round(x)+PP;y=Math.round(y)+PP;if(x>=0&&x<w&&y>=0&&y<h)G[y*w+x]=ch;};
-  const n=sh-A.leg,air=!p.ground&&!p.fly,ph=p.walkPh||0,walking=ph>0&&p.ground&&!p.fly;
-  const up=p.crouch>6?2:p.landF>0?1:walking&&Math.abs(Math.cos(ph*2))>.75?1:0; // squash on landing / crouch / weight on each step
-  const mode=armMode(p),hide=new Set(),twoArms=mode&&!['aim','punch','super','visor','chest'].includes(mode);
+  const air=!p.ground&&!p.fly,ph=p.walkPh||0,walking=ph>0&&p.ground&&!p.fly,F=art&&art.frames;
+  let legs=null,up=0; // up: how far the upper body sits down this frame (step weight, crouch, breath)
+  if(F){
+    if(p.fly)legs=HC.id==='iceman'||HC.board?F.fall:F.fly; // surfers keep a wide stance
+    else if(p.cling)legs=F.jump;
+    else if(air)legs=p.vy<0?F.jump:F.fall;
+    else if(p.crouch>6||p.landF>0){legs=F.crouch;up=F.crouchUp;}
+    else if(walking){const i=Math.floor(ph/6.2832*6)%6;legs=F.run[i];up=F.bob[i];}
+    else if(!(p.castF>0)&&(ST.frame%110)<16)up=1; // idle: a slow breath
+  }
+  const sig=!!(art&&art.sig&&p.sigF>0);
+  const mode=sig?null:armMode(p),hide=new Set(),twoArms=mode&&!['aim','punch','super','visor','chest'].includes(mode);
   if(mode&&mode!=='chest'){for(const [x,y] of A.hide){hide.add(y*sw+x);if(twoArms)hide.add(y*sw+(sw-1-x));}}
   // posed arms are thick shaded limbs: shoulder -> (elbow ->) hand, plus a solid fist / glove.
   // The back arm is laid down before the body so the torso overlaps its shoulder; the front arm goes on top.
@@ -73,7 +85,7 @@ export function posePlayer(p){
     if(mode==='aim'||mode==='punch'){const L=aimLocal(p),len=armLen(p,mode),hx=fx+L.lx*len,hy=fy+L.ly*len;
       arm1(front,fx,fy,hx,hy,aw,A.claws?fs:mode==='punch'?fs+1:fs);
       if(A.claws)front.push(()=>{for(let c=-1;c<=1;c++)for(let k=1;k<=3;k++)put(hx+L.lx*(k+.5)-L.ly*c,hy+L.ly*(k+.5)+L.lx*c,A.claws);});}
-    else if(mode==='visor'){arm2(front,fx,fy,fx+1.5,fy-2.5,fx-1.5,2.5,aw,fs);}
+    else if(mode==='visor'){arm2(front,fx,fy,fx+1.5,fy-2.5,fx-1.5,A.eye??4,aw,fs);}
     else if(mode==='slide'){arm1(front,fx,fy,fx+3,fy+al-.5,aw,fs);arm1(back,bx,fy,bx-1,fy+al-1,aw,fs);}
     else if(mode==='hold'){ // overhead lift: elbows out at head height, fists just above the head, load resting on them
       arm2(front,fx,fy,fx+2.5,fy-4.5,fx-1.5,-2.5,aw,fs);arm2(back,bx,fy,bx-2.5,fy-4.5,bx+1.5,-2.5,aw,fs);}
@@ -89,21 +101,21 @@ export function posePlayer(p){
     else if(mode==='cling'){const hx=fx+2.5,hy=fy-al+1.5;arm1(front,fx,fy,hx,hy,aw,fs);arm1(back,bx,fy,fx+1.5,fy+1,aw,fs);
       if(A.claws)front.push(()=>{for(let c=-1;c<=1;c++)for(let k=1;k<=3;k++)put(hx+k*.7,hy-1+c-k*.7,A.claws);});}
   }
+  // the back layer (cape, coat, tail, long hair) hangs behind everything and sways on its own: a slow ripple down its
+  // length, and it trails behind when the hero moves or flies
+  if(art&&art.back){const v=p.vx*p.face,tr=Math.max(-3,Math.min(4,v*(p.fly?1.1:.8))),amp=(A.sway??1)*(p.fly?1.6:Math.abs(v)>.4?1.3:.7),B=art.back;
+    for(let y=0;y<sh;y++){const row=B[y];let any=false;for(let x=0;x<sw;x++)if(row[x]!=='.'){any=true;break;}if(!any)continue;
+      const k=y/sh,dx=Math.round(Math.sin(ST.frame*.11+y*.42)*amp*k-tr*k*k*1.6),dy=air&&p.vy>1.5?-Math.round(Math.min(3,p.vy*.5)*k):0;
+      for(let x=0;x<sw;x++){const ch=row[x];if(ch!=='.')put(x+dx,y+dy+(y<A.leg?up:0),ch);}}}
   for(const f of back)f();
   const blink=A.blink&&(ST.frame%170)<5;
-  for(let y=0;y<sh;y++)for(let x=0;x<sw;x++){let ch=spr[y][x];if(ch==='.'||hide.has(y*sw+x))continue;
-    if(blink&&ch===A.blink)ch=A.lid;
-    if(y<A.leg||(A.cape&&A.cape.includes(ch))){put(x,y+(y<A.leg?up:0),ch);continue;}
-    const k=(y-A.leg+1)/n,side=x<A.mid?1:-1;let dx=0,dy=0;
-    if(p.fly&&(ST.CH.id==='iceman'||ST.CH.board)){dx=-side*Math.round(k*1.2);dy=0;}                // surfing stance on the slide
-    else if(p.fly){dx=-Math.round(k*2.4);dy=-Math.round(k*.6);}                       // legs trail behind in flight
-    else if(air){if(p.vy<0){dx=-side*Math.round(k);dy=-Math.round(k*2.2);}           // tuck on the way up
-                 else dx=-side*Math.round(k*1.6);}                                   // spread on the way down
-    else if(walking){const lift=Math.max(0,Math.sin(ph)*side);if(k>.4){dy=-Math.round(lift*2*k);dx=-side*Math.round(lift*k*1.3);}} // alternate steps: one knee lifts and swings out (front leg forward, back leg back)
-    else if(p.landF>0||p.crouch>6)dx=-side*Math.round(k*(p.crouch>6?2.2:1.4));
-    put(x+dx,y+dy,ch);}
+  // upper body: the idle frame, or the hand-drawn signature pose (which may rise above the head)
+  const U=sig?art.sig:spr,u0=sig?art.sigUp:0;
+  for(let r=0;r<A.leg+u0;r++){const row=U[r],y=r-u0;for(let x=0;x<sw;x++){let ch=row[x];if(ch==='.'||(!sig&&hide.has(y*sw+x)))continue;if(blink&&ch===A.blink)ch=A.lid;put(x,y+up,ch);}}
+  // legs: a hand-drawn stance frame (run cycle, jump, fall, crouch, flight) or the idle legs
+  for(let y=A.leg;y<sh;y++){const row=legs?legs[y-A.leg]:spr[y];for(let x=0;x<sw;x++){const ch=row[x];if(ch!=='.')put(x,y,ch);}}
   for(const f of front)f();
-  if(mode==='chest'){const cx=Math.floor(sw/2),cy=A.leg-4+up,c=(ST.frame>>1)&1?'@':'*';for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++)if(Math.abs(a)+Math.abs(b)<2)put(cx+a,cy+b,c);}
+  if(mode==='chest'){const cx=Math.floor(sw/2),cy=A.sh[1]+1+up,c=(ST.frame>>1)&1?'@':'*';for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++)if(Math.abs(a)+Math.abs(b)<2)put(cx+a,cy+b,c);}
   const R2=POSE.rows;R2.length=h;for(let y=0;y<h;y++)R2[y]=G.slice(y*w,(y+1)*w).join('');
   return R2;
 }
