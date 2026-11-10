@@ -75,6 +75,6 @@ export function setChar(i){
   rings.push({x:p.x,y:p.y-ST.PH/2,r:2,vr:2.5,life:16,c:ST.CH.glow},{x:p.x,y:p.y-ST.PH/2,r:12,vr:-.6,life:16,c:ST.CH.glow});flash(p.x,p.y-ST.PH/2,40,ST.CH.glow,10);
   for(let k=0;k<40;k++){const a=R()*6.283;spawn(p.x,p.y-ST.PH/2,Math.cos(a)*2,Math.sin(a)*2,ST.CH.thrust(),20,0,1,0,1);}
   const sel=document.getElementById('char');if(sel)sel.value=ST.CH.id;
-  const bd=document.getElementById('badge');if(bd){bd.textContent=ST.CH.name[0];bd.style.background=HERO_UI[ST.CH.id]||'#2f8f4e';document.getElementById('hero').textContent=ST.CH.name.toUpperCase();}
+  const bd=document.getElementById('badge');if(bd){bd.textContent=ST.CH.name[0];bd.style.background=HERO_UI[ST.CH.id]||'#2f8f4e';if(ST.badgeHook)ST.badgeHook(bd);document.getElementById('hero').textContent=ST.CH.name.toUpperCase();}
 }
 export { cast, castUlt, selPowerHook, setSelHook } from './kit.js'; // the cast pipeline lives in heroes/kit.js

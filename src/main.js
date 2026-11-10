@@ -37,6 +37,7 @@ import { triggerEvent } from './maps/events.js';
 import { PLACED } from './maps/setpieces.js';
 import './enemies/sinister.js'; // Hand ninjas, pumpkin drones, illusions, the Goblin, Mysterio and Sandman bosses, the training dummy
 import './modes/sinister.js';
+import './ui/onboard.js'; // first-run coach
 
 resize();
 onViewResize(()=>resizeGL(VW,VH)); // the zoom resized the sim canvas (ui/zoom.js)

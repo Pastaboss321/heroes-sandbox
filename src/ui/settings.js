@@ -28,3 +28,5 @@ document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('but
 $('sback').onclick=closeSettings;
 $('msettings').onclick=()=>openSettings('menu');
 $('psettings').onclick=()=>openSettings('pause');
+
+$('scoach').onclick=()=>{try{localStorage.removeItem('ironsorc.coach');}catch(e){}$('scoach').textContent='IT WILL PLAY ON YOUR NEXT RUN';};

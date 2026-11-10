@@ -392,3 +392,49 @@ harness leaves them hovering above the dummies.
 - Boss Rush got longer rather than getting a second variant: one mode, more to fight. Its record table is the
   same key, so an old best score stays (it is now easier to beat).
 - The old boss versions of Juggernaut, Ultron and Magneto keep their AI; only their sprites changed (stage 2).
+
+## Stage 7: UI and onboarding
+
+### Hero select
+
+- **Portraits.** Every hero card shows the hero's sprite, drawn from the same art and with the same outline and
+  lighting as in game (`src/ui/portrait.js`). The eight new heroes carry a NEW tag.
+- **Filters and search** above the grid: ALL, NEW, FLIERS, GROUND, HEAVY (420+ health), FAST (run 2.3+), and a
+  name search. With 44 heroes the grid needed a way in.
+- **Hero panel** under the grid for the selected hero: an animated figure (idle, run cycle, signature pose),
+  bars for health, armour, speed and jump, the trait and its awakened state in full, and the whole kit as chips
+  coloured by kind (tap, hold, move, ultimate). The trait used to be one line of small text on the card.
+
+### Power bar
+
+- Each power shows its **energy cost** (per second for hold powers), after the balance multipliers. Ultimates
+  show none.
+- Kind detection was fixed in stage 1 and 5, so the hold (blue) and move (green) stripes are now right on all
+  638 powers.
+
+### HUD
+
+- The hero badge is the **hero's face** instead of an initial.
+- (From stage 3) aggregated damage numbers, hero-coloured sound words.
+
+### Spawn menu
+
+- New tool **Map Event**: starts the current map's event on demand.
+- New enemy **Training Dummy**: never dies, for reading damage numbers. The stage 6 enemies and bosses appear
+  in the list automatically.
+
+### Onboarding
+
+- **First-run coach** (`src/ui/onboard.js`): a small panel above the power bar that teaches the controls by
+  waiting for the player to use them. Steps: run and jump; take off (fliers only); use a power; pick another
+  power; break something; ultimate; the spawn menu (sandbox only). It shows once, has a SKIP button, hides in
+  menus and on pause, and Settings has REPLAY THE TUTORIAL.
+
+### Settings added over the overhaul
+
+DAMAGE NUMBERS, MAP EVENTS, REPLAY THE TUTORIAL. All default on; all saved with the others.
+
+### Known issues
+
+- Long hero names wrap to two lines on the narrow cards (Black Widow, Green Goblin).
+

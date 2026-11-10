@@ -42,6 +42,7 @@ export function startRun(modeId,hero,map){
   helpEl.style.display=ST.MODE.sandbox?'':'none'; // H still toggles it
   bossBar(null);if(ST.MODE.setup)ST.MODE.setup(ST.MS);
   overlay(null);ST.GS='play';
+  if(ST.coachHook)ST.coachHook(); // first run only: the how-to-play coach (ui/onboard.js)
 }
 export function endRun(){
   ST.GS='over';const id=ST.MODE.id,res=ST.MODE.result?ST.MODE.result(ST.MS):{title:'RUN OVER',lines:[]},best=bestOf(id),nb=ST.score>best;

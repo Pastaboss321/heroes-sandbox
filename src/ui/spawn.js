@@ -55,6 +55,7 @@ const TERRAIN=[SAND,DIRT,STONE,CONC,STEEL,GLASS,WOOD,LEAF,GRASS,ICE,SNOW,OBSID,N
 const TOOLS=[
  {id:'erase',label:'Eraser',kind:'paint',icon:iconRects([['#f3e9d2',3,5,10,6],['#e23b2e',3,5,4,6]])},
  {id:'boom',label:'Explosion',kind:'place',icon:iconRects([['#ffc93c',3,3,10,10],['#e23b2e',5,5,6,6]]),tip:'size = brush'},
+ {id:'event',label:'Map Event',kind:'place',icon:iconRects([['#ffc93c',2,2,12,3],['#ffc93c',7,5,2,6],['#e23b2e',6,12,4,3]]),tip:'starts this map\'s event'},
  {id:'bolt',label:'Lightning',kind:'place',icon:iconRects([['#d8e4ff',8,1,2,5],['#d8e4ff',6,6,2,4],['#d8e4ff',8,10,2,5]])},
  {id:'fire',label:'Ignite',kind:'paint',icon:iconRects([['#ff8c1e',4,6,8,8],['#ffd250',6,3,4,6]])},
  {id:'freeze',label:'Freeze',kind:'paint',icon:iconRects([['#bfe3ff',7,1,2,14],['#bfe3ff',1,7,14,2],['#ffffff',6,6,4,4]])},
@@ -100,5 +101,6 @@ export function useTool(){const T=SPAWN.tool;if(!T||ST.GS!=='play')return;const 
     for(let k=1;k<=n;k++)paintDisc(lx+(x-lx)*k/n|0,ly+(y-ly)*k/n|0,r,m);SPAWN.lx=x;SPAWN.ly=y;if(ST.frame%6===0)snd(m===EMPTY?'pop':'step',x,y,{v:.3});return;}
   if(T.id==='boom'){if(first)explode(x,y,r*2+3,{fire:.25});return;}
   if(T.id==='bolt'){if(first)lightningStrike(x,y,8);return;}
+  if(T.id==='event'){if(first&&ST.mapEventHook)ST.mapEventHook();return;}
   if(T.id==='fire'){for(let n=0;n<r*r;n++){const X=x+(R()-.5)*r*2|0,Y=y+(R()-.5)*r*2|0;if(X<0||X>=W||Y<0||Y>=H)continue;const i=Y*W+X,m=t[i];if(FLAM[m]>0)ignite(i);else if(!m&&R()<.3)setc(i,FIRE);}return;}
   if(T.id==='freeze'){if(ST.frame%4===0)freezeArea(x,y,r*2+2,90,0);for(let n=0;n<r*r;n++){iceAt(x+(R()-.5)*r*2,y+(R()-.5)*r*2);}return;}}

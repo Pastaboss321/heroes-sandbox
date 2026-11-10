@@ -77,7 +77,7 @@ export function loop(now){
   else{ambience('fire',0);ambience('lava',0);ambience('rain',0);ambience('wind',0);}
   ST.frameMs=ST.frameMs*.95+(performance.now()-a)*.05;
   fpsN++;fpsT+=dt;if(fpsT>=500){ST.fps=fpsN*1000/fpsT;fpsN=0;fpsT=0;}
-  hudUlt();hudTrait();hpEl.style.width=Math.max(0,pl_.hp/ST.CH.hp*100)+'%';enEl.style.width=Math.max(0,pl_.en)+'%';
+  hudUlt();hudTrait();if(ST.coachTick)ST.coachTick();hpEl.style.width=Math.max(0,pl_.hp/ST.CH.hp*100)+'%';enEl.style.width=Math.max(0,pl_.en)+'%';
   {const tc=$('toolchip'),T=SPAWN.tool,st=[SPAWN.pause&&'PHYSICS PAUSED',SPAWN.slow&&'SLOW MOTION',SPAWN.god&&'GOD MODE',SPAWN.inf&&'INFINITE ENERGY',SPAWN.peace&&'PEACEFUL'].filter(Boolean);
    const txt=T?'PLACING '+T.label.toUpperCase()+' · RIGHT-CLICK CANCELS'+(T.kind==='paint'||T.id==='boom'||T.id==='boulder'?' · [ ] BRUSH '+SPAWN.brush:''):st.join(' · ');tc.style.display=txt&&ST.GS==='play'?'block':'none';if(tc.textContent!==txt)tc.textContent=txt;}
   {const d=pwDiv.children[ST.cur],f=d&&d.lastChild;if(f&&f.className==='cdf')f.style.width=(ST.cd>0?Math.min(100,ST.cd/ST.cdMax*100):0)+'%';}

@@ -104,3 +104,5 @@ export function updEvents(mapId) {
   else if (SET.events !== false && ST.GS === 'play' && EVENTS[mapId] && --wait <= 0) triggerEvent(mapId);
   ST.pctx = p0;
 }
+
+ST.mapEventHook = () => triggerEvent(forMap); // the spawn menu's Map Event tool

@@ -48,6 +48,7 @@ export function finalizeKits(CHARS) {
       if (pw.cost != null || pw.cd != null) { const f = pw.fn; pw.fn = (a, p, use) => { if (pw.cost != null && !use(pw.cost)) return; if (pw.cd != null) ST.cd = pw.cd; return f(a, p, use); }; pw.src = f; }
       pw.hero = c.id; pw.i = i; pw.kindC = kindOf(pw.src ? { ...pw, fn: pw.src } : pw); pw.sig = sigOf(c.id, pw.n);
       const b = bal[pw.n]; pw.costK = b && b.cost != null ? b.cost : 1; pw.cdK = b && b.cd != null ? b.cd : 1;
+      const m = pw.cost == null && /use\(\s*([\d.]+)\s*\)/.exec(String(pw.src || pw.fn)), c0 = pw.cost != null ? pw.cost : m ? +m[1] : null; pw.costN = c0 == null || pw.ult ? null : c0 * pw.costK; // shown on the power bar
       BY_NAME.set(c.id + '/' + pw.n, pw);
     });
     for (const n in bal) if (!seen.has(n)) console.warn('balance entry for a missing power:', c.id, n);
