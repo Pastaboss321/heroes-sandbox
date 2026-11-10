@@ -9,7 +9,7 @@ import { bodies } from '../world/support.js';
 import { pvx, pvy, px, py, spawn, spawnFlake } from '../world/particles.js';
 import { flash, fxBurst, fxWord } from '../render/fx.js';
 import { explode } from '../world/destruction.js';
-import { ANIM, rect } from '../render/rig.js';
+import '../render/rig.js'; // kept for evaluation order
 import { snd, sndLoop } from '../sfx.js';
 import { lightning, lightningStrike, pickC, shots, surfaceY, zap } from './powers.js';
 import { ACT, iceAt } from './xmen.js';

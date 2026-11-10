@@ -6,9 +6,9 @@ import { H, W, col, setc, t } from '../world/grid.js';
 import { bodies } from '../world/support.js';
 import { spawn } from '../world/particles.js';
 import { beams, flash, fxImpact, fxWord, rings } from '../render/fx.js';
-import { ANIM, rect } from '../render/rig.js';
+import '../render/rig.js'; // kept for evaluation order
 import { snd, sndLoop } from '../sfx.js';
-import { CYAN, beamCore, isMetal, pickC, shieldAs, shockFx, shots, therm } from './powers.js';
+import { CYAN, beamCore, isMetal, pickC, shockFx, shots, therm } from './powers.js';
 import { ACT, aimFrom } from './xmen.js';
 import { carve, hand, mouse, pl_ } from '../player.js';
 import { damageLine, enemies, hitEnemy, nearestEnemy } from '../enemies/core.js';

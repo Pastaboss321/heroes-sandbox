@@ -15,7 +15,7 @@ import { ST } from '../state.js';
 import { FIRE, GFIRE, KIND, LAVA, P, PROPANE, R, SMOKE, SNOW, WATER, ICE, rgb } from '../world/materials.js';
 import { H, W, t } from '../world/grid.js';
 import { spawn } from '../world/particles.js';
-import { beams, flash, fxWord, rings } from '../render/fx.js';
+import { beams, fxWord } from '../render/fx.js';
 import { snd } from '../sfx.js';
 
 export const summons=[];

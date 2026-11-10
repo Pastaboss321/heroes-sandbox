@@ -1,7 +1,7 @@
 // Iconic New York landmarks for the Marvel Manhattan: Avengers Tower, the Baxter Building, the Sanctum
 // Sanctorum and the Daily Bugle. Each takes the street x and ground y and returns the x after it.
-import { CONC, EMPTY, GLASS, NEON, STEEL, STONE, WOOD, rgb } from '../world/materials.js';
-import { H, W, bg, col, setc, sxy, t } from '../world/grid.js';
+import { CONC, EMPTY, GLASS, NEON, STEEL, STONE, rgb } from '../world/materials.js';
+import { H, W, col, setc, t } from '../world/grid.js';
 import { bgRect, fill, tint } from './gen.js';
 import { building, glassTower } from './city.js';
 

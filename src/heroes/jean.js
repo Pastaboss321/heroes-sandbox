@@ -8,9 +8,9 @@ import { makeBody } from '../world/bodies.js';
 import { crumble, pg, pl, pvx, pvy, px, py, spawn } from '../world/particles.js';
 import { beams, flash, fxBurst, fxImpact, fxWord, rings } from '../render/fx.js';
 import { explode } from '../world/destruction.js';
-import { ANIM, rect } from '../render/rig.js';
+import '../render/rig.js'; // kept for evaluation order
 import { snd } from '../sfx.js';
-import { shieldAs, shockFx, shots } from './powers.js';
+import { shockFx, shots } from './powers.js';
 import { ACT } from './xmen.js';
 import { hand, mouse, pl_, toggleFly } from '../player.js';
 import { damageCone, damageEnemies, damageLine, enemies, hitEnemy, nearestEnemy } from '../enemies/core.js';

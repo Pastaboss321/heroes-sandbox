@@ -10,7 +10,7 @@ numbers. Newest stage last.
   tag sat on more than two heroes (412 powers kept, about 110 retired or swapped for new ones in `kits4a/4b.js`).
   It was rejected as a change for the worse. Lesson applied to this overhaul: **no existing power is retired,
   renamed or replaced, and no quota is imposed on kits.** Kits keep their names, order and behaviour.
-- Baseline measured before touching anything: 36 heroes, 523 powers. A hash of every hero's power list (names,
+- Baseline measured before touching anything: 36 heroes, 521 powers. A hash of every hero's power list (names,
   order, which one is the ultimate, which are held grabs) was recorded so later stages can prove nothing moved.
 - The Obsidian vault named in `CLAUDE.md` was not used for this overhaul; the code and the brief are the source.
 
@@ -41,7 +41,7 @@ numbers. Newest stage last.
 ### Proof nothing moved
 
 After the codemod the per-hero hash of power names, order, ultimate and grab flags is identical to the baseline for
-all 36 heroes (523 powers). Every power of every hero was then cast in a sandbox run with no exception thrown.
+all 36 heroes (521 powers). Every power of every hero was then cast in a sandbox run with no exception thrown.
 
 ### Dead code removed (18 power definitions that never reached the bar)
 
@@ -87,7 +87,7 @@ power got: `docs/overhaul/balance-table.md`.
   Weak powers get the full nudge: cost x0.8 (x0.65 beyond 5x), cooldown x0.85 (x0.7). Strong powers get half:
   cost x1.12 (x1.25), cooldown x1.1 (x1.2). **A hero's basic attack (first on the bar) is never made dearer.**
   Utility powers that deal no damage are not touched. Ultimates are not touched.
-- Result: **95 of 523 powers adjusted** (50 cheaper or faster, 45 dearer or slower). No power changed by more
+- Result: **95 of 521 powers adjusted** (50 cheaper or faster, 45 dearer or slower). No power changed by more
   than 35% down or 25% up. The list is `src/heroes/balance.js`.
 - Hero stats: **Doom armor 1.0 -> 0.85.** He took full damage in plate armour and had the lowest effective health
   on the roster (300). All other base stats are unchanged.
@@ -410,7 +410,7 @@ harness leaves them hovering above the dummies.
 - Each power shows its **energy cost** (per second for hold powers), after the balance multipliers. Ultimates
   show none.
 - Kind detection was fixed in stage 1 and 5, so the hold (blue) and move (green) stripes are now right on all
-  638 powers.
+  641 powers.
 
 ### HUD
 
@@ -438,3 +438,76 @@ DAMAGE NUMBERS, MAP EVENTS, REPLAY THE TUTORIAL. All default on; all saved with 
 
 - Long hero names wrap to two lines on the narrow cards (Black Widow, Green Goblin).
 
+
+## Stage 8: performance and cleanup
+
+### Performance
+
+- **The sim step visits only awake chunks** (`world/sim.js`). It used to test every chunk once per cell row:
+  about 181,000 checks a tick on a city map (1080 rows x 168 chunk columns) even when nothing moved. It now picks
+  out the awake chunks once per chunk row (34 x 168 = 5,700 checks) and the 32 cell rows inside visit only
+  those. Order of updates is unchanged (bottom to top, alternating direction per row), so the sim behaves the
+  same. A quiet Forest map steps in 0.45 ms.
+- **No regression from the overhaul.** Same benchmark on the pre-overhaul build and this one (production
+  builds, City, 25 enemies, the Torch casting every 20 ticks, 400 ticks, both run back to back):
+
+| | tick | of which sim | render |
+|---|---|---|---|
+| Before (`6ef4b7e`) | 4.9 - 8.6 ms | 4.4 - 8.0 ms | 14.5 - 19.3 ms |
+| After | 4.2 - 5.3 ms | 3.8 - 4.8 ms | 8.9 - 16.1 ms |
+
+  The spread is the test browser (a throttled, software-rendered pane), not the game; with the pane in front
+  the new build measured 1.7 - 2.2 ms a tick and 1.7 - 3.0 ms a render. The honest reading is "no slower".
+- New per-frame work is small and bounded: sprite lighting touches the ~500 pixels of the hero; trails emit at
+  most two particles a tick; damage numbers are capped at 40; events run one at a time.
+- Build size: 1,372 kB -> 1,495 kB (gzip 456 -> 495 kB) for 8 heroes, 44 sets of art, set pieces, events,
+  enemies, a mode and the UI.
+
+### Cleanup
+
+- `scripts/deadcode.mjs` (kept): removed **133 unused import names** across `src/` (an import whose names all
+  went became a bare `import 'x'`, so module evaluation order did not change) and 2 unused constants.
+- Removed the two boss definitions in `enemies/bosses.js` that a later `defineEnemy` with the same name
+  overwrote (the first Juggernaut and the first Magneto never spawned).
+- From earlier stages: 18 unreachable power definitions, the four patch-layer kit files, `ULTS` / `markUlt`,
+  72 old sprite and palette constants and the per-hero rig entries, the per-pixel leg swing code.
+- **Duplicate powers**: none found. No two heroes share a power function, and no power name appears twice in
+  a kit (`finalizeKits` now warns if one ever does).
+- The script lists 21 exports nothing imports (for example `aoeR`, `isTitan`, `HERO_DARK`). They are left in:
+  several are debugging handles and none costs anything after tree-shaking.
+
+### Verification at the end
+
+- `npm run build` and `npm run build:mobile` succeed; the production build loads and runs with 44 heroes.
+- Every power of all 44 heroes cast in a sandbox run: no exceptions.
+- The 36 original kits hash identical to the pre-overhaul baseline (names, order, ultimates, grabs).
+- All 11 modes started and fought; all 7 bosses fought; 16 maps generated with their events run.
+
+## Summary
+
+| Deliverable | State |
+|---|---|
+| Every hero redrawn, with frames and VFX | 44 heroes in `src/art`; idle + signature pose each, shared hand-drawn stance frames; per-hero impact, trail and default signature |
+| Eight new heroes | Daredevil, Hawkeye, Black Widow, Iron Fist, Namor, Sandman, Green Goblin, Mysterio: 15 powers and a trait each |
+| One ability system | `heroes/kit.js`, one definition per power, `heroes/balance.js` for tuning |
+| Maps | 17 set pieces, one event and one colour grade per map, on all 16 maps |
+| Modes, enemies, UI, HUD | Sinister Night, 7-boss Boss Rush, 4 enemies, 3 bosses; hero select, power costs, coach |
+| Commits | eight, one per stage, on `art-overhaul-pilot` (not pushed) |
+
+### Known issues and next steps
+
+1. **Art is a first pass.** All of it was drawn in one sitting as character grids and checked on contact sheets,
+   not animated by hand frame by frame per hero. Legs in motion are shared per body type. A second pass should
+   give the most-played heroes their own run and attack frames, and Hawkeye a bow in the rig.
+2. **Bespoke signature effects for the new heroes.** They use the default signature; the 36 older heroes have 137
+   hand-made ones between them.
+3. **Balance is measured in one scenario.** Two stationary dummies on flat ground. Powers that need crowds,
+   walls, water or flying targets are under-measured, and fliers are measured hovering. Nudges were capped for
+   that reason. The harness and report scripts are in `scripts/` to rerun after play-testing.
+4. **Map layouts are the old generators plus set pieces.** Sakaar, Knowhere and the Dark Dimension get few
+   pieces because they have little level ground; overpasses rarely fit.
+5. **Bigger hit boxes.** Heroes are 16% taller. Nothing was found that they no longer fit through, but only the
+   spawn areas of each map were walked.
+6. **Not play-tested by a person.** Everything above was verified by scripts and screenshots. Feel, difficulty
+   of the new bosses and whether the coach is paced right need a human run.
+7. The Obsidian vault has one Dev Log entry pointing here; the per-system notes were not rewritten.

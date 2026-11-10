@@ -7,7 +7,7 @@ import { bodies, gnd } from '../world/support.js';
 import { solidAt, spawn } from '../world/particles.js';
 import { beams, fxWord } from '../render/fx.js';
 import { explode, punchOut, ringChunks } from '../world/destruction.js';
-import { ANIM, rect } from '../render/rig.js';
+import '../render/rig.js'; // kept for evaluation order
 import { snd } from '../sfx.js';
 import { pickC, shockFx, shots } from './powers.js';
 import { ACT } from './xmen.js';

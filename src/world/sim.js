@@ -1,5 +1,5 @@
 // Cellular-automaton step: powders, liquids, gases, fire, lava and acid reactions.
-import { CS, CW, H, N, VW, W, booms, canSink, life, markDirty, rn, setc, stamp, swap, t, vel, wake } from './grid.js';
+import { CS, CW, H, N, VW, W, booms, canSink, life, markDirty, rn, setc, stamp, swap, t, vel, wake, CHN } from './grid.js';
 import { ST } from '../state.js';
 import { ACID, ASH, BONE, CONC, DIRT, EMBER, EMPTY, GOLD, STONE, VIBR, F, FIRE, FLAM, G, GFIRE, GLASS, HARD, ICE, KIND, L, LAVA, OBSID, OIL, P, PROPANE, R, RUBBLE, S, SAND, SMOKE, SNOW, STEAM, STEEL, WATER, WOOD, rgb } from './materials.js';
 import { PHYS } from './physics.js';
@@ -11,25 +11,32 @@ export function step(){
   // long maps: chunks more than a screen away from the view only step every third tick (they stay awake
   // meanwhile), so the cost follows the camera rather than the width of the world
   const near0=((ST.camX-VW)/CS)|0, near1=((ST.camX+VW*2)/CS)|0, fr=ST.frame%3; // far columns take turns, so no tick pays for all of them
-  for(let y=H-1;y>=0;y--){
-    const rowA=(y>>5)*CW, ltr=((ST.frame+y)&1)===0;
-    for(let q=0;q<CW;q++){
-      const cx=ltr?q:CW-1-q; if(!ST.act[rowA+cx])continue;
-      if((cx<near0||cx>near1)&&cx%3!==fr){ST.nxt[rowA+cx]=1;continue;}
-      const xs=cx*CS, xe=xs+CS>W?W:xs+CS;
-      for(let k=xs;k<xe;k++){
-        const x=ltr?k:xe-1-(k-xs), i=y*W+x, m=t[i];
-        if(m===0||stamp[i]===ST.clock)continue;
-        const kd=KIND[m];
-        if(kd===S)continue;
-        if(kd===P)updPowder(i,m,x,y);
-        else if(kd===L)updLiquid(i,m,x,y);
-        else if(kd===G)updGas(i,m,x,y);
-        else reactFire(i,m,x,y);
+  // one pass over the chunk grid per chunk row picks out the awake chunks; the 32 cell rows inside it then visit
+  // only those. A quiet map costs a few thousand checks a tick instead of one per chunk per cell row.
+  for(let cy=CHN-1;cy>=0;cy--){
+    const rowA=cy*CW;let n=0;
+    for(let cx=0;cx<CW;cx++){if(!ST.act[rowA+cx])continue;if((cx<near0||cx>near1)&&cx%3!==fr){ST.nxt[rowA+cx]=1;continue;}AW[n++]=cx;}
+    if(!n)continue;
+    const yTop=cy*CS, yBot=Math.min(H-1,yTop+CS-1);
+    for(let y=yBot;y>=yTop;y--){
+      const ltr=((ST.frame+y)&1)===0;
+      for(let q=0;q<n;q++){
+        const cx=ltr?AW[q]:AW[n-1-q], xs=cx*CS, xe=xs+CS>W?W:xs+CS;
+        for(let k=xs;k<xe;k++){
+          const x=ltr?k:xe-1-(k-xs), i=y*W+x, m=t[i];
+          if(m===0||stamp[i]===ST.clock)continue;
+          const kd=KIND[m];
+          if(kd===S)continue;
+          if(kd===P)updPowder(i,m,x,y);
+          else if(kd===L)updLiquid(i,m,x,y);
+          else if(kd===G)updGas(i,m,x,y);
+          else reactFire(i,m,x,y);
+        }
       }
     }
   }
 }
+let AW=new Int16Array(4096); // awake chunk columns of the chunk row being stepped
 function updPowder(i,m,x,y){
   if(m===EMBER){ wake(i); if(--life[i]===0){setc(i,ASH);return;} const j=rn(i); if(j>=0&&FLAM[t[j]]>0&&R()<.08)ignite(j); }
   if(y>=H-1)return;

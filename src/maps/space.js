@@ -3,7 +3,7 @@
 // destinations of space travel: fly to the top of any sky to leave orbit. Each has its own gravity
 // (MAPDEFS[...].grav) and a black starfield sky.
 import { ST } from '../state.js';
-import { BONE, CONC, DIRT, EMPTY, GLASS, GOLD, ICE, KIND, LAVA, NEON, OBSID, R, RUBBLE, S, SAND, STEEL, STONE, WATER, rgb } from '../world/materials.js';
+import { BONE, CONC, DIRT, EMPTY, GLASS, GOLD, ICE, LAVA, NEON, OBSID, R, RUBBLE, SAND, STEEL, STONE, rgb } from '../world/materials.js';
 import { H, VH, VW, W, bg, bgD, col, setc, sxy, t } from '../world/grid.js';
 import { SURF, bgRect, clearAll, disc, fill, makeFar, tint } from './gen.js';
 import { noise2 } from './city.js';

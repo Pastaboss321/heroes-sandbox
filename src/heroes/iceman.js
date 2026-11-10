@@ -8,7 +8,7 @@ import { bodies, pin, q } from '../world/support.js';
 import { finishBody, makeBody } from '../world/bodies.js';
 import { MP, spawn } from '../world/particles.js';
 import { beams, flash, fxBurst, fxImpact, fxWord, rings } from '../render/fx.js';
-import { ANIM, rect } from '../render/rig.js';
+import '../render/rig.js'; // kept for evaluation order
 import { snd } from '../sfx.js';
 import { shots, surfaceY } from './powers.js';
 import { ACT, freezeArea, iceAt } from './xmen.js';

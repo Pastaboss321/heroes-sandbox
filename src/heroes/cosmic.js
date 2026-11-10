@@ -1,14 +1,14 @@
 // Cosmic newcomers: Captain Marvel (photon powers, Binary mode) and the Silver Surfer (the Power Cosmic,
 // a board that cuts through anything), plus Captain America (a shield that ricochets and slices).
 import { ST } from '../state.js';
-import { EMPTY, FIRE, GFIRE, GLASS, ICE, KIND, LAVA, NEON, R, S, STEEL, STONE, WATER, rgb } from '../world/materials.js';
+import { EMPTY, FIRE, GFIRE, GLASS, ICE, KIND, LAVA, NEON, R, S, WATER, rgb } from '../world/materials.js';
 import { H, W, col, setc, t } from '../world/grid.js';
 import { bodies, q } from '../world/support.js';
 import { spawn } from '../world/particles.js';
 import { afters, beams, flash, fxWord, rings } from '../render/fx.js';
 import { explode } from '../world/destruction.js';
-import { clawSlice, sliceLine } from '../world/slice.js';
-import { ANIM, rect } from '../render/rig.js';
+import { sliceLine } from '../world/slice.js';
+import '../render/rig.js'; // kept for evaluation order
 import { snd } from '../sfx.js';
 import { beamCore, lightningStrike, quake, scriptMove, shockFx, shots, surfaceY, zap } from './powers.js';
 import { ACT } from './xmen.js';
@@ -136,7 +136,6 @@ const SURFER_POWERS=[
 export const CHAR_SURFER={id:'surfer',name:'Silver Surfer',pw:7,ph:19,fly:true,fs:4.4,boost:2.6,run:2,jump:4.6,hp:360,armor:.6,glow:CO,cape:null,thrust:()=>R()<.5?rgb(200,240,255):rgb(120,200,255),powers:SURFER_POWERS,board:true};
 
 // ================= CAPTAIN AMERICA =================
-const SH_R=[200,40,48];
 export function drawShield(s,pix){const R0=4;for(let y=-R0;y<=R0;y++)for(let x=-R0;x<=R0;x++){const d=Math.hypot(x,y);if(d>R0+.3)continue;const c=d<1.3?rgb(236,236,244):d<2.2?rgb(44,74,160):d<3.2?rgb(196,40,48):d<3.9?rgb(236,236,244):rgb(196,40,48);pix(s.x+x,s.y+y,c);}}
 function throwShield(p,a,bounces,cut){shots.push({x:a.h.x,y:a.h.y,vx:a.dx*8,vy:a.dy*8,type:'shield',life:200,boom:0,bounces,cut,hit:new Set(),
   draw:drawShield});snd('whoosh',a.h.x,a.h.y,{pitch:1.2});}

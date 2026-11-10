@@ -8,7 +8,7 @@
 //   Surtur    - Ragnarok's fire giant: the Twilight Sword cuts whole districts in half
 //   Knull     - the King in Black: Necrosword cuts, grasping tendrils, symbiote dragons, the dark
 import { ST } from '../state.js';
-import { EMPTY, FIRE, GLASS, KIND, LAVA, R, RUBBLE, S, STONE, rgb } from '../world/materials.js';
+import { EMPTY, FIRE, GLASS, KIND, LAVA, R, S, STONE, rgb } from '../world/materials.js';
 import { H, W, col, setc, t } from '../world/grid.js';
 import { bodies, gnd } from '../world/support.js';
 import { finishBody } from '../world/bodies.js';

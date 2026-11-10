@@ -4,7 +4,7 @@
 import { ST } from '../state.js';
 import { R } from '../world/materials.js';
 import { beams, rings } from '../render/fx.js';
-import { CURL, DRAG, GRAV, K, RISE, fxBolt, fxCone, fxCrack, fxDome, fxEclipse, fxFlare, fxGlitch, fxHole, fxPillar, fxSigil, fxSlash, fxTask, mixW, pk, puff, screenFlash, sparks, vp, zoomPunch } from '../render/vfxcore.js';
+import { CURL, DRAG, GRAV, K, RISE, fxBolt, fxCone, fxCrack, fxDome, fxEclipse, fxFlare, fxGlitch, fxHole, fxPillar, fxSigil, fxSlash, fxTask, pk, puff, screenFlash, sparks, vp, zoomPunch } from '../render/vfxcore.js';
 import { STONES } from '../render/theme.js';
 import { enemies } from '../enemies/core.js';
 import { groundBelow } from '../ui/spawn.js';

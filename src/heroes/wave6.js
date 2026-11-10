@@ -10,9 +10,9 @@ import { spawn, spawnFlake } from '../world/particles.js';
 import { afters, beams, flash, fxWord, rings } from '../render/fx.js';
 import { explode } from '../world/destruction.js';
 import { clawSlice, sliceLine } from '../world/slice.js';
-import { ANIM, rect } from '../render/rig.js';
+import '../render/rig.js'; // kept for evaluation order
 import { snd } from '../sfx.js';
-import { beamCore, scriptMove, shockFx, shots, surfaceY, zap } from './powers.js';
+import { beamCore, scriptMove, shockFx, shots, zap } from './powers.js';
 import { ACT } from './xmen.js';
 import { solidCells } from './wave2.js';
 import { boxHit, carve, hand, mouse, pl_ } from '../player.js';

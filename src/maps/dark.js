@@ -2,7 +2,7 @@
 // arches, rivers of hellfire lava, and his burning face filling the heavens.
 import { ST } from '../state.js';
 import { EMPTY, LAVA, NEON, OBSID, R, STONE, rgb } from '../world/materials.js';
-import { H, VH, VW, W, bg, bgD, col, setc, sxy, t } from '../world/grid.js';
+import { H, VH, VW, W, bg, bgD, col, setc, t } from '../world/grid.js';
 import { SURF, clearAll, makeFar } from './gen.js';
 import { noise2 } from './city.js';
 import { spawn } from '../world/particles.js';

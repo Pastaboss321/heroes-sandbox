@@ -13,7 +13,7 @@ import { applyStatus, stOf } from './abilities.js';
 import { nearestN } from './kitlib.js';
 import { ACT } from './xmen.js';
 import { TRAITS } from './traits.js';
-import { alive, blink, body, cloak, convert, dash, grapple, hitAround, melee, mouse, puffs, say, seg, shoot, stun } from './newkit.js';
+import { alive, blink, body, cloak, convert, dash, grapple, hitAround, mouse, puffs, say, seg, shoot, stun } from './newkit.js';
 
 const RED = [255, 70, 60], WH = rgb(240, 232, 224), RC = rgb(220, 50, 44), HEX = '#ff5a4a';
 const marked = e => stOf(e).mark > 0 || stOf(e).stun > 0;

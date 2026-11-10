@@ -5,7 +5,7 @@ import { ST } from '../state.js';
 import { KIND, PROPANE, R, S, SAND, SMOKE, rgb } from '../world/materials.js';
 import { H, W, setc, t } from '../world/grid.js';
 import { spawn } from '../world/particles.js';
-import { flash, fxWord, rings } from '../render/fx.js';
+import { fxWord } from '../render/fx.js';
 import { explode } from '../world/destruction.js';
 import { snd } from '../sfx.js';
 import { pl_ } from '../player.js';

@@ -14,7 +14,7 @@ import { applyStatus } from './abilities.js';
 import { ACT } from './xmen.js';
 import { TRAITS, trOf } from './traits.js';
 import { carve } from '../player.js';
-import { blink, body, convert, dash, dot, groundY, hitAround, melee, mouse, puffs, say, shoot, stun } from './newkit.js';
+import { blink, body, convert, dash, dot, groundY, hitAround, melee, mouse, puffs, say, shoot } from './newkit.js';
 
 const GOLD = [255, 214, 90], HEX = '#ffd65a', GC = rgb(255, 220, 110), GD = rgb(255, 160, 40);
 const chi = p => trOf(p);

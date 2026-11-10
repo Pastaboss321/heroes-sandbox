@@ -3,10 +3,10 @@
 // what makes him dangerous: wet enemies take more from him, standing in it heals him, and several powers only
 // reach their full size when there is water under them. He floods the street first and fights second.
 import { ST } from '../state.js';
-import { FIRE, GFIRE, KIND, L, R, WATER, rgb } from '../world/materials.js';
-import { VH, VW } from '../world/grid.js';
+import { FIRE, GFIRE, R, WATER, rgb } from '../world/materials.js';
+import '../world/grid.js'; // kept for evaluation order
 import { spawn } from '../world/particles.js';
-import { beams, flash, fxWord, rings } from '../render/fx.js';
+import { beams, fxWord, rings } from '../render/fx.js';
 import { explode } from '../world/destruction.js';
 import { sliceLine } from '../world/slice.js';
 import { snd } from '../sfx.js';
@@ -14,7 +14,7 @@ import { damageLine, enemies, hitEnemy, nearestEnemy } from '../enemies/core.js'
 import { applyStatus, stOf } from './abilities.js';
 import { ACT } from './xmen.js';
 import { TRAITS } from './traits.js';
-import { body, circ, convert, dash, dot, groundY, hitAround, liquidAt, melee, mouse, paint, say, seg, spray, stun, zone } from './newkit.js';
+import { body, circ, convert, dash, dot, groundY, hitAround, liquidAt, melee, mouse, paint, say, spray, stun, zone } from './newkit.js';
 
 const SEA = [90, 170, 255], HEX = '#6ab4ff', WC = rgb(70, 130, 230), FOAM = rgb(210, 235, 255), GRN = rgb(50, 150, 110);
 const wc = () => R() < .75 ? WC : FOAM;

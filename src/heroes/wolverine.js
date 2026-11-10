@@ -5,7 +5,7 @@ import { KIND, R, S, rgb } from '../world/materials.js';
 import { spawn } from '../world/particles.js';
 import { afters, flash, fxBurst, fxWord, rings } from '../render/fx.js';
 import { explode } from '../world/destruction.js';
-import { ANIM, rect } from '../render/rig.js';
+import '../render/rig.js'; // kept for evaluation order
 import { snd } from '../sfx.js';
 import { pickC, scriptMove, surfaceY } from './powers.js';
 import { ACT, clawSlash, slashFx } from './xmen.js';

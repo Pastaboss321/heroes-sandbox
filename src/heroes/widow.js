@@ -11,7 +11,7 @@ import { enemies, hitEnemy, nearestEnemy } from '../enemies/core.js';
 import { nearestN } from './kitlib.js';
 import { ACT } from './xmen.js';
 import { TRAITS } from './traits.js';
-import { alive, blink, body, circ, cloak, dash, dot, grapple, groundY, hitAround, melee, mouse, paint, puffs, say, seg, shoot, stun, tagd, zone } from './newkit.js';
+import { alive, blink, body, circ, cloak, dash, dot, grapple, groundY, hitAround, melee, mouse, paint, puffs, say, shoot, stun, tagd, zone } from './newkit.js';
 
 const BLU = [120, 200, 255], HEX = '#78c8ff', BC = rgb(120, 200, 255), RED = '#ff4a5a', DARK = rgb(34, 34, 44);
 const deny = (p, s) => { if (ST.frame - (p.denyT || -99) > 20) { p.denyT = ST.frame; say(p, s, HEX, .7); } };

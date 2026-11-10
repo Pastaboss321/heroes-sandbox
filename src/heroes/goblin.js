@@ -12,7 +12,7 @@ import { zap } from './powers.js';
 import { enemies, hitEnemy, nearestEnemy } from '../enemies/core.js';
 import { applyStatus } from './abilities.js';
 import { ACT } from './xmen.js';
-import { TRAITS, trOf } from './traits.js';
+import { TRAITS } from './traits.js';
 import { body, dash, dot, groundY, hitAround, mouse, paint, puffs, say, seg, shoot, spray, stun, tagd, zone } from './newkit.js';
 
 const ORG = [255, 150, 50], GRN = [140, 230, 90], HEX = '#ff9a3c', OC = rgb(255, 140, 40), OD = rgb(200, 80, 20), GC = rgb(90, 190, 70), PUR = rgb(150, 70, 200);

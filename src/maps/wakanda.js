@@ -3,8 +3,8 @@
 // the Great Mound on the right: a mountain laced with glowing vibranium veins, mined by tunnels.
 import { ST } from '../state.js';
 import { CONC, DIRT, EMPTY, GLASS, GRASS, LEAF, NEON, OBSID, R, STEEL, STONE, VIBR, WATER, WOOD, rgb } from '../world/materials.js';
-import { H, VH, VW, W, bg, bgD, col, setc, sxy, t } from '../world/grid.js';
-import { SURF, bgRect, clearAll, disc, fill, makeFar, tint } from './gen.js';
+import { H, VH, W, bg, bgD, col, setc, sxy, t } from '../world/grid.js';
+import { SURF, bgRect, clearAll, fill, makeFar, tint } from './gen.js';
 import { noise2 } from './city.js';
 import { spawn } from '../world/particles.js';
 import { dress, free, jungleTree, room, roundHouse, wkMarket, wkPalace, wkTower } from './realms.js';

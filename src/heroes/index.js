@@ -1,13 +1,13 @@
 // Hero roster (CHARS), setChar and cast.
-import { boxHit, hand, pl_ } from '../player.js';
-import { vfxCast } from '../render/vfxcore.js';
+import { boxHit, pl_ } from '../player.js';
+import '../render/vfxcore.js'; // kept for evaluation order
 import { ST } from '../state.js';
 import { R } from '../world/materials.js';
 import { spawn } from '../world/particles.js';
-import { flash, fxWord, rings } from '../render/fx.js';
+import { flash, rings } from '../render/fx.js';
 import { punchOut } from '../world/destruction.js';
-import { snd } from '../sfx.js';
-import { TSL, aim } from './powers.js';
+import '../sfx.js'; // kept for evaluation order
+import { TSL } from './powers.js';
 import { CHAR_DOOM } from './doom.js';
 import { CHAR_HULK } from './hulk.js';
 import { CHAR_THOR } from './thor.js';
@@ -39,11 +39,11 @@ import { ANIM } from '../render/rig.js';
 import { CHAR_HELA, CHAR_MOON, CHAR_SHANG, CHAR_THANOS } from './wave5.js';
 import { CHAR_GAMBIT, CHAR_KURT, CHAR_MILES, CHAR_QUILL } from './wave6.js';
 import { CHAR_KANG } from './kang.js';
-import { aoeCost } from './aoe.js';
+import './aoe.js'; // kept for evaluation order
 import { resetHeroTimers } from './abilities.js';
-import { SPAWN } from './powers.js';
-import { buildPowerBar, pwDiv } from '../ui/hud.js';
-import { traitCast, traitCost, traitIntro, traitPre, traitUlt } from './traits.js';
+import './powers.js'; // kept for evaluation order
+import { buildPowerBar } from '../ui/hud.js';
+import { traitIntro } from './traits.js';
 import { CHAR_DAREDEVIL } from './daredevil.js';
 import { CHAR_HAWKEYE } from './hawkeye.js';
 import { CHAR_WIDOW } from './widow.js';

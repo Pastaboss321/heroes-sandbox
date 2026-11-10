@@ -2,8 +2,8 @@
 // over the edge of the world, the golden city with Odin's palace at its heart, and the ocean pouring off
 // the far rim into the cosmos. A nebula sky with Yggdrasil's branches behind it.
 import { ST } from '../state.js';
-import { DIRT, EMPTY, GLASS, GOLD, GRASS, NEON, OBSID, R, STEEL, STONE, WATER, WOOD, rgb } from '../world/materials.js';
-import { H, N, VW, W, bg, bgD, col, setc, sxy, t } from '../world/grid.js';
+import { DIRT, EMPTY, GOLD, GRASS, NEON, OBSID, R, STEEL, STONE, WATER, rgb } from '../world/materials.js';
+import { H, VW, W, bg, bgD, col, setc, sxy, t } from '../world/grid.js';
 import { SURF, bgRect, clearAll, disc, fill, makeFar, tint } from './gen.js';
 import { noise2 } from './city.js';
 import { tree } from './forest.js';

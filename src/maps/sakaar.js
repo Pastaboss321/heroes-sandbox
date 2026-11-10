@@ -2,8 +2,8 @@
 // the Grandmaster's tower, the great arena with its stands, and the Devil's Anus wormhole in the sky
 // that keeps dropping junk. Space-side map: stars and wormholes in a hazy amber sky.
 import { ST } from '../state.js';
-import { CONC, DIRT, EMPTY, GLASS, KIND, NEON, OBSID, R, RUBBLE, S, SAND, STEEL, STONE, mkcol, rgb } from '../world/materials.js';
-import { H, VH, VW, W, bg, bgD, col, setc, sxy, t } from '../world/grid.js';
+import { CONC, DIRT, EMPTY, GLASS, NEON, OBSID, R, RUBBLE, SAND, STEEL, STONE, mkcol, rgb } from '../world/materials.js';
+import { H, VW, W, bg, bgD, col, setc, t } from '../world/grid.js';
 import { SURF, bgRect, clearAll, disc, fill, makeFar, tint } from './gen.js';
 import { noise2 } from './city.js';
 import { bodies } from '../world/support.js';

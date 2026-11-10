@@ -6,7 +6,7 @@ import { H, VH, W, col, setc, t } from '../world/grid.js';
 import { mix3 } from '../render/look.js';
 import { beams, flash, fxWord, rings } from '../render/fx.js';
 import { explode, punchOut } from '../world/destruction.js';
-import { ANIM, rect } from '../render/rig.js';
+import '../render/rig.js'; // kept for evaluation order
 import { snd } from '../sfx.js';
 import { aim, beamCore, drones, grabRegion, isMetal, shockFx, shots, zap } from './powers.js';
 import { ACT, aimFrom, eyes } from './xmen.js';

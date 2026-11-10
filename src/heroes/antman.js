@@ -8,7 +8,7 @@ import { fill, tint } from '../maps/gen.js';
 import { spawn } from '../world/particles.js';
 import { afters, flash, fxWord, rings } from '../render/fx.js';
 import { explode, punchOut } from '../world/destruction.js';
-import { ANIM, rect } from '../render/rig.js';
+import '../render/rig.js'; // kept for evaluation order
 import { snd } from '../sfx.js';
 import { pickC, quake, scriptMove, shockFx, shots, zap } from './powers.js';
 import { ACT } from './xmen.js';

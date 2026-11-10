@@ -2,10 +2,10 @@
 import './powers.js'; // evaluation order: runs after heroes/powers.js
 import { ST } from '../state.js';
 import { clawSlice } from '../world/slice.js';
-import { ACID, EMPTY, F, G, ICE, KIND, LAVA, OBSID, R, RUBBLE, S, STEAM, STEEL, WATER, cl, rgb } from '../world/materials.js';
-import { H, W, col, setc, t } from '../world/grid.js';
+import { ACID, EMPTY, F, G, ICE, KIND, LAVA, OBSID, STEAM, WATER, cl, rgb } from '../world/materials.js';
+import { H, W, setc, t } from '../world/grid.js';
 import { lumC } from '../render/look.js';
-import { spawn } from '../world/particles.js';
+import '../world/particles.js'; // kept for evaluation order
 import { beams } from '../render/fx.js';
 import { bgHit } from '../world/destruction.js';
 import { snd } from '../sfx.js';

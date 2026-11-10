@@ -7,9 +7,9 @@ import { bodies } from '../world/support.js';
 import { pvx, pvy, px, py, spawn } from '../world/particles.js';
 import { afters, beams, flash, fxBurst, fxImpact, fxWord, rings } from '../render/fx.js';
 import { explode } from '../world/destruction.js';
-import { ANIM, rect } from '../render/rig.js';
+import '../render/rig.js'; // kept for evaluation order
 import { snd, sndLoop } from '../sfx.js';
-import { BLUE, beamCore, lightning, lightningStrike, pickC, pins, shots, surfaceY, zap } from './powers.js';
+import { BLUE, beamCore, lightningStrike, pickC, pins, shots, surfaceY, zap } from './powers.js';
 import { ACT, aimFrom } from './xmen.js';
 import { SKY, boxHit, carve, hand, mouse, pl_, toggleFly } from '../player.js';
 import { damageEnemies, enemies, hitEnemy, nearestEnemy } from '../enemies/core.js';

@@ -3,12 +3,12 @@ import './wolverine.js'; // evaluation order: runs after heroes/wolverine.js
 import { ST } from '../state.js';
 import { EMPTY, F, G, KIND, L, OBSID, R, RUBBLE, S, STEEL, rgb } from '../world/materials.js';
 import { H, VH, VW, W, col, setc, t } from '../world/grid.js';
-import { bodies } from '../world/support.js';
+import '../world/support.js'; // kept for evaluation order
 import { dust } from '../world/bodies.js';
 import { spawn } from '../world/particles.js';
-import { beams, flash, fxBurst, fxImpact, fxWord } from '../render/fx.js';
+import { beams, flash, fxImpact, fxWord } from '../render/fx.js';
 import { explode } from '../world/destruction.js';
-import { ANIM, rect } from '../render/rig.js';
+import '../render/rig.js'; // kept for evaluation order
 import { snd } from '../sfx.js';
 import { beamCore, jets, pickC, shots, surfaceY } from './powers.js';
 import { ACT, aimFrom, eyes } from './xmen.js';

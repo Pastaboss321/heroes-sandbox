@@ -9,7 +9,7 @@ import { mix3 } from '../render/look.js';
 import { spawn } from '../world/particles.js';
 import { beams, flash, fxImpact, fxWord, rings } from '../render/fx.js';
 import { explode } from '../world/destruction.js';
-import { ANIM, rect } from '../render/rig.js';
+import '../render/rig.js'; // kept for evaluation order
 import { snd, sndLoop } from '../sfx.js';
 import { pickC, shockFx, shots } from './powers.js';
 import { ACT, freezeArea, iceAt } from './xmen.js';

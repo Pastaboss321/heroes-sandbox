@@ -8,14 +8,14 @@ import { fxWord, flash, rings } from '../render/fx.js';
 import { explode } from '../world/destruction.js';
 import { snd } from '../sfx.js';
 import { zap } from './powers.js';
-import { enemies, hitEnemy, nearestEnemy } from '../enemies/core.js';
+import { enemies, nearestEnemy } from '../enemies/core.js';
 import { applyStatus } from './abilities.js';
 import { nearestN } from './kitlib.js';
 import { ACT, freezeArea } from './xmen.js';
 import { webCell, webEnemy } from './wave2.js';
 import { TRAITS, trOf } from './traits.js';
 import { carve } from '../player.js';
-import { dash, dot, grapple, hitAround, mouse, paint, puffs, say, seg, shoot, spray, stun } from './newkit.js';
+import { dash, dot, grapple, hitAround, mouse, paint, seg, shoot, spray } from './newkit.js';
 
 const PUR = [190, 120, 255], HEX = '#c88cff', SHAFT = rgb(214, 214, 224), FLETCH = rgb(160, 96, 208);
 // what each trick arrow does where it lands: (x, y, enemy or null)

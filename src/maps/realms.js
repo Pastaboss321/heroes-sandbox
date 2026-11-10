@@ -5,7 +5,7 @@
 // breaks, slices and topples like everything else) and returns the width it used (0 = didn't fit).
 // dress(hm, x0, x1, table) walks across a stretch placing weighted pieces with small gaps.
 // Everything must touch the ground: the anchor pass drops anything left hanging.
-import { BONE, CONC, DIRT, EMPTY, GLASS, GOLD, GRASS, ICE, LAVA, LEAF, NEON, OBSID, R, SAND, STEEL, STONE, VIBR, WATER, WOOD, rgb } from '../world/materials.js';
+import { BONE, CONC, DIRT, EMPTY, GLASS, GOLD, ICE, LAVA, LEAF, NEON, OBSID, R, SAND, STEEL, STONE, VIBR, WOOD, rgb } from '../world/materials.js';
 import { H, W, bg, col, setc, t } from '../world/grid.js';
 import { noise2 } from './city.js';
 

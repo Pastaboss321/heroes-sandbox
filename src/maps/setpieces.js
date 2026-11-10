@@ -71,7 +71,6 @@ const PIECES = {
   logs: { w: 32, build(x, gy) { for (let r = 0; r < 3; r++) for (let k = 0; k < 4 - r; k++) { const a = x + 2 + r * 4 + k * 8; fill(a, gy - 6 * (r + 1), a + 7, gy - 6 * r, WOOD); tint(a, gy - 6 * (r + 1), a + 7, gy - 6 * r, 136, 92, 50, 10); tint(a, gy - 6 * (r + 1) + 2, a + 2, gy - 6 * r - 2, 190, 150, 100, 6); } } },
 };
 
-const NEONS = { pink: [255, 70, 200] };
 export const PLAN = {
   city: [['crane', 2], ['fuel', 2], ['sandbin', 2], ['overpass', 1], ['billboard', 3]],
   nyc: [['overpass', 2], ['billboard', 3], ['tank', 2], ['fuel', 1], ['crane', 1]],

@@ -2,8 +2,8 @@
 // after it. Used by genCity (and so by Incursion) and genNYC.
 import { CONC, DIRT, EMPTY, GLASS, GRASS, NEON, OIL, PROPANE, R, STEEL, STONE, WATER, WOOD, rgb } from '../world/materials.js';
 import { H, W, bg, col, setc, sxy, t } from '../world/grid.js';
-import { bgRect, fill, tint } from './gen.js';
-import { BLD, building, car } from './city.js';
+import { bgRect, fill } from './gen.js';
+import { BLD, building } from './city.js';
 import { sign } from './landmarks.js';
 import { tree } from './forest.js';
 

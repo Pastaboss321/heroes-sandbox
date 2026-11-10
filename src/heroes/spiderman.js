@@ -8,7 +8,7 @@ import { makeBody } from '../world/bodies.js';
 import { spawn } from '../world/particles.js';
 import { afters, beams, fxWord } from '../render/fx.js';
 import { explode, punchOut } from '../world/destruction.js';
-import { ANIM, rect } from '../render/rig.js';
+import '../render/rig.js'; // kept for evaluation order
 import { snd } from '../sfx.js';
 import { grabRegion, scriptMove, shots } from './powers.js';
 import { ACT } from './xmen.js';

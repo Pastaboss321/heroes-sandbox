@@ -5,7 +5,7 @@ import { ST } from '../state.js';
 import { buf, gbuf } from './canvas.js';
 import { VH, VW } from '../world/grid.js';
 import { SET } from './look.js';
-import { styleOf, themeOf } from './theme.js';
+import { styleOf } from './theme.js';
 import { DRAG, EMIS, GRAV, K, RISE, V, fan, fc0, fc1, fk_, fl_, fm_, fs0, fs1, fvx, fvy, fx_, fxo, fy_, ff_, mixW, pk, sparks, vp } from './vfxcore.js';
 
 // ---- pixel ops on buffer index o

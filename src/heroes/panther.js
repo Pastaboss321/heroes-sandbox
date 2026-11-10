@@ -5,15 +5,15 @@ import { ST } from '../state.js';
 import { R, rgb } from '../world/materials.js';
 import { bodies } from '../world/support.js';
 import { spawn } from '../world/particles.js';
-import { afters, flash, fxWord, rings } from '../render/fx.js';
+import { afters, flash, fxWord } from '../render/fx.js';
 import { explode } from '../world/destruction.js';
 import { clawSlice, sliceLine } from '../world/slice.js';
-import { ANIM, rect } from '../render/rig.js';
+import '../render/rig.js'; // kept for evaluation order
 import { snd } from '../sfx.js';
 import { scriptMove, shockFx, shots, surfaceY } from './powers.js';
 import { ACT } from './xmen.js';
 import { carve, mouse } from '../player.js';
-import { damageCone, damageEnemies, damageLine, enemies, hitEnemy, nearestEnemy } from '../enemies/core.js';
+import { damageCone, damageEnemies, damageLine, hitEnemy, nearestEnemy } from '../enemies/core.js';
 import { summons } from './abilities.js';
 import { groundBelow } from '../ui/spawn.js';
 import { echo, tagged } from './kitlib.js';

@@ -5,7 +5,7 @@ import { ST } from '../state.js';
 import { EMPTY, F, G, KIND, L, R, S, rgb } from '../world/materials.js';
 import { H, W, col, setc, t } from '../world/grid.js';
 import { spawn } from '../world/particles.js';
-import { afters, beams, fxWord, rings } from '../render/fx.js';
+import { afters, beams, fxWord } from '../render/fx.js';
 import { pix } from '../render/canvas.js';
 import { snd } from '../sfx.js';
 import { boxHit, carve, hand, mouse, pl_ } from '../player.js';

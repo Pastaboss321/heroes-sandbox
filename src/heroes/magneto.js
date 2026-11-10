@@ -8,7 +8,7 @@ import { makeBody } from '../world/bodies.js';
 import { disc, tint } from '../maps/gen.js';
 import { pvx, pvy, px, py, spawn } from '../world/particles.js';
 import { beams, flash, fxWord, rings } from '../render/fx.js';
-import { ANIM, rect } from '../render/rig.js';
+import '../render/rig.js'; // kept for evaluation order
 import { snd, sndLoop } from '../sfx.js';
 import { isMetal, pickC, shieldAs, shockFx, shots } from './powers.js';
 import { ACT } from './xmen.js';
