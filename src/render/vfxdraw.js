@@ -132,7 +132,7 @@ function star(sx, sy, s, r, g, b, k) { lit(sx, sy, r, g, b, k, k); for (let t = 
 export function drawRingFx(r, lite) {
   const Sy = styleOf(r.st), st = Sy.ring, a = Math.min(1, r.life / 10), c = r.c, rad = r.r; if (rad < 1) return;
   if (lite) { circL(r.x - ST.CX, r.y - ST.CY, rad, c[0], c[1], c[2], .6 * a, .5 * a, st === 'dust' ? .38 : 1); return; }
-  const f = ST.frame, th = Math.min(4.5, 1 + Math.abs(r.vr) * .45 + rad * .025), sx = r.x - ST.CX, sy = r.y - ST.CY, C = mixW(c, .6);
+  const f = ST.frame, th = Math.min(5.5, 1.4 + Math.abs(r.vr) * .5 + rad * .03), sx = r.x - ST.CX, sy = r.y - ST.CY, C = mixW(c, .6);
   const sq = st === 'dust' ? .38 : 1, amp = st === 'spike' || st === 'thorn' ? 1.5 + rad * .09 : st === 'wisp' ? 1.6 : 0, solid = st === 'dust' || st === 'smoke' || st === 'splat';
   const ink = SET.ink && rad > 6 && !solid && st !== 'wisp', Ro = rad + amp + (ink ? 2 : 1.5), Ri = Math.max(0, rad - th - amp - (st === 'double' ? th + 2 : 0) - 1);
   if (sx + Ro < 0 || sx - Ro > VW || sy + Ro * sq < 0 || sy - Ro * sq > VH) return;

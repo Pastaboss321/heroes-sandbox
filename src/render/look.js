@@ -5,7 +5,7 @@ import { cl, rgb } from '../world/materials.js';
 import { H } from '../world/grid.js';
 
 // ================= look: settings, time of day, colour grading =================
-export const SET=Object.assign({tod:'auto',dim:55,shake:80,words:true,ink:true,bloom:true,fps:false,sound:true,vol:70,fx:true,light:true},(()=>{try{return JSON.parse(localStorage.getItem('ironsorc.settings')||'{}');}catch(e){return {};}})());
+export const SET=Object.assign({tod:'auto',dim:55,shake:80,words:true,ink:true,bloom:true,fps:false,sound:true,vol:70,fx:true,light:true,nums:true},(()=>{try{return JSON.parse(localStorage.getItem('ironsorc.settings')||'{}');}catch(e){return {};}})());
 export function saveSet(){try{localStorage.setItem('ironsorc.settings',JSON.stringify(SET));}catch(e){}}
 // sky gradient top/bottom, haze (what distant things fade into), light on the foreground, window lights on/off
 const TODS={

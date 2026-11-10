@@ -12,7 +12,7 @@
 //   cast() is the only path from a key press to a power: energy pricing (area scale, trait, balance), the ultimate
 //   meter, the power itself, then the hero's cast flare, signature effect and trait reaction.
 import { hand, pl_ } from '../player.js';
-import { vfxCast } from '../render/vfxcore.js';
+import { vfxCast, vfxSign } from '../render/vfxcore.js';
 import { ST } from '../state.js';
 import { beams, fxWord, rings } from '../render/fx.js';
 import { snd } from '../sfx.js';
@@ -64,7 +64,9 @@ export function firePower(pw, a, p, use) {
   pw.fn(a, p, use);
   if (ST.cd > c0 && pw.cdK !== 1) ST.cd = c0 + (ST.cd - c0) * pw.cdK;
   const fired = ST.cd > c0 || p.en < e0 - .01 || ult0;
-  const g = pw.sig; if (!fired || !g) return fired;
+  const g = pw.sig; if (!fired) return fired;
+  if (!g) { // no bespoke effect: the hero's default signature, for powers heavy enough to deserve one
+    const wt = ST.cd - c0; if (wt >= 30 && !pw.ult && ST.frame - (pw.sigT ?? -99) > 8) { pw.sigT = ST.frame; vfxSign(pw, a, p, wt); } return fired; }
   const fresh = ST.frame - (pw.sigT ?? -99) > 8; pw.sigT = ST.frame; if (!fresh && !g.opt.every) return fired;
   if (g.opt.st) { for (let i = b0; i < beams.length; i++) beams[i].st = g.opt.st; for (let i = r0; i < rings.length; i++) rings[i].st = g.opt.st; }
   try { g.f({ a, p, mx: a.h.x + a.dx * a.d, my: a.h.y + a.dy * a.d, hx: a.h.x, hy: a.h.y, ang: Math.atan2(a.dy, a.dx), ox, oy, fresh }); } catch (e) { console.warn('sigfx', pw.hero, pw.n, e); }

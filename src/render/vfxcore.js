@@ -171,12 +171,75 @@ export function vfxBoom(cx, cy, r, opt = {}) {
   if (r >= 14 && !opt.quiet) { screenFlash(mixW(base, .5), .1 + big * .12); zoomPunch(cx, cy, .025 + big * .03); }
 }
 
-// ---- hits: a comic impact star and sparks in the hitter's colours
+// ---- hits: every hero's blows land in that hero's own way (THEME[id].hit): claws leave crossed slashes, lightning
+// forks, ice shatters, magic stamps a sigil, rock throws dust and cracks the ground. FXK sizes all of it.
+export const FXK = { hit: 1.3, cast: 1.3, trail: 1 };
+const WHITE = pk([255, 255, 255]);
+const spokes = (x, y, n, r, c, g) => { for (let k = 0; k < n; k++) { const an = R() * 6.283, L = r * rnd(.9, 1.6); beams.push({ x0: x, y0: y, x1: x + Math.cos(an) * L, y1: y + Math.sin(an) * L, life: 6, w: 0, c, g, st: 'crisp' }); } };
 export function vfxHit(x, y, dmg) {
-  const TH = themeOf(curKey()), pal = TH.pal, big = dmg >= 22;
-  fxFlare(x, y, 3 + Math.min(9, dmg * .22), mixW(pal[1], .4), { n: big ? 8 : 4, life: big ? 7 : 5 });
-  sparks(x, y, 3 + Math.min(7, dmg / 6) | 0, pk(pal[0]), pk(pal[2]), 2.6);
-  if (big) rings.push({ x, y, r: 2, vr: 1.6, life: 8, c: pal[1], st: curKey() });
+  const key = curKey(), TH = themeOf(key), pal = TH.pal, big = dmg >= 22, r = (3 + Math.min(10, dmg * .24)) * FXK.hit, n = 3 + Math.min(8, dmg / 5) | 0;
+  const c0 = pk(pal[0]), c1 = pk(pal[1]), c2 = pk(pal[2]);
+  fxFlare(x, y, r, mixW(pal[1], .4), { n: big ? 8 : 4, life: big ? 8 : 5 });
+  switch (TH.hit) {
+    case 'slash': { const an = R() * 3.14; fxSlash(x, y, an, r * 1.5, mixW(pal[1], .3), { th: 2.5, life: 6, span: 1.4 }); if (big) fxSlash(x, y, an + 1.57, r * 1.5, mixW(pal[1], .3), { th: 2.5, life: 6, span: 1.4, dir: -1 }); sparks(x, y, n, c0, c2, 3); break; }
+    case 'arc': for (let k = 0; k < (big ? 4 : 2); k++) { const an = R() * 6.283, L = r * rnd(1, 1.8); fxBolt(x, y, x + Math.cos(an) * L, y + Math.sin(an) * L, pal[0], pal[2], { life: 3, forks: big ? 1 : 0, st: key, w: .5 }); } sparks(x, y, n, c0, c2, 3); break;
+    case 'shard': burstKind(K.SHARD, x, y, n + 2, c0, c2, 2.4, 22, GRAV, 2); burstKind(K.STAR, x, y, 2, WHITE, c1, 1, 14, DRAG, 2); break;
+    case 'sigil': fxSigil(x, y, r * .9, pal[2], { kind: TH.sig || 'rune', life: 10, spin: .25 }); burstKind(K.GLYPH, x, y, big ? 4 : 2, c1, c2, 1.2, 18); break;
+    case 'hex': for (let k = 0; k < n; k++) { const an = R() * 6.283, v = 1 + R() * 1.4; vp(K.WISP, x, y, Math.cos(an) * v, Math.sin(an) * v, rnd(12, 22), 1.4, .4, c1, c2, CURL | DRAG, an, (R() < .5 ? 1 : -1) * .14); } break;
+    case 'ember': for (let k = 0; k < n; k++) vp(K.EMBER, x + (R() - .5) * 4, y + (R() - .5) * 4, (R() - .5) * 2, -R() * 2, rnd(18, 34), 1, 1, pk([255, 230, 140]), c2, RISE | DRAG);
+      for (let k = 0; k < (big ? 4 : 2); k++) vp(K.FLAME, x + (R() - .5) * 4, y, (R() - .5) * .6, -.5 - R() * .5, rnd(8, 14), rnd(2, 3.5), 0, pk([255, 240, 170]), c2, RISE); break;
+    case 'dust': puff(x, y, big ? 4 : 2, 2.5 + r * .2, pk([186, 174, 150]), pk([120, 112, 100]), { sp: 1.2, life: 22 }); sparks(x, y, n, c0, c2, 2.4);
+      if (big) { const gy = groundY(x, y, 14); if (gy != null && fxo.length < 50) fxCrack(x, gy, r * 1.6, pal[2], { life: 26 }); } break;
+    case 'ring': rings.push({ x, y, r: 1, vr: 1.4 + (big ? .6 : 0), life: 9, c: pal[1], st: key }); if (big) rings.push({ x, y, r: 3, vr: 1, life: 11, c: (TH.alt || pal)[2], st: key }); burstKind(K.MOTE, x, y, n, c0, c2, 1.6, 18); break;
+    case 'splat': burstKind(K.GOO, x, y, n + 2, pk([44, 46, 62]), pk([12, 12, 18]), 2.6, 30, GRAV, 2); break;
+    case 'glint': burstKind(K.GLINT, x, y, n, WHITE, c1, 2.6, 16, GRAV, 1); sparks(x, y, n, c0, c2, 3.2); break;
+    case 'field': for (let k = 0; k < (big ? 3 : 2); k++) fieldArc(x, y, r * rnd(.9, 1.5), R() * 6.283, mixW(pal[1], .5), pal[2]); burstKind(K.GLINT, x, y, n, WHITE, c1, 2.2, 16, GRAV, 1); break;
+    case 'beamlet': spokes(x, y, big ? 6 : 3, r * 1.2, [255, 235, 230], pal[2]); sparks(x, y, n, WHITE, c2, 3.4); break;
+    case 'starry': burstKind(K.STAR, x, y, n, WHITE, c1, 1.6, 20, DRAG, 2.5); break;
+    case 'web': spokes(x, y, big ? 5 : 3, r, [255, 255, 255], [150, 160, 190]); break;
+    case 'cresc': burstKind(K.CRESC, x, y, n, WHITE, c2, 2, 20, DRAG, 2); break;
+    case 'card': burstKind(K.CARD, x, y, big ? 4 : 2, c0, c2, 2, 26, GRAV, 2); sparks(x, y, n, c0, c2, 2.6); break;
+    case 'smoke': puff(x, y, big ? 4 : 2, 3, pk([120, 92, 170]), pk([40, 28, 60]), { sp: .8, life: 24 }); sparks(x, y, 3, pk([255, 236, 150]), pk([220, 140, 40]), 2); break;
+    case 'thorn': spokes(x, y, big ? 6 : 4, r, [200, 255, 210], [30, 140, 70]); burstKind(K.WISP, x, y, 3, c1, c2, 1.2, 18, CURL | DRAG, 1.3); break;
+    case 'mote': burstKind(K.MOTE, x, y, n + 2, c0, c2, 1.8, 20); rings.push({ x, y, r: 1, vr: 1.2, life: 8, c: pal[1], st: key }); break;
+    case 'sand': burstKind(K.SHARD, x, y, n + 3, pk([240, 216, 150]), pk([170, 136, 80]), 2.2, 26, GRAV, 1.2); puff(x, y, 2, 3, pk([226, 204, 150]), pk([150, 124, 80]), { sp: 1, life: 20 }); break;
+    case 'water': burstKind(K.GOO, x, y, n + 2, pk([190, 230, 255]), pk([50, 120, 220]), 2.6, 24, GRAV, 1.6); rings.push({ x, y, r: 1, vr: 1.3, life: 8, c: pal[1], st: key }); break;
+    default: sparks(x, y, n, c0, c2, 2.6);
+  }
+  if (big) rings.push({ x, y, r: 2, vr: 1.8, life: 8, c: pal[1], st: key });
+}
+
+// ---- trails: what a hero sheds at speed (flight, boosts, dashes, a flat-out run). THEME[id].trail picks the row:
+// particle kind, flags, start and end size, life, the two palette colours (negative = a fixed dust / goo / smoke
+// pair), and where it leaves the body.
+const DUSTC = [pk([176, 164, 140]), pk([120, 112, 100])], GOOC = [pk([44, 46, 62]), pk([12, 12, 18])], BAMFC = [pk([120, 92, 170]), pk([40, 28, 60])];
+const TR = {
+  jets: [K.FLAME, RISE, 2.8, 0, 12, 0, 2, 'feet'], flame: [K.FLAME, RISE, 3.2, 0, 16, 0, 2, 'body'], stars: [K.STAR, DRAG, 2.2, .8, 20, 0, 1, 'body'], motes: [K.MOTE, DRAG, 1.6, .3, 18, 0, 2, 'body'],
+  wisps: [K.WISP, CURL | DRAG, 1.5, .4, 20, 1, 2, 'body'], glyphs: [K.GLYPH, DRAG, 1.6, 1, 22, 1, 2, 'body'], shards: [K.SHARD, GRAV, 2, 1, 20, 0, 2, 'feet'], dust: [K.SMOKE, DRAG, 1.5, 3.5, 24, -1, -1, 'feet'],
+  rubble: [K.SHARD, GRAV, 1.6, 1, 22, 2, 3, 'feet'], goo: [K.GOO, GRAV, 1.6, 1, 26, -2, -2, 'body'], smoke: [K.SMOKE, DRAG | RISE, 1.5, 3.5, 24, -3, -3, 'body'], glints: [K.GLINT, DRAG, 1, .6, 14, 0, 1, 'body'],
+  cresc: [K.CRESC, DRAG, 2, 1, 18, 0, 2, 'body'], cards: [K.CARD, GRAV, 2, 1.4, 22, 0, 2, 'body'], sparks: [K.SPARK, DRAG, 1, 0, 12, 0, 2, 'body'], embers: [K.EMBER, RISE | DRAG, 1, 1, 30, 0, 2, 'body'],
+  ripples: [K.RIPPLE, 0, 2, 7, 14, 1, 1, 'body'], lines: [K.SPARK, DRAG, 1, 0, 9, 0, 1, 'body'], arcs: [K.SPARK, DRAG, 1, 0, 12, 0, 2, 'body'], sand: [K.SHARD, GRAV, 1.2, .8, 22, 1, 2, 'feet'], drops: [K.GOO, GRAV, 1.4, .8, 20, 1, 2, 'body'],
+};
+export function vfxTrail(p) {
+  if (!SET.fx || p.slip || p.blob || ST.GS !== 'play') return;
+  const sp = Math.hypot(p.vx, p.vy), fast = p.fly ? sp > 2.3 : Math.abs(p.vx) > 2.5 || p.script > 0 && sp > 2; if (!fast && !(p.boost > 0)) return;
+  const key = ST.CH.id, TH = themeOf(key), T = TR[TH.trail]; if (!T) return;
+  const every = p.boost > 0 ? 1 : 2; if (ST.frame % every) return;
+  const pal = TH.pal, pair = T[5] === -1 ? DUSTC : T[5] === -2 ? GOOC : T[5] === -3 ? BAMFC : null, c0 = pair ? pair[0] : pk(pal[T[5]]), c1 = pair ? pair[1] : pk(pal[T[6]]);
+  const d = sp || 1, bx = -p.vx / d, by = -p.vy / d, ph = ST.PH, feet = T[7] === 'feet';
+  const x = p.x + bx * 3 + (R() - .5) * (feet ? 5 : 6), y = feet ? p.y - 1 - R() * 2 : p.y - ph * (.25 + R() * .55);
+  if (TH.trail === 'lines') { beams.push({ x0: x, y0: y, x1: x + bx * (6 + sp * 2), y1: y + by * (6 + sp * 2), life: 4, w: 0, c: mixW(pal[1], .4), g: pal[2], st: 'crisp' }); return; }
+  for (let k = 0, n = (p.boost > 0 ? 2 : 1) * FXK.trail; k < n; k++) vp(T[0], x, y, bx * (.4 + R() * .6) + (R() - .5) * .5, by * (.4 + R() * .6) + (R() - .5) * .5, rnd(T[4] * .7, T[4] * 1.3), T[2], T[3], c0, c1, T[1], R() * 6.28, (R() - .5) * .3);
+  if (TH.trail === 'arcs' && ST.frame % 4 === 0) { const an = R() * 6.283, L = rnd(4, 9); fxBolt(x, y, x + Math.cos(an) * L, y + Math.sin(an) * L, pal[0], pal[2], { life: 2, forks: 0, st: key, w: .5 }); }
+}
+
+// ---- the default signature: a power with no bespoke effect in heroes/sigfx.js still signs its cast in the hero's
+// language. The hero's emblem turns once around the body (a sigil for those who have one, nested rings otherwise),
+// sized by how heavy the power is, and the hero's own particles lift off it.
+export function vfxSign(pw, a, p, weight) {
+  const key = ST.CH.id, TH = themeOf(key), pal = TH.pal, r = 10 + Math.min(16, weight * .22), body = () => [p.x, p.y - ST.PH / 2], T = TR[TH.trail];
+  if (fxo.length < 50) fxSigil(p.x, p.y - ST.PH / 2, r, pal[2], { kind: TH.sig || 'rings', life: 16 + (weight * .15 | 0), spin: .12, follow: body, c2: pal[1] });
+  if (T && T[5] >= 0) for (let k = 0, n = Math.min(10, 3 + weight * .1 | 0); k < n; k++) { const an = R() * 6.283; vp(T[0], p.x + Math.cos(an) * r, p.y - ST.PH / 2 + Math.sin(an) * r, Math.cos(an) * .5, Math.sin(an) * .5 - .3, rnd(T[4] * .7, T[4] * 1.3), T[2], T[3], pk(pal[T[5]]), pk(pal[T[6]]), T[1], an, .2); }
 }
 
 // ---- cast flourish: the hand flares in the hero's style when a power fires; a held power trickles motes
@@ -191,7 +254,7 @@ export function vfxCast(pw, a, p, handFn) {
   if (Sy.cast === 'stone') { const i = ['Power', 'Space', 'Reality', 'Soul', 'Time', 'Mind'].findIndex((s) => pw.n.includes(s)); col = STONES[i >= 0 ? i : (ST.frame >> 3) % 6]; }
   const atHand = () => { const q = handFn(); return [q.x, q.y]; }, atBody = () => [p.x, p.y - ST.PH / 2];
   if (!fresh) { if (ST.frame % 2 === 0) vp(K.MOTE, h.x + (R() - .5) * 5, h.y + (R() - .5) * 5, (R() - .5) * .5 - a.dx * .3, (R() - .5) * .5 - a.dy * .3 - .1, rnd(8, 14), 1.4, .3, pk(mixW(col, .4)), pk(col), DRAG); return; }
-  fxFlare(h.x, h.y, 6, mixW(col, .3), { n: Sy.flare || 0, life: 6, follow: atHand });
+  fxFlare(h.x, h.y, 6 * FXK.cast, mixW(col, .3), { n: Sy.flare || 0, life: 7, follow: atHand });
   switch (Sy.cast) {
     case 'sigil': fxSigil(h.x, h.y, 8, b, { kind: TH.sig || 'rune', life: 20, spin: .16, follow: atHand }); burstKind(K.GLYPH, h.x, h.y, 3, pk(c), pk(b), 1, 20); break;
     case 'hex': for (let k = 0; k < 6; k++) { const an = k / 6 * 6.283; vp(K.WISP, h.x, h.y, Math.cos(an) * 1.4, Math.sin(an) * 1.4, rnd(14, 22), 1.4, .4, pk(c), pk(b), CURL | DRAG, an, .14); } fxSigil(h.x, h.y, 7, b, { kind: 'hexagram', life: 14, spin: -.2, follow: atHand }); break;

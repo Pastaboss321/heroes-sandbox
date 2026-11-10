@@ -3,7 +3,7 @@ import { ctx, cv, resize, vig } from './canvas.js';
 import { ST } from '../state.js';
 import { R } from '../world/materials.js';
 import { VH, VW } from '../world/grid.js';
-import { comics } from './fx.js';
+import { comics, nums } from './fx.js';
 import { pl_ } from '../player.js';
 import { enemies } from '../enemies/core.js';
 
@@ -20,11 +20,17 @@ export function drawComics(sx,sy){
   for(let n=comics.length-1;n>=0;n--){const f=comics[n],t=1-f.life/f.max;
     if(f.k==='b'){const r=f.r*ST.scale/3*(.5+t*.9),cx=S(f.x),cy=T(f.y);ctx.save();ctx.translate(cx,cy);ctx.rotate(f.rot);ctx.globalAlpha=1-t*t;ctx.beginPath();
       for(let k=0;k<24;k++){const rr=k&1?r*.55:r,a=k/24*6.283;ctx.lineTo(Math.cos(a)*rr,Math.sin(a)*rr);}ctx.closePath();ctx.fillStyle=f.c;ctx.fill();ctx.lineWidth=Math.max(2,ST.scale);ctx.strokeStyle='#14110f';ctx.stroke();ctx.restore();}
-    else{const pop=t<.18?.3+t/.18*1.1:t<.3?1.4-(t-.18)/.12*.4:1,sz=f.size*16*ST.scale*pop,cx=S(f.x),cy=T(f.y)-t*10*ST.scale;
+    else{const pop=t<.18?.3+t/.18*1.1:t<.3?1.4-(t-.18)/.12*.4:1,sz=f.size*18*ST.scale*pop,cx=S(f.x),cy=T(f.y)-t*10*ST.scale;
       ctx.save();ctx.translate(cx,cy);ctx.rotate(f.rot);ctx.globalAlpha=t>.7?1-(t-.7)/.3:1;ctx.font=`${sz|0}px Bangers, Impact, sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';
       ctx.lineJoin='round';ctx.lineWidth=Math.max(3,sz*.16);ctx.strokeStyle='#14110f';ctx.fillStyle='#e23b2e';ctx.strokeText(f.text,sz*.07,sz*.07);ctx.fillText(f.text,sz*.07,sz*.07);
       ctx.strokeText(f.text,0,0);ctx.fillStyle=f.c;ctx.fillText(f.text,0,0);ctx.restore();}
     if(ST.GS==='play')f.life--;if(f.life<=0)comics.splice(n,1);}
+  // damage numbers
+  if(nums.length){ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineJoin='round';
+    for(let n=nums.length-1;n>=0;n--){const f=nums[n],t=1-f.life/44,big=f.v>=60?1.5:f.v>=25?1.2:1,sz=(5.2+Math.min(3,f.v*.02))*ST.scale*big*(1+(f.pop>0?f.pop*.07:0));
+      ctx.globalAlpha=t>.7?1-(t-.7)/.3:1;ctx.font=`${sz|0}px Bangers, Impact, sans-serif`;const X=S(f.x),Y=T(f.y)-t*9*ST.scale,tx=String(Math.round(f.v));
+      ctx.lineWidth=Math.max(2,sz*.22);ctx.strokeStyle='#14110f';ctx.strokeText(tx,X,Y);ctx.fillStyle=f.c;ctx.fillText(tx,X,Y);
+      if(ST.GS==='play'){f.life--;if(f.pop>0)f.pop--;}if(f.life<=0)nums.splice(n,1);}}
   ctx.globalAlpha=1;
   if(ST.GS==='play'){ // arrows at the screen edge pointing to enemies you can't see (bosses get a bigger one)
     let shown=0;const cx=cv.width/2,cy=cv.height/2,mg=26;

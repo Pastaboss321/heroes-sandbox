@@ -158,3 +158,44 @@ The hit box grew 16%, the same as the art, so heroes do not look larger than the
 
 - The Thing's rock texture is lost on his legs while he runs (the shared big-body leg frames are flat colour).
 - Posed arms are still procedural limbs; on heroes with detailed sleeves (Thor's bracers) they are plain.
+
+## Stage 3: VFX
+
+The game already had a themed effect system (`render/theme.js`: 30 shape styles shared between the heroes; 137
+powers with a bespoke effect in `heroes/sigfx.js`). This stage does not replace it. It makes each hero's language
+unique, gives every power a signature, and makes hits bigger and easier to read.
+
+### What changed
+
+- **A unique language per hero.** `THEME[hero]` gains `hit` (how the hero's blows land) and `trail` (what the
+  hero sheds at speed). Style + impact + trail + palette is now different for every hero. Heroes that shared a
+  style are told apart by the new fields: Doom (sigil hits, glyph trail) vs Strange (sigil hits, spark trail);
+  Thor (forked arcs, crackling trail) vs Storm (arcs, wind wisps); Hulk (dust) vs Thing and Juggernaut (rubble);
+  Iron Man (glints, boot jets) vs Ultron; Torch vs Ghost Rider; Panther (slashes, kinetic motes) vs Gambit (cards).
+- **Impact styles** (`vfxHit` in `render/vfxcore.js`), 20 of them: slash, arc, shard, sigil, hex, ember, dust (and a
+  ground crack on heavy hits), ring, splat, glint, field, beamlet, starry, web, cresc, card, smoke, thorn, mote,
+  plus sand and water for the new heroes.
+- **Trails** (`vfxTrail`, called once a tick): 21 kinds. They only appear at speed: flying faster than 2.3,
+  running faster than 2.5, scripted dashes, and boosts (boosts double the rate).
+- **Every power signs its cast.** A power with no bespoke effect now gets the hero's default signature
+  (`vfxSign`): the hero's emblem turns once around the body and the hero's own particles lift off it. It fires for
+  powers with a cooldown of 30 frames or more, sized by the cooldown, so basic attacks stay clean.
+- **Damage numbers** (`fxDmg` in `render/fx.js`, drawn in `render/comic.js`): hits on one enemy within a third of
+  a second add into one number over its head, tinted by damage type (fire orange, shock yellow, ice blue) or the
+  hero's colour. New setting: DAMAGE NUMBERS (on by default).
+- **Comic words take the hero's colour** when the power did not ask for one (they were all the same yellow).
+- **Bigger**: hit flares x1.3 with more sparks (`FXK.hit`), cast flare x1.3 (`FXK.cast`), comic words 16 -> 18 px
+  per unit, explosion words up to 1.8 (was 1.6), starbursts r x3 (was x2.6), ring bands 1.4-5.5 px (was 1-4.5),
+  flashes x1.15.
+
+### Performance
+
+Nothing new allocates per frame; trails emit one particle every other tick (two on a boost) and everything goes
+through the existing particle budget (1400 soft cap, 700 on phones). Measured in a 25-enemy fight with the Torch
+casting: tick 5.4 ms, of which effects 0.03 ms.
+
+### Decisions
+
+- Kept the existing style system and the 137 bespoke effects as they were; rewriting them risked the same
+  "changed for the worse" outcome as the reverted kit overhaul.
+- Damage numbers are aggregated, not per hit, so beams and rapid fire show one growing number instead of a stream.

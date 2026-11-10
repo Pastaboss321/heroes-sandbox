@@ -7,7 +7,7 @@ import { H, N, VW, W, t } from '../world/grid.js';
 import { bodies } from '../world/support.js';
 import { bodyAt } from '../world/bodies.js';
 import { MP, solidAt, spawn } from '../world/particles.js';
-import { beams, flash, fxWord, rings } from '../render/fx.js';
+import { beams, flash, fxWord, rings, fxDmg } from '../render/fx.js';
 import { explode } from '../world/destruction.js';
 import { snd } from '../sfx.js';
 import { SPAWN, inStasis, shots } from '../heroes/powers.js';
@@ -73,7 +73,7 @@ export function hitEnemy(e,dmg,kx,ky){if(e.hp<=0)return;
   if(e.host){e.flash=5;if(e.host.hp>0)hitEnemy(e.host,dmg*(e.mult||1),0,0);return;} // a titan's weak point passes the hit on, multiplied
   if(e.def.titan){kx=ky=0;}
   if(ST.hitHook)dmg=ST.hitHook(e,dmg); // statuses and combos (heroes/abilities.js)
-  if(ST.pctx)e.pHit=ST.frame;if(e.mem.shield>0)dmg*=.35;if(e.hex>0)dmg*=1.5;e.hp-=dmg;e.flash=5;e.vx+=kx||0;e.vy+=ky||0;
+  if(ST.pctx)e.pHit=ST.frame;if(e.mem.shield>0)dmg*=.35;if(e.hex>0)dmg*=1.5;e.hp-=dmg;if(ST.pctx)fxDmg(e,dmg);e.flash=5;e.vx+=kx||0;e.vy+=ky||0;
   if(dmg>=8&&ST.np<MP-2000){for(let k=0;k<5;k++){const a=R()*6.283,s=1.5+R()*2.5;spawn(e.x,e.y,Math.cos(a)*s,Math.sin(a)*s,R()<.5?rgb(255,250,230):rgb(255,210,120),6+R()*6,0,1,0,1);}if(dmg>=20)flash(e.x,e.y,10+dmg*.2,[255,230,180],3);}}
 export function damageEnemies(x,y,r,dmg,kx,ky,radial){
   r*=ST.aoeC||1;
